@@ -109,3 +109,48 @@ The 24 BLOCKING items collapse into six themes:
 - **No round-2 `/design-review` yet** — the patched doc must be re-reviewed (full depth) before the round-2 verdict is recorded. The cross-cut still binding: ED's F.6 Crafting-`MAX_BEACON` mandate (runtime `MAX_ACTIVE_BEACONS = 3` cap with reject-at-publish-site) — fold into the next revision pass.
 
 ---
+
+## Review — 2026-06-01 — Verdict: MAJOR REVISION NEEDED (round-2 re-review)
+
+**Scope signal:** L (verging XL — 5+ dependencies, two unwritten sibling GDDs the thesis now depends on, a cross-doc conflict, multiple new ADR obligations)
+**Specialists:** game-designer, systems-designer, economy-designer, ux-designer, network-programmer, qa-lead, creative-director (senior synthesis)
+**Review depth:** full (7 adversarial specialist agents + senior synthesis)
+**Prior verdict resolved:** Partially — round-1 themes 2 (order-of-ops) & 6 (bench cap) RESOLVED; themes 1/3/4/5 PARTIAL.
+
+### Summary
+
+Senior verdict (creative-director): **sound thesis, unfinished patch.** The survival-window redesign is the correct structural fix for round-1's press-button-win dominance and serves the pillars — keep it. But the blocking cluster is dominated by an **incomplete reconciliation sweep** (the patch reached the normative surfaces but missed the prose, the copy-paste template, a state-machine `From` field, and the upstream parent doc) plus **specification gaps** that hand the load-bearing "aid items are necessary" claim to two GDDs that don't exist yet (Predator AI, Resource Management). The specialists individually leaned NEEDS REVISION; the CD escalated to MAJOR REVISION NEEDED on the verified keystone contradiction + the unupdated authoritative parent + the blocking-cluster volume.
+
+### Blocking items — Group A (reconciliation-sweep misses) — **FIXED this session (2026-06-01)**
+
+- **A1** [VERIFIED] E.9 edge-case body still fired `T8` + "run ends in victory" at activation (the pre-round-2 keystone). → rewritten to window-survival semantics, consistent with H.44.
+- **A2** [VERIFIED] C.11.3 (normative publisher contract) + H.39 still used `sourcePlayerId=crafters[1]` for the midpulse (round-1 B7 bug). → repointed to `CraftSession.primaryCrafterId`.
+- **A3** [VERIFIED] C.9 BCT5 `From` field listed "BC4 or BC5" (BC5 is terminal-victory). → corrected to `From: BC4` only.
+- **A4** [BLOCKING cross-doc] `game-concept.md` lines 270/317 ("victory state on activation") contradicted the window model. → updated game-concept to the survival-window win condition.
+- **R1/R2** [VERIFIED RECOMMENDED] registry `dampenerCoilReduction` formula `× DAMPENER_REDUCTION` (diverged from GDD `× (1 − DAMPENER_REDUCTION)` at non-default tunings; output_range `[0.04]`) → fixed to `× (1 − DAMPENER_REDUCTION)`, range `[0.024, 0.056]`; H.67 craft-time list (7 values) → 5.
+- *(Dismissed: qa-lead's "AC count 72 not 73" — re-verified 73 live is correct: 72 original − 7 retired + 8 added, numbered through H.80.)*
+
+### Blocking items — Group B (design decisions) — **PENDING (next session)**
+
+- **B1** Victory-proximity rule undefined (BCT4 "≥1 alive *anywhere*") — must state the proximity stance; "activate-and-scatter" otherwise trivializes the window. *(CD ruling: the under-specified condition is BLOCKING; the balance exploit is RECOMMENDED-pending-PA-GDD.)*
+- **B2** Aid-suite-necessity unsubstantiated — add F.4 forward obligations: min predator aggression during BC4, min oxygen drain, provisional oxygen-transfer values for Canister/Relay. (game-designer + economy-designer convergence; Canister-stack-and-bunker is the likely new dominant line.)
+- **B3** BCT-DEFEAT leans on PC's unverified all-dead `RunEnded(defeat)` path (PC in MAJOR REVISION) — add a cross-GDD lock; mark H.76 integration/unverified-until-PC.
+- **B4** Cross-wall placement exploit — clamp + downward-raycast still allows placing a beacon/anchor through a wall into an unreachable room; add a server-side reachability raycast + AC.
+- **B5** Pin the survival-window timer to `RunService.Heartbeat` (not `task.delay`) or the E.25/H.77 tie-break determinism breaks.
+- **B6** Beacon activation friction (round-1 B19) still open — lock a design decision (single-tap / tap-hold / two-tap) + acknowledge irreversible placement.
+- **B7** H.80 zero-yield AC covers only 3 of 8 state-mutating handlers (double-consume race on UseItem/EquipItem) — extend to all eight.
+- **B8** Round-1 carryover H.27 (determinism tolerance) + H.61 (tick-window boundary) still unresolved — dt-injection rewrites.
+- **B9** H.74 (server-crash) + H.77 (tie-break) not deterministically reproducible as written — specify the test-harness injection mechanism.
+
+### Recommended (deferred to Group-B session)
+
+Registry `BEACON_HALF_LIFE` cross-GDD lock (safe window range ⇒ ~[64,128] s vs. registry [45,180]); `OnSignalAnchorTripped` payload `anchorPosition` vs `predatorPosition`; RELAY tier (0.20) sub-floor vs MID (0.18) — consider merging; Canister stack-cap + dead-player-lock-in-window analysis; ux (countdown ring vs art-bible single-circle, reduced-motion, BC4 HUD-density audit, Coil-badge color-only warning); H.63→P1, H.64 annotation, H.80 lint-enforcement, rate-limit algorithm; solo-play (squad=1) supported?; E.26 covering AC.
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (round-2 patched + Group-A reconciled)
+- Parent updated: `design/gdd/game-concept.md` (win-condition reconciled to the window model)
+- Registry: `design/registry/entities.yaml` (Coil formula corrected)
+- Cross-cited: `design/gdd/player-controller.md` (round-6 MAJOR REVISION — T8/defeat contracts unverified), `design/gdd/ecological-disturbance.md` (owns the derived window length)
+
+---

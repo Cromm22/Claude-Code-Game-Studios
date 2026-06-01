@@ -778,12 +778,12 @@ formulas:
 
   - name: dampenerCoilReduction
     category: formula
-    expression: "magnitude_out = magnitude_base * DAMPENER_REDUCTION (= 0.08 * 0.50 = 0.04); applied to ALL Light pulses by equipped player while Coil active; Coil NOT consumed per pulse (consumed on equip, expires on duration/bench-visit/death)"
+    expression: "magnitude_out = magnitude_base * (1 - DAMPENER_REDUCTION) (= 0.08 * (1 - 0.50) = 0.04 at default); applied to ALL Light pulses by equipped player while Coil active; Coil NOT consumed per pulse (consumed on equip, expires on duration/bench-visit/death)"
     variables: [magnitude_base, DAMPENER_REDUCTION, DAMPENER_DURATION]
-    output_range: [0.04]
+    output_range: [0.024, 0.056]
     source: design/gdd/crafting-and-items.md (D.6)
     referenced_by: []
-    notes: "Light-pulse magnitude reduction applied by Dampener Coil while active. Stationary Coil-equipped players' effective pulse: 0.08 * 0.50 * STATIONARY_EMISSION_FACTOR = 0.012 < MAGNITUDE_FLOOR = 0.02 — discarded by ED, Coil NOT consumed for that pulse (per H.38)."
+    notes: "Light-pulse magnitude reduction applied by Dampener Coil while active. DAMPENER_REDUCTION is a FRACTIONAL reduction (the multiplier is (1 - DAMPENER_REDUCTION)), per GDD D.6 — NOT a direct multiplier. At default 0.50 the multiplier is 0.50, but over the tuning range [0.30, 0.70] the output spans [0.056, 0.024] (higher DAMPENER_REDUCTION = stronger reduction = lower output). output_range corrected 2026-06-01 (round-2 re-review BLOCKING-1: prior `* DAMPENER_REDUCTION` form diverged from the GDD at every non-default tuning). Stationary Coil-equipped players' effective pulse: 0.08 * (1 - 0.50) * STATIONARY_EMISSION_FACTOR = 0.012 < MAGNITUDE_FLOOR = 0.02 — discarded by ED, Coil NOT consumed for that pulse (per H.38)."
 
   - name: beaconMidpulseTrigger
     category: formula
