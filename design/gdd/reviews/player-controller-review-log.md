@@ -777,3 +777,42 @@ Per CD's meta-pattern observation and `.claude/docs/context-management.md` "one 
 - `production/session-state/active.md` — replaced with round-7-split-patch-pending state.
 
 ---
+
+## Round-7 Session 1 Patch — 2026-06-07 — Status: APPLIED (trivial-fix sweep)
+
+**Context:** A `/design-review` was invoked on `player-controller.md`, but the GDD was found to be **byte-unchanged since the round-6 MAJOR REVISION verdict** — `player-controller.md` has exactly one commit in its history (`8fcbd3c`, the "accumulated design backlog" commit; first-committed as-is with round-6 body content). All 12 round-6 BLOCKING items provably carried forward (spot-checked: R6-B1 inline `workspace:GetServerTimeNow()` at predicate lines, R6-B5 `deathDeductionCommitted` absent from T6 clearance, R6-B8–B12 reconciliation-tick unchanged). Rather than re-run the full 7-agent panel to re-derive the known verdict (a documented no-op class — cf. the 2026-05-02 "no-op re-review against unchanged text" entry), the user elected to **skip the panel and execute the CD-prescribed Round-7 Session 1 trivial-fix sweep** directly. This entry records that patch. **No verdict is implied — this is a patch, not a review.**
+
+**Scope:** Session 1 of the round-6 CD two-session prescription — the trivial-fix sweep (scope S). The heavy reconciliation-tick lifecycle/contract patch (Session 2) is explicitly deferred to a separate fresh session, then a round-8 `/design-review`.
+
+**Edits applied (8 items across 2 files):**
+
+| ID | Severity | Fix | Section / file |
+|---|---|---|---|
+| **R6-B1** | BLOCKING (5-spec convergence) | C.5.3 read-and-cache skeleton gains `local cachedNow = getServerTime()` (passed into `isImminentDeath_cached(...)`); both predicate arms now call `getServerTime()` (C.11 seam), not inline `workspace:GetServerTimeNow()`. Unblocks the paper-only ACs H.22b–f. | `player-controller.md` C.5.3 |
+| **R6-B2** | BLOCKING | `pulseEmissionMagnitude` formula expression rewritten to anchor `t_lastGracePulse[axis] = t_0` in a Step-0a anchor-on-eligibility clause (out of the grace-AND-window branch), matching the GDD D.4 B9 fix. Closes the 1ms-past-window jitter reopening of G1 under thermally-throttled mobile. | `entities.yaml` `pulseEmissionMagnitude` |
+| **R6-B3** | BLOCKING | `GRACE_REENTRY_COOLDOWN` notes gain the inclusive `>=` eligibility-comparator annotation (eligible again at exactly the cooldown boundary), explicitly contrasted with the strict-`<` B11 comparators and aligned to the `PING_COOLDOWN_PER_PLAYER` `>=` precedent. | `entities.yaml` `GRACE_REENTRY_COOLDOWN` |
+| **R6-B4** | BLOCKING (4-spec convergence) | Unenforceable camera-angle plausibility clause deleted from C.4.1 + C.9 (camera orientation is not server-tracked); server now validates ray origin within `PING_ORIGIN_TOLERANCE` + re-runs the raycast server-side (client `candidateTargetId` advisory). New knob `PING_ORIGIN_TOLERANCE` = 8 studs (first-pass placeholder, Theme-2-tuned) added to G.4 + registry. | `player-controller.md` C.4.1/C.9/G.4 + `entities.yaml` |
+| **R6-I6** | IMPORTANT | E.D heartbeat timeout predicate + T1-seed both route through `getServerTime()` (C.11 seam). | `player-controller.md` E.D |
+| **R6-I7** | IMPORTANT | V/A.3 lantern-lower SFX gains Path-B suppression qualifier (no character-attached sound on a destroyed/destroying character). | `player-controller.md` V/A.3 |
+| **R6-I8** | IMPORTANT (carried-unfulfilled 2 rounds — process-integrity escalation) | V/A.3 Death SFX gains Path-B anchoring: snapshot `lastKnownPosition` at `PlayerRemoving` before destruction, play remote cue from a world-anchored character-detached emitter (exact audio API deferred to Theme 2 per the post-cutoff flag); own-player Death SFX N/A on Path B. | `player-controller.md` V/A.3 |
+| **R6-I9** | IMPORTANT (carried-unfulfilled 2 rounds — process-integrity escalation) | V/A.3 lantern raise + lower SFX gain the "fires on the T3/T4 state transition ONLY — NOT per `LightEmission` pulse" negative rule. | `player-controller.md` V/A.3 |
+
+**Header status block** refreshed (was 4 reviews stale — said "round-4 applied / round-5 pending"). Now reflects round-6 MAJOR REVISION + round-7 Session 1 applied + Session 2 pending.
+
+**Verification:** Post-edit grep confirms zero remaining `workspace:GetServerTimeNow()` *call-site* violations in C.5.3 or E.D; the 9 surviving references are all legitimate (C.8.4 ED.D.1 primitive rule, C.11 seam definition/prose, D.4 variable descriptions, F.4/F.5 prose, H.22d AC). This grep + clean-apply pass served as the CD-prescribed round-6.5 mini-validation for the trivial sweep.
+
+**Patch effort:** ~single-session, 11 edits (8 GDD + 3 registry), zero design-decision risk per the round-6 CD adjudication.
+
+**Carried-open to Round-7 Session 2 (separate fresh session, scope M):** R6-B5 (`deathDeductionCommitted` not cleared on T6 — 3-spec convergence, same defect class as round-4 B6), R6-B6 (`RECONCILIATION_TICK_INTERVAL` not registered), R6-B7 (reconciliation tick absent from C.11 seam scope table), R6-B8 (reconciliation success path doesn't invoke T5 side-effects (a)/(b) — phantom pulses), R6-B9 (`userId` vs `Player`-instance keying contradiction — 3-spec convergence), R6-B10 (`player.Name` access on destroyed instance crashes the handler), R6-B11 (8 missing reconciliation ACs), R6-B12 (Death SFX must not fire on `deathCause="reconciliation-recovery"`), plus R6-I1–I5/I10/I11/I12 cluster. **After Session 2 lands, run a round-8 `/design-review` in a fresh session. DO NOT predict APPROVED for round-8** — the converging defect-rate pattern means a NEEDS REVISION tail is plausible.
+
+**Note (minor, not flagged round-6, deferred):** D.4 variable-table descriptions still describe `t` / `t_0` as `workspace:GetServerTimeNow()` at the primitive level; these are descriptive variable definitions, not call sites, and the `t_lastGracePulse` variable already cites the seam. Optional consistency cleanup for a future pass.
+
+### Files Modified This Session
+
+- `design/gdd/player-controller.md` — 8 edits (R6-B1, B4-prose, B4-knob, I6, I7, I8, I9 + header).
+- `design/registry/entities.yaml` — 3 edits (R6-B2 formula, R6-B3 notes, R6-B4 `PING_ORIGIN_TOLERANCE` registration).
+- `design/gdd/reviews/player-controller-review-log.md` — this Round-7 Session 1 entry appended.
+- `production/session-state/active.md` — refreshed to round-7-Session-2-pending state.
+- `design/gdd/systems-index.md` — NOT modified (status correctly remains MAJOR REVISION NEEDED; heavy items open).
+
+---

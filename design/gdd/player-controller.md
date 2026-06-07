@@ -1,8 +1,9 @@
 # Player Controller
 
-> **Status**: NEEDS REVISION (round-1 review verdict 2026-05-01) — **Round-2 Theme 1 (Pillar 1 closure) APPLIED 2026-05-01**; **Round-3 patch (B1–B5 + H.22d) APPLIED 2026-05-02**; **Round-4 patch (B6–B11 + IMPORTANT cluster) APPLIED 2026-05-02**; Round-5 design-review PENDING in fresh session; Themes 2/3/4 + OQ.3 camera decision PENDING in fresh sessions
-> **Author**: chrusht + claude-opus-4-7
-> **Last Updated**: 2026-05-02 (round-4 patch applied)
+> **Status**: MAJOR REVISION NEEDED (round-6 design-review verdict 2026-05-05 — 12 BLOCKING + 12 IMPORTANT) — **Round-7 Session 1 (trivial-fix sweep) APPLIED 2026-06-07**: R6-B1 (C.5.3 predicate → C.11 `getServerTime()` seam), R6-B2 (registry anchor-on-eligibility), R6-B3 (registry `>=` cooldown annotation), R6-B4 (camera-angle clause deleted + `PING_ORIGIN_TOLERANCE` introduced), R6-I6 (E.D heartbeat seam), R6-I7 (Path-B lantern-lower SFX suppression), R6-I8 (Path-B Death-SFX world-anchor), R6-I9 (lantern SFX T3/T4-only negative rule). **Round-7 Session 2 (heavy reconciliation-tick lifecycle patch: R6-B5–B12 + R6-I1–I5/I10/I11/I12 cluster) PENDING in a separate fresh session**, then a round-8 `/design-review`. Themes 2/3/4 + OQ.3 camera decision remain PENDING.
+> **Author**: chrusht + claude-opus-4-7 + claude-opus-4-8
+> **Last Updated**: 2026-06-07 (round-7 Session 1 trivial-fix sweep applied)
+> **Round-7 Session 1 closures (2026-06-07)**: 4 carried/new BLOCKING (R6-B1/B2/B3/B4) + 4 IMPORTANT (R6-I6/I7/I8/I9). Pure textual + registry work, zero design-decision risk per round-6 CD prescription. R6-I8/I9 were carried-unfulfilled 2 rounds (process-integrity escalation) — closed this session. The reconciliation-tick lifecycle defects (R6-B5 `deathDeductionCommitted` T6-clearance, B6 registry, B7 seam-scope, B8 phantom-pulse, B9 dual-keying, B10 destroyed-player crash, B11 zero-AC, B12 false-death-SFX) are deferred intact to Session 2.
 > **Implements Pillar**: 1 (Quiet Is Power), 2 (The Squad Is the Experience), 4 (Rounds Not Saves)
 > **Engine**: Roblox Studio + Luau + Knit + Rojo
 >
@@ -83,7 +84,7 @@ You walk. Walking is the default because walking is survival — every footfall 
 1. **Quick-ping**:
    - **Input**: two-finger simultaneous tap (touch); `G` (PC); `L1 / LB` (gamepad).
    - **What is pinged**: client raycasts from camera center on input. If the ray hits a tagged entity (`enemy`, `resource`, `door`, `exit`) within `PING_RAYCAST_RANGE = 80 studs`, ping carries location + entity type. Otherwise location only.
-   - **Server validation**: server validates raycast origin/destination against player's server-tracked position and camera angle before broadcasting (per game-concept's "server validates plausibility" rule).
+   - **Server validation**: server validates the ping ray *origin* against the player's server-tracked `HumanoidRootPart.Position` within `PING_ORIGIN_TOLERANCE` before broadcasting, then re-runs the raycast server-side and uses the server's result (the client's `candidateTargetId` is advisory only — per E.F). **The server does NOT validate camera angle** (camera orientation is not server-tracked, so a camera-angle plausibility check is unenforceable — R6-B4); ping legitimacy rests on origin-position plausibility plus the server-authoritative raycast (per game-concept's "server validates plausibility" rule).
    - **Persistence**: `PING_DISPLAY_DURATION = 8 s`.
    - **Rate limit**: per-player `PING_COOLDOWN_PER_PLAYER = 1.0 s`; burst cap `PING_BURST_CAP = 3` pings per `PING_BURST_WINDOW = 1.5 s`.
    - **Categories**: Danger (red, enemy tag), Resource (green, resource tag), Navigate (yellow, terrain/door/exit), Untagged (white, location-only).
@@ -117,9 +118,10 @@ You walk. Walking is the default because walking is survival — every footfall 
          local cachedDamageTs = lastPredatorDamageTimestamp[player]
          local cachedHealth = player.Character and player.Character:FindFirstChild("Humanoid")
                               and player.Character.Humanoid.Health or nil
+         local cachedNow = getServerTime()  -- C.11 seam — NOT inline workspace:GetServerTimeNow() (R6-B1)
          -- Now safe to evaluate the predicate against cached locals
          -- and to yield within the T5 procedure (RequestSquadOxygenSpend, etc.)
-         if isImminentDeath_cached(cachedHealth, cachedDamageTs) then
+         if isImminentDeath_cached(cachedHealth, cachedDamageTs, cachedNow) then
              invokeT5(player, "disconnect-while-damaged")
          end
      end)
@@ -132,10 +134,10 @@ You walk. Walking is the default because walking is survival — every footfall 
    isImminentDeath(player) =
        (Humanoid.Health < HP_IMMINENT_THRESHOLD
         AND lastPredatorDamageTimestamp[player] ~= nil
-        AND (workspace:GetServerTimeNow() - lastPredatorDamageTimestamp[player]) < HP_ARM_RECENT_WINDOW)
+        AND (getServerTime() - lastPredatorDamageTimestamp[player]) < HP_ARM_RECENT_WINDOW)
        OR
        (lastPredatorDamageTimestamp[player] ~= nil
-        AND (workspace:GetServerTimeNow() - lastPredatorDamageTimestamp[player]) < DAMAGE_RECENT_WINDOW)
+        AND (getServerTime() - lastPredatorDamageTimestamp[player]) < DAMAGE_RECENT_WINDOW)
    ```
    where `HP_IMMINENT_THRESHOLD = 25` (default; range 10–50), `DAMAGE_RECENT_WINDOW = 3.0 s` (default; range 1.5–5.0), and `HP_ARM_RECENT_WINDOW = 30.0 s` (default; range 15–60).
 
@@ -321,7 +323,7 @@ Player Controller is the **publisher of two emission types** to Ecological Distu
 |---|---|---|---|---|
 | `RequestSprintToggle` | C → S | `{sprint: boolean}` | 10/s/player (debounced — same-state ignored; this event-specific guard does NOT apply to `PlayerHeartbeat`, which is a separate event with no payload) | Player alive; not in S4/S5; if requesting `sprint=true`, stamina > 0 |
 | `RequestLanternToggle` | C → S | `{raised: boolean}` | 5/s/player | Player alive; not in S4/S5 |
-| `RequestPing` | C → S | `{rayOriginPos, rayDirection, candidateTargetId?}` | per-player 1.0 s + burst 3/1.5 s (per C.4.1) | Alive OR in S4 (dead-spectating); ray origin matches server-tracked position within tolerance; raycast result matches client claim; rate-limit |
+| `RequestPing` | C → S | `{rayOriginPos, rayDirection, candidateTargetId?}` | per-player 1.0 s + burst 3/1.5 s (per C.4.1) | Alive OR in S4 (dead-spectating); ray origin within `PING_ORIGIN_TOLERANCE` of server-tracked position; server-side raycast result is authoritative (client `candidateTargetId` advisory); rate-limit |
 | `RequestEmote` | C → S | `{slot: 1..6}` | per-player 3.0 s + burst 5/15 s (per C.4.2) | Alive OR dead-spectating; slot ∈ [1, 6]; rate-limit |
 | `PlayerHeartbeat` | C → S | `{}` (no payload) | `HEARTBEAT_SEND_RATE = 1 Hz` per player (server drops excess silently) | Player must be in S2 (Alive-Sprinting); if received while in S1/S4/S5, drop silently. **No same-state guard** — this event is not a state toggle. |
 | `OnSprintStateChanged` | S → C (broadcast) | `{playerId, sprinting: boolean}` | On transition only | n/a (server-pushed) |
@@ -595,11 +597,11 @@ Edge cases are organised by category. Each starts with `**If [condition]**: [exa
 - **If a touch-screen PC (Surface-class hybrid) receives both a touch input and a simultaneous keyboard input**: Roblox `UserInputService` treats them as independent streams. Server accepts the first valid `RequestSprintToggle` / `RequestLanternToggle`; same-state dedup drops the second. **Platform classifier uses the most-recent input event type** to determine drift-floor logic — touch inputs use `MOBILE_ANALOG_DRIFT_THRESHOLD`; keyboard inputs do not.
 - **If a Bluetooth gamepad disconnects mid-sprint (L3 released by disconnect)**: the Roblox client receives `GamepadDisconnected` and MUST synthesize `RequestSprintToggle(sprint=false)`. This is the **cooperative path**.
 
-  **Server-side timeout safety (independent of client cooperation)**: the server maintains a per-player timestamp `_lastHeartbeatTime` updated by each valid `PlayerHeartbeat` receipt. While a player is in S2 (Alive-Sprinting), the client MUST send `PlayerHeartbeat` at `HEARTBEAT_SEND_RATE = 1 Hz`. If `(workspace:GetServerTimeNow() - _lastHeartbeatTime[player]) > SPRINT_CLIENT_TIMEOUT = 3 s`, the server forces transition T2 (WalkSpeed → `WALK_SPEED`; stop sprint pulse timer; start `STAMINA_REGEN_DELAY` timer). This prevents ghost-sprint from zombie clients (frozen process, suspended mobile app, or lost `GamepadDisconnected` synthesis).
+  **Server-side timeout safety (independent of client cooperation)**: the server maintains a per-player timestamp `_lastHeartbeatTime` updated by each valid `PlayerHeartbeat` receipt. While a player is in S2 (Alive-Sprinting), the client MUST send `PlayerHeartbeat` at `HEARTBEAT_SEND_RATE = 1 Hz`. If `(getServerTime() - _lastHeartbeatTime[player]) > SPRINT_CLIENT_TIMEOUT = 3 s`, the server forces transition T2 (WalkSpeed → `WALK_SPEED`; stop sprint pulse timer; start `STAMINA_REGEN_DELAY` timer). This prevents ghost-sprint from zombie clients (frozen process, suspended mobile app, or lost `GamepadDisconnected` synthesis).
 
   **`_lastHeartbeatTime` lifecycle (load-bearing for the timeout-safety rule above)**:
 
-  - **Init on T1 entry (sprint-start) — the implicit first heartbeat**: when T1 fires, the server sets `_lastHeartbeatTime[player] = workspace:GetServerTimeNow()` **before** the timeout check arms. The state-entry timestamp counts as the implicit first heartbeat. Without this rule, every legitimate sprint-after-walk-pause longer than `SPRINT_CLIENT_TIMEOUT = 3 s` would force-revert immediately because the timeout predicate would compare `now` against either `nil` or a stale prior-sprint timestamp.
+  - **Init on T1 entry (sprint-start) — the implicit first heartbeat**: when T1 fires, the server sets `_lastHeartbeatTime[player] = getServerTime()` (C.11 seam — R6-I6) **before** the timeout check arms. The state-entry timestamp counts as the implicit first heartbeat. Without this rule, every legitimate sprint-after-walk-pause longer than `SPRINT_CLIENT_TIMEOUT = 3 s` would force-revert immediately because the timeout predicate would compare `now` against either `nil` or a stale prior-sprint timestamp.
   - **First-heartbeat grace window**: because T1 seeds the timestamp to `now`, the player has the full `SPRINT_CLIENT_TIMEOUT` window (3 s) to send their first explicit `PlayerHeartbeat` after sprint entry before timeout fires. No additional grace window beyond this is required — the implicit first heartbeat IS the grace window.
   - **Clearance on T2 (sprint exit, any path)**: when T2 fires (input release, stamina = 0, force-walk, server timeout itself), the server sets `_lastHeartbeatTime[player] = nil`. Subsequent `PlayerHeartbeat` events from this player are dropped per the S2-only validation rule (next paragraph).
   - **Clearance on T5 (death)**: T5's sprint-state hard-reset side-effect (per C.5.5 / C.6 transition table) sets `_lastHeartbeatTime[player] = nil`. Prevents a stale timestamp from blocking the next life's first sprint.
@@ -739,6 +741,7 @@ All knobs are **server-authoritative** and live in a single config module (consu
 | `PING_BURST_CAP` | 3 | 2–6 | Gate | C.4.1 | Single-player burst pinging in danger sequences feels unresponsive | Burst-cap stops gating spam |
 | `PING_BURST_WINDOW` | 1.5 s | 1.0–5.0 | Gate | C.4.1 | Burst window too tight, legitimate fast-pings denied | Burst window too wide, spam tolerance returns |
 | `PING_RAYCAST_RANGE` | 80 studs | 40–200 | Feel | C.4.1 | Pings can't reach distant threats; players feel unequipped to flag distant predators | Pings reach across map; intel becomes too cheap |
+| `PING_ORIGIN_TOLERANCE` | 8 studs (placeholder) | 4–16 | Gate | C.4.1, C.9 | Legitimate pings rejected when client/server `HumanoidRootPart.Position` desyncs under lag; ping feels unreliable in fast encounters | Implausible/spoofed ping origins accepted; ping trust-boundary weakened (R6-B4). **First-pass placeholder — value tuned in Theme 2.** |
 | `PING_TWO_FINGER_WINDOW` | 150 ms | 80–300 | Feel | C.7, E.F | Legitimate two-finger taps register as separate touches; quick-ping is unreliable on touch | Palm-rest false-pings register as intentional |
 | `EMOTE_COOLDOWN_PER_PLAYER` | 3.0 s | 1.0–10.0 | Gate | C.4.2 | Emote spam clutters HUD | Emotes feel unresponsive; coordination signal degrades |
 | `EMOTE_BURST_CAP` | 5 | 3–10 | Gate | C.4.2 | Burst tolerance too low; legitimate fast-emote sequences blocked | Burst tolerance too high; spam re-emerges |
@@ -834,9 +837,9 @@ All in-world positional 3D audio uses Roblox `SoundService` with `RollOffMode = 
 | Walk footstep | Positional 3D | MVP (uses Roblox default if no custom asset) | Low volume; aural feedback for own player + squad proximity awareness. **Walk footstep audio is NOT a predator-perception input** (OQ.1 closed, Theme 1) — predator consumes only the discrete `DisturbanceService:Emit()` mechanical contracts (`SprintEmission`, `LightEmission`); positional walk audio is player-feedback only. Cosmetic skins MUST NOT alter volume, emission radius, or cadence; timbre is the only permitted cosmetic dimension (mechanical-equivalence test verifies disturbance generation unchanged and movement speed unchanged). |
 | Sprint footstep | Positional 3D | **MVP** (custom asset) | Distinct timbre from walk — heavier texture, slightly breathless quality communicating physical effort. Volume at source: +3–4 dB above walk footstep maximum (effort cue, **not** broadcast cue). Cadence locked to approximate the `SPRINT_PULSE_INTERVAL` window; cadence is the mechanical transaction-pacing signal to the player's ear, not a volume escalation. The formal disturbance signal is `SprintEmission` (discrete mechanical contract, server-fired); this audio is redundant aural feedback for the sprinting player and nearby squad only — **not a predator-perception input** (OQ.1 closed, Theme 1). Cosmetic skins MUST NOT alter volume, emission radius, or cadence; timbre is the only permitted cosmetic dimension. |
 | Jump grunt | — | **No** — skip MVP | No survival-decision information. |
-| Lantern raise SFX | UI-adjacent (attached to character, not fully positional) | **MVP** | Short mechanical click/whirr, ~0.3 s. |
-| Lantern lower SFX | UI-adjacent | **MVP** | Softer click, ~0.2 s. |
-| Death SFX | Positional 3D (own + nearby remote) | **MVP** | Non-vocal: low percussive impact + brief resonant tone. **No scream** (non-diegetic; conflicts with biological/organic predator sonic identity which must remain unique). ~1.0 s. |
+| Lantern raise SFX | UI-adjacent (attached to character, not fully positional) | **MVP** | Short mechanical click/whirr, ~0.3 s. **Fires on the T3 (raise) state transition ONLY — NOT per `LightEmission` pulse** (R6-I9): a raised lantern emits one Light pulse per `LIGHT_PULSE_INTERVAL`, but those pulses are silent to this SFX channel. |
+| Lantern lower SFX | UI-adjacent | **MVP** | Softer click, ~0.2 s. **Fires on the T4 (lower) state transition ONLY — NOT per pulse** (R6-I9). **Path B suppression** (R6-I7): when T4 is forced by a disconnect (C.5.3 Path B), the player's character is being destroyed — this SFX MUST be suppressed (no character-attached sound on a destroyed/destroying character). |
+| Death SFX | Positional 3D (own + nearby remote) | **MVP** | Non-vocal: low percussive impact + brief resonant tone. **No scream** (non-diegetic; conflicts with biological/organic predator sonic identity which must remain unique). ~1.0 s. **Path B anchoring** (R6-I8): on a disconnect-induced death the character may already be destroyed when the remote cue would play — the server snapshots `lastKnownPosition` (`HumanoidRootPart.Position`) at `PlayerRemoving` time, *before* destruction, and plays the remote Death SFX from a **world-anchored, character-detached emitter** at that position (NOT parented to the gone character; exact audio-API binding deferred to Theme 2 per the post-cutoff API-verification flag). The own-player Death SFX does not apply on Path B (the disconnecting player is no longer present). |
 | Respawn SFX | UI-adjacent | **MVP** | Soft ambient inhale-analog tone, ~0.5 s. Non-vocal. |
 | Quick-ping audio | **UI channel only — NOT positional** | **MVP** | Short neutral tone (~200 ms). **Same sound for all ping categories** — category is distinguished visually only. |
 | Emote audio | **UI channel only — NOT positional** | **MVP** | Brief acknowledgment tone per emote type; non-vocal. |
