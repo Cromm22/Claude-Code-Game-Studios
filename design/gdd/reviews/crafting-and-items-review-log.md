@@ -602,3 +602,532 @@ network-programmer: **AUTHORITY-CHAIN STATUS: SOUND** — re-confirmed against t
 - Target: `design/gdd/crafting-and-items.md` (round-9 authoring pass; 2020 lines; NOT committed)
 - Cross-cited: `design/gdd/player-controller.md` (round-6 MAJOR — T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed` / all-dead / the new `OnSquadMemberAliveChanged` respawn contracts unverified-until-PC); `design/gdd/ecological-disturbance.md` (owns `BEACON_HALF_LIFE`; owes the R4-1 `[64,128]s` registry edit — backstopped by H.105); Not-Started + load-bearing: `resource-management.md`, `predator-ai.md`; also Not-Started: `resource-node.md`, `hud.md`
 - Registry: `design/registry/entities.yaml` (`BEACON_HALF_LIFE` Crafting init-guard note present; ED value/range unchanged per coordination rules)
+
+---
+
+## Round-11 Authoring Pass Applied — 2026-06-04 — NOT YET RE-REVIEWED
+
+**This is a patch record, not a review verdict.** It applies the CD's round-10 sequencing: an **AUTHORING pass** closing the round-10 convergences + single-lens blockers (plus a CD design ruling on EC-3), then the **WIDENED build-from-artifact gate** (PC contract + full-run lifecycle + AC-vs-prose) + a **narrow network security gate**. The next step is the **round-12 full `/design-review`** (the full 7-spec panel returns as the closure gate). **Do NOT treat this entry as APPROVED. Do NOT predict APPROVED for round-12.**
+
+**Design decisions (user/CD-approved this session, 3-tab widget):** **EC-3** → in-window Oxygen Canister emission fires at **`RunSession.beaconWorldPosition`** during BC4 (not the using player's position) — structurally forecloses the scatter-to-breathe bait; **DAMPENER_REDUCTION** → **interim ceiling 0.56** (default 0.50) until PC's D.6a Stage-2 lands, 0.70 the post-PC ceiling; **game-B1** → **prose-honesty fix** (2-player bench coordination is "who crafts / who watches"; the spike-vs-speed multi-crafter choice is a 3–4-player decision), keep cap=1.
+
+### Resolution by round-10 blocker
+
+| Round-10 blocker | Round-11 resolution |
+|---|---|
+| **Conv #1** `aliveMembers` stale outside-BC4 / across respawn [TRIPLE] | RunSession-scope `_enqueueDeparture` + drain **widened to the whole run** (death/disconnect drains `aliveMembers` every Heartbeat from RunStarted, not only during BC4), so the first BC4 snapshot is accurate. Respawn re-add is now load-bearing → PC's `OnSquadMemberAliveChanged` **upgraded to BLOCKING** (F.4/C.12), with an interim self-sourced `CharacterAdded` re-add until PC lands. C.8/C.9/C.10 + new **H.108** (split Logic/Integration). |
+| **Conv #2** `runOutcomeResolved` cross-system latch vs PC [DOUBLE] | Explicit mutual-exclusion protocol: **PC suppresses its all-dead `RunEnded(defeat)` for the whole post-activation lifecycle** (gate on `beaconActivated == true` alone — widened by build-gate A4 from the racy `&& !beaconWindowSurvived`); the `runOutcomeResolved` latch is defense-in-depth. C.9/C.12.1/F.4 + new **H.109**. |
+| **Conv #3** H.89 wipe reconciliation [DOUBLE] | Reconciled the stale "wipe → PC's all-dead path, no Crafting signal" in **five** places the AC-vs-prose pass found: H.89 variant (c), E.24, H.76, C.12.1, **and F.2 PC row** → all now `OnBeaconWindowFailed(reason="wipe")` per round-9 C.9 single decision point. |
+| **Conv #4** `OnBeaconHoldStateChanged` flood/hysteresis [DOUBLE] | New knob **`BEACON_HOLD_HYSTERESIS` (~3 studs)**: Schmitt band on the *presentation* crossing signal (enter `<= R`, leave `> R + HYST`); the **win snapshot stays strict `<= R`** (walled off). C.9/C.10/C.14/C.15/UI.1 + H.94 extended (negatives). |
+| **Conv #5** advisory-vs-evaluative HUD trap [DOUBLE] | Window-end **escalation cue** (knob `BEACON_HOLD_ESCALATION_LEAD = 10 s`): out-of-radius + final lead → "HOLD THE BEACON" escalates with direction vector; client-derived from `OnBeaconActivated.windowDurationSeconds` + `OnBeaconHoldStateChanged`. UI.1 surface 13 / C.14. |
+| DAMPENER 0.70 PC-dep [systems BLOCK-3] | G.5 range → interim **0.30–0.56**; D.6/D.6a flag the silencing rationale as PC-Stage-2-dependent. |
+| Economy EC-1 (RM inequality violated short-window) | F.4 RM inequality must hold at the **shortest 35 s window**; provisional `canister_restore` tightened to **≈ 3 s** (10-stack ≈ 30 s < 35 s); `OXYGEN_DRAIN_BC4_FLOOR` calibrated vs 35 s. F.4/OQ.13/H.106. |
+| Economy EC-2 (OQ.15 overclaim) | OQ.15 softened: structurally *improved*, not "resolved"; MINERAL/RESONANT practical demand thin in the oxygen-heavy line; fenced on RM/PA. |
+| Economy EC-3 (scatter-to-breathe) | **CD ruling: emit at beacon position** (above). C.6/C.11/E.32/H.93/C.2/G.4 + registry. |
+| qa AC-coverage [BLOCK-1/2/3] | H.94 negatives (stays-in-radius / jitter fires zero); **H.109** (terminal no-op); new **H.110** (`_enqueueDeparture` ≡ real `Humanoid.Died`/`PlayerRemoving` seam-integrity). |
+| game-B1 (2-player bench) | Section B prose-honesty (above). |
+| ux UX-B1/B2 | Surface-11 **BC4 density cap** (≤ 2 concurrent banners, coalesce); **reduced-motion variants affirmatively required** for the 3 pulsing BC4 surfaces (UI.5 item 6/7 + new **H.111**). |
+
+### The two round-11 gates RAN this session (both returned findings — all resolved in-session)
+
+- **Network security gate (narrow — authority-chain non-regression):** returned **AUTHORITY-CHAIN STATUS: SOUND** against all five round-11 edit targets (EC-3 beacon-position emission, whole-run `aliveMembers` drain, `runOutcomeResolved`/PC-suppression, hysteresis presentation signal, BCT3/BCT4 core). 0 BLOCKING; 1 RECOMMENDED (make the interim `CharacterAdded` re-add idempotency explicit) — **applied**. No forge path / client-trust hole introduced. *(The gameplay-programmer subagent type failed to deliver its report twice this session — a harness delivery issue specific to that agent type; the build-from-artifact gate was run via a general-purpose fresh agent instead, which delivered fully.)*
+- **Widened build-from-artifact gate (PC contract + full-run lifecycle + AC-vs-prose):** a fresh agent given only the schema/state-machine/contract sections returned **16 findings** (6 omissions, 3 contradictions, 4 ambiguities, 3 AC-vs-prose mismatches) — **all genuine, none artifacts of out-of-scope walling, all fixed in-session.** The load-bearing catches: **C3** — the whole-run fan-out (Conv #1) would have let a benign `RequestCraftCancel` drain `aliveMembers` and fire a false wipe → **reason-gated the alive scope to `{death, disconnect}` only** (new **H.112**); **A4** — the PC suppression gate `&& !beaconWindowSurvived` opened a post-victory defeat-race → widened to `beaconActivated == true` alone; **C2** — a PC-owned outside-BC4 `RunEnded` never latched `runOutcomeResolved` → added Crafting's **`RunEnded` subscription** that latches + halts the whole-run drain (new **H.113**); **O2/O3/A1** — pinned the **single `_step` Heartbeat connection** + drain-exactly-once ordering (snapshot-before-drain on BC4 ticks); **O1** — added the **`RunStarted` init contract** (roster source + field-population order); **O5** — the Conv #5 escalation was unbuildable (no published window-end) → added **`windowDurationSeconds`** to the activation payloads. C1 (alive-set invariant), O4 (interim/canonical supersession switch), A2 (dead member not fired as "out of radius"), A3 (respawn position-validity), O6 (`OnCraftRejected` catch-all channel), M1/M2 (H.110 re-add exemption / H.108 split) all fixed.
+
+### Counts reconciled
+ACs **99 → 105** (H.108–H.113); knobs **+2** (`BEACON_HOLD_HYSTERESIS`, `BEACON_HOLD_ESCALATION_LEAD`, G.6); DAMPENER_REDUCTION range → interim 0.30–0.56; edge cases **30** (unchanged); VA moments **24** (unchanged — Moment 28 position note only); recipes **4** / item types **4** (unchanged). New RemoteEvent payload field `windowDurationSeconds` on `OnBeaconActivated`/`OnEscapeBeaconActivated`.
+
+### Cross-GDD forward obligations (updated/created)
+- **PC (round-6 MAJOR):** `OnSquadMemberAliveChanged(playerId, isAlive)` respawn signal **now BLOCKING** (whole-run drain makes the re-add mandatory); **BC4 all-dead suppression BLOCKING** (gate `beaconActivated == true`, BCT3→`RunEnded`); maps `OnBeaconWindowFailed{scatter,wipe}` → defeat; T8 ← `OnBeaconWindowSurvived`. Crafting also subscribes to PC's `RunEnded` (C2).
+- **RM:** `canister_restore ≈ 3 s` provisional; `OXYGEN_DRAIN_BC4_FLOOR` calibrated at the 35 s short-window; inequality + inverse-degenerate ACs (H.106, unverified-until-RM).
+- **ED:** `BEACON_HALF_LIFE` → `[64,128] s` registry edit (R4-1, backstopped by H.105); WCAG flora flash cap.
+- **PA:** `PREDATOR_BC4_MIN_COMMIT` (F.4).
+
+### Files touched
+`design/gdd/crafting-and-items.md` (primary — ~45 edits; header/Status updated round-7→round-11), `design/registry/entities.yaml` (`MAGNITUDE_CANISTER_INWINDOW_USE` beacon-position note; `DAMPENER_REDUCTION` interim-cap note; new `BEACON_HOLD_HYSTERESIS` + `BEACON_HOLD_ESCALATION_LEAD` constants). **Not committed** (awaiting user instruction).
+
+### Next
+**Round-12 full `/design-review`** (the full 7-spec panel returns as the closure gate, per the round-10 CD prescription). **Do NOT predict APPROVED for round-12.** Fenced (do not re-litigate): RM/PA/PC/ED forward obligations (F.4).
+
+---
+
+## Review — 2026-06-04 — Verdict: NEEDS REVISION (round-12 full-panel closure gate)
+
+**Scope signal:** L (verging XL — 6 dependencies, 4 unwritten with 2 load-bearing; 7 formulas; win-condition cross-cutting; multiple new-ADR obligations; 113 ACs)
+**Specialists:** game-designer, systems-designer, economy-designer, network-programmer, ux-designer, qa-lead, gameplay/build-from-artifact lens (via general-purpose — the gameplay-programmer agent type's prior delivery failures), creative-director (senior synthesis) — full 7-spec panel, the designated single closure gate after the round-11 authoring pass + two gates.
+**Review depth:** full
+**Prior verdict resolved:** Round-10 convergences + the round-11 authoring pass — **YES at the rule/schema level, verified.** All 5 round-10 convergences (aliveMembers whole-run drain, runOutcomeResolved/PC-suppression, H.89 wipe reconciliation, OnBeaconHoldStateChanged hysteresis, advisory-vs-evaluative HUD escalation) + the EC-3/DAMPENER/game-B1 rulings genuinely closed. But round-11's OWN edits re-opened the recurring reconciliation-miss class a 3rd time, at seams the widened build-from-artifact gate's scope provably excluded.
+
+### Summary
+
+**Unanimous NEEDS REVISION — all 7 specialists (none MAJOR, none APPROVED). 12th consecutive non-APPROVED; 3rd consecutive non-MAJOR.** The CD synthesis: **converging decisively, with KITING as the one genuine non-reconciliation exception.** The four blocking convergences are all one-line-to-one-paragraph fixes at section seams the round-11 gate did not cover; the recurring reconciliation-miss class held its *count* but its per-occurrence blast radius collapsed an order of magnitude (round-2/3 were cross-section rule contradictions; round-12 are two position-args, three field-enumerations, one guard-hoist). The round-6/8 methodology-MAJOR arc stays resolved — the build-from-artifact gate is non-self-certifying, caught its 16 in-scope round-11 findings, and leaked only at its scope edge (under-scoped, not untrustworthy). **Positive finding to PROTECT (re-confirmed 4th consecutive round, no regression):** network-programmer — **AUTHORITY-CHAIN STATUS: SOUND**; no forge path against the full round-11 surface (EC-3 beacon-position emission, whole-run aliveMembers drain, runOutcomeResolved/PC-suppression, hysteresis band all open no client-trust hole; `usingPlayerId` attribution correct; client beacon position still a clamped hint). Authority wins over blocker-closure in any conflict.
+
+### Blocking convergences (independent lenses on the same defect — most reliable signal)
+
+1. **C.15 `RequestUseItem` validation cell CONTRADICTS C.6/C.11/E.32/H.93 on in-window Canister emission position — QUAD-lens** *(systems BLOCK-3, build-from-artifact Finding-2, qa-lead, + VA twin)*. C.15 still says "at the using player's server-tracked position"; the round-11 EC-3 ruling (everywhere else) says `RunSession.beaconWorldPosition`. An implementer building the handler from the C.15 surface table **reintroduces the scatter-to-breathe exploit EC-3 closed.** VFX twin: VA.3 Moment 28 prose says player-position while VA.4 says beacon. **The cleanest fresh fix-creates-next-gap instance** — EC-3 reconciled in C.6/C.11/E.32 but missed in the C.15 handler cell. Attribution/authority itself untouched (only the `position` arg is wrong) — fix changes ONLY the position arg.
+2. **`windowDurationSeconds` (round-11 O5 fix) incompletely propagated — TRIPLE-lens** *(network ×2, systems BLOCK-4, qa-lead)*. C.14/C.15 carry it; C.9 BCT3 normative side-effects column omits it from the fired payload, UI.3 omits it, and **no AC asserts `windowDurationSeconds == BEACON_SURVIVAL_WINDOW`.** Built from C.9 → truncated payload → client countdown + Conv-#5 escalation break, all sprint-gate ACs stay green.
+3. **`runOutcomeResolved` guard-scope contradiction — DOUBLE-lens** *(systems BLOCK-1/2, build-from-artifact Finding-1 "sharpest")*. Build-gate C2 (round-11) added "Crafting ceases ALL `_step` run-scope work on RunEnded" (H.113), but the pre-existing C.9 guard is "first statement of the BC4 segment" only. Built from C.9, the non-BC4 bench-progress + alive-drain segments keep running against an already-ended run (pre-activation PC all-dead, or the between-ticks Knit-subscription gap). Fix: hoist the guard to the top of `_step`.
+4. **Bench BT3 completion on the BC4-terminal tick unadjudicated — DOUBLE-lens** *(systems BLOCK-5, build-from-artifact Finding-4)*. A non-Beacon craft completing at `_step` segment (1) on the same tick the BC4 segment (3) fires a terminal: is BT3 suppressed, or does it grant an item + emit + fire `OnCraftCompleted` racing the win/defeat signal? Undefined.
+
+### Headline finding (design-level — NOT a one-line fix)
+
+- **KITING [game-designer B1]** — the single-frame, window-end-only alive-and-in-radius check makes the optimal line "activate, scatter to safe geometry for ~38 s, regroup for the final ~10 s," recovering the scatter-dominance the round-3 proximity-hold was created to kill. **Not an exploit — game-legal optimal play that directly contradicts Section B's "hold the line."** Requires a CD design ruling on a sustained-presence mechanism, not a transcription fix. **ux-B12-2 is bound to it** (the 3-stud hysteresis band lets a player shown "in-radius" at 32 studs still LOSE — an affirmatively-wrong HUD signal violating the design's own "scatter-defeat is never unsignalled" promise; resolve via the same ruling).
+
+### Other blocking (single-lens)
+
+- **[ux UX-B12-1]** Surface-13 renders up to 5 elements incl. up to 4 per-member hold-rows on a 375pt iPhone-SE screen with no row cap/collapse rule; the ≤4-surface cap is by surface-ID — `/ux-design` has no locked constraint.
+- **[economy EC-1a/EC-1b/Sanity-1]** F.4 RM inequality conflates squad-pool item count with per-member oxygen coverage (un-writable as a deterministic AC); no `canister_restore < 3.5 s` ceiling (RM could pick a re-violating value); C.2 18-gather sanity check (2 Canisters) inconsistent with the EC-1 full-stack arithmetic (understates grind ~1.5–2×, mis-feeds LD node density).
+- **[qa-lead]** H.37/H.22 time-dependent ACs don't cite the C.16 `_clock` seam (invite forbidden `task.wait`); DAMPENER 0.56 interim cap has no covering AC.
+
+### Recommended (deferred to the round-13 authoring pass)
+
+VA.3 Moment 28 ↔ VA.4 VFX-position reconciliation; `OnBeaconWindowFailed` payload typed `string` (C.15) vs `"scatter"|"wipe"` union (C.12/C.14); make the "queue-emptied-every-tick ⇒ respawn-safe" invariant explicit (systems REC-3) + run-end `_craftSessions` BT5 sweep unspecified (systems REC-5); `RequestUseItem` zero-yield vs a possibly-yielding RM restore (network); H.110 BLOCKING/advisory split; reconnect-during-BC4 AC + `BEACON_HOLD_HYSTERESIS` bandwidth-bound AC (network); Signal Anchor window-value prose overstates a single-shot sensor vs a straight-line committed predator (game R1); Coil bench-visit-expiry anticipatory cue (game R4); `OnRunStarted` vs `RunStarted` method-vs-signal naming (build-from-artifact); out-of-bench-range departure `reason` string literal unnamed (build-from-artifact).
+
+### Specialist Disagreements (adjudicated by creative-director)
+
+- **Aid-suite-necessity IOU** — game-designer treated it as a design blocker; economy-designer as a legitimately-fenced forward obligation. **CD ruling: economy is correct — FENCED** (claim gated on two unwritten GDDs; `open ≠ design-closure blocker`). The economy *precision* items (EC-1a/b, Sanity-1) are in-scope; the *closure* of the aid-necessity claim is fenced.
+- **KITING severity** — **CD ruling: a genuine round-12 design finding and the headline of the round, but NEEDS REVISION not MAJOR** — a flaw in one rule's implementation of a sound thesis, with a bounded fix space, not a flaw in the thesis.
+
+### Senior Verdict (creative-director)
+
+Converging decisively. The reconciliation-miss class re-opening a 3rd time is real but its severity is collapsing toward zero per occurrence; the recurrence is confined to seams provably outside the round-11 gate's scope (within-section validation cells, side-effect columns, the H.113↔C.9 interaction) — the signature of a fixable under-scoped gate, not an untrustworthy design. Methodology-MAJOR arc stays resolved (round-10 determination strengthened, not weakened). KITING is the most important finding because, unlike the reconciliation misses, it requires a design ruling. Held at **NEEDS REVISION**.
+
+### Binding CD rulings / next-step sequence (user may override)
+
+- **Round-13 Step 1 — CD design ruling on KITING BEFORE authoring.** Three bounded mechanisms to present: **(a)** sustained-presence integral (cumulative in-radius ≥ X% of window); **(b)** fail-fast "line breaks" (window fails if the hold radius empties of all alive members for > grace seconds) — *CD-recommended*: most directly restores the round-3 intent, trivially HUD-honest (binary line state, dissolves ux-B12-2), cheapest to make server-authoritative; **(c)** periodic check-in with a grace budget. User's call (a more forgiving for the casual co-op profile).
+- **Step 2 — ONE authoring pass** closing KITING (per the ruling) + ux-B12-2 (bound to it) + the 4 convergences + qa AC seam-citations + the economy precision items + ux-B12-1 surface-13 row cap. The pass MUST carry an explicit **reconciliation-fanout checklist that includes within-section validation cells and normative side-effect columns** — the two seam-types that leaked this round.
+- **Step 3 — round-13 gates (NOT a full panel):** a **widened build-from-artifact gate** (general-purpose fresh agent) explicitly scoped to include within-section table/prose desync + side-effect-column completeness; **a narrow network gate** on the KITING server-authority surface (new per-tick in-radius state — confirm no forge regression). Reserve the full 7-spec panel for round-14.
+- **Authority chain is a hard constraint on every fix.** Conv-1 must change only the position arg (not `usingPlayerId`); the KITING mechanism's in-radius determination must stay server-authoritative (no client "I'm in radius" claim). Authority wins over blocker-closure.
+- **DO NOT predict APPROVED for round-13** — the KITING mechanism choice could itself open new HUD/economy/authority seams a 13th round must catch.
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (round-11 authoring pass; ~2090 lines; NOT committed). Load-bearing defects: C.15 `RequestUseItem` cell (stale player-position), C.9 BCT3 side-effects (omits `windowDurationSeconds`), the C.9-local vs H.113 whole-`_step` `runOutcomeResolved` guard scope, the C.5.6a/C.9 BCT4 single-frame window-end check (KITING).
+- Cross-cited still-blocking: `player-controller.md` (round-6 MAJOR — T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` contracts unverified-until-PC); `ecological-disturbance.md` (owns `BEACON_HALF_LIFE`; owes the R4-1 `[64,128]s` registry edit — backstopped by H.105); Not-Started + load-bearing for the fenced aid-necessity: `resource-management.md`, `predator-ai.md`; also Not-Started: `resource-node.md`, `hud.md`.
+- Registry: `design/registry/entities.yaml` (`BEACON_HALF_LIFE` Crafting init-guard note present; ED value/range unchanged per coordination rules).
+
+**User chose to STOP and revise in a separate session.** Branch `crafting-round2-patch`; rounds 3–12 work all still NOT committed.
+
+---
+
+## Round 13 — 2026-06-04 — AUTHORING PASS + BOTH NARROW GATES (a patch, NOT a verdict)
+Scope signal: L (continuous-hold inversion of the win condition + a new buffered re-add seam)
+Specialists: none (per the round-12 CD plan, round-13 = ruling → one authoring pass → two narrow gates, NOT a full panel; the full 7-spec panel is reserved for round-14)
+Blocking items closed: all round-12 (4 convergences + KITING headline + ux/economy/qa single-lens) | Gate findings closed: build-from-artifact 1 BLOCKING + 2 IMPORTANT + 3 MINOR; network 3 MINOR
+Prior verdict resolved: round-12 NEEDS REVISION → addressed by this authoring pass (verification deferred to the round-14 full panel)
+
+**Executed the CD-prescribed round-13 sequence.**
+
+**Step 1 — KITING design ruling (user):** of the three CD-offered mechanisms, the user chose **(b) fail-fast line-breaks** — the survival window now requires CONTINUOUS in-radius presence (was a single window-end check). User also chose two sub-options: a **~3 s regroup grace** (`BEACON_LINE_BREAK_GRACE`) so a knockback/jitter does not instantly lose, and **Conv-4 outcome-first** (the BC4 segment resolves before the bench tick, suppressing a same-tick BT3).
+
+**Step 2 — one authoring pass (all round-12 blockers closed):**
+- **KITING (game B1 headline)** — inverted to continuous-hold: every BC4 tick, an empty `windowAliveInRadius` snapshot while members are alive starts the `_lineBreakEmptySince` grace clock; staying empty for `BEACON_LINE_BREAK_GRACE` → scatter line-break defeat; a full wipe (`aliveMembers` empty) is immediate, no grace. Victory = window elapses while held. New knob `BEACON_LINE_BREAK_GRACE` (G.6 + registry), field `_lineBreakEmptySince`, signal `OnBeaconLineBreak` (strict squad-level HOLDING/BROKEN binary — dissolves ux-B12-2). The round-9 "advisory, kiting unpunished" framing (Blocker #10/Q3) is REVERSED — touched C.5.6a, C.8 `_step` order, C.9 (BCT3/BCT4/BCT-DEFEAT + the handler bullet), C.10 (schema/eval/invariants), E.24/E.27, C.14/C.15/UI.3 signals, UI.1 surface 13, UI.5 item 7, VA.3 Moment 26.
+- **Conv-1** — C.15 `RequestUseItem` cell + VA.3 Moment 28 in-window canister position → `RunSession.beaconWorldPosition` (EC-3 reconciled; the position-arg-only fix, attribution untouched).
+- **Conv-2** — `windowDurationSeconds` propagated through C.9 BCT3, C.12.1, UI.3, H.14; new H.116 asserts `== BEACON_SURVIVAL_WINDOW`.
+- **Conv-3** — `runOutcomeResolved` guard hoisted to the very top of `_step` (C.8 ordering, C.10 field text).
+- **Conv-4** — outcome-first ordering: the BC4 segment runs before the bench progress tick; a post-segment guard suppresses same-tick BT3.
+- **ux UX-B12-1** — surface-13 collapses per-member hold-rows to an "N/M holding" count on 375pt; **UX-B12-2** dissolved by the strict squad-level binary.
+- **economy EC-1a/1b/Sanity-1** — F.4 RM per-member-vs-pool clarified, `canister_restore < 3.5 s` ceiling stated; C.2 18-gather reconciled as illustrative-vs-floor-stress.
+- **qa** — H.22/H.37 now cite the C.16 `_clock` seam; new H.117 (Dampener interim 0.56 cap config guard).
+- ACs 105 → **109** (H.114 line-break grace, H.115 wipe-immediate-vs-scatter-grace, H.116 windowDurationSeconds, H.117 dampener cap; H.73/H.85/H.89 revised to the continuous model).
+
+**Step 3 — both narrow gates (general-purpose agents; gameplay-programmer type still avoided per prior delivery failures):**
+- **Network gate → AUTHORITY-CHAIN SOUND (5th round, PROTECT).** No BLOCKING/IMPORTANT. The continuous in-radius determination is fully server-authoritative (positions via the `_memberPosition` seam, never a client claim); `OnBeaconLineBreak` is pure server→client presentation (the client grace countdown is cosmetic, the server decides the terminal); Conv-1 removes (not adds) a client-position surface; Conv-2 `windowDurationSeconds` is server-derived push-only. 3 MINOR hardening applied (debounce promoted to normative MUST; H.114 gained a client-independence negative; the A3 positioned-respawn invariant flagged as protected).
+- **Build-from-artifact gate → 1 BLOCKING + 2 IMPORTANT + 3 MINOR, ALL FIXED in-session:**
+  - **BLOCKING** — the round-11 respawn re-add was a *direct* `CharacterAdded` write racing the buffered departure drain (ordering unspecified, re-opening the R4-5 buffered-vs-direct asymmetry). **Fix:** routed the re-add through a new buffered `_pendingReadds` queue + `_enqueueReadd` seam, drained in `_step` AFTER the departure drain (so a same-tick death+respawn nets to alive). The round-11 "sanctioned direct add" exemption (H.110) is RETIRED — no direct alive-set mutation remains. Updated C.10 schema/desc, C.8 `_step` order, C.9 step c (wipe checked after BOTH drains), C.16 seam, H.108, H.110, init, invariant.
+  - **IMPORTANT-1** — C.10 "never set for wipe" contradicted step (b) stamping the grace clock on a wipe tick → reworded to acknowledge the benign transient (stamped but never read; wipe resolves the same tick).
+  - **IMPORTANT-2** — C.14 + C.15 `OnBeaconWindowFailed` rows still defined `scatter` as the retired window-END condition → updated to the continuous-hold definition.
+  - **3 MINOR** — BC5 description round-3 semantics (fixed); BCT4/BCT-DEFEAT side-effect cells omit `_lineBreakEmptySince=nil` (covered by the centralized cleanup, accepted); H.73 negative (adequately references H.85/H.114).
+
+**Verdict shape:** the recurring reconciliation-miss class re-appeared a 4th time (2 signal-table rows + a side-effect contradiction) AND the continuous-hold widening newly exposed the round-11 respawn seam — all caught by the widened build-from-artifact gate, all fixed in-session, and confined to seams the gate's new within-section/side-effect scope is designed to catch. The KITING thesis (continuous hold = "hold the line") is sound and the authority chain held a 5th round. **Round-13 is a patch, not a verdict.** NEXT = round-14 full 7-spec `/design-review` (the closure gate); the round-14 self-stress MUST carry the within-section table/prose + side-effect-column + respawn-seam reconciliation checklist. **DO NOT predict APPROVED for round-14.** Registry: `BEACON_LINE_BREAK_GRACE` added; BEACON_HOLD_RADIUS/ESCALATION_LEAD notes updated. Branch `crafting-round2-patch`; rounds 3–13 work all still NOT committed. **User chose to STOP — round-14 in a fresh session.**
+
+---
+
+## Review — 2026-06-05 — Verdict: NEEDS REVISION (round-14 full-panel closure gate)
+
+**Scope signal:** L (verging XL — 6 dependencies, 4 unwritten with 2 load-bearing [RM, PA]; 7 formulas; win-condition cross-cutting; 109 ACs; multiple new-ADR obligations)
+**Specialists:** game-designer, economy-designer, network-programmer, ux-designer, qa-lead, build-from-artifact lens (via general-purpose — gameplay-programmer subagent type avoided per prior delivery failures), creative-director (senior synthesis). **systems-designer's dedicated lens failed to deliver (twice this session — its final message was a truncated reasoning line both times); its formula/state-machine domain was absorbed by the build-from-artifact trace, which independently found the load-bearing ordering defects (B-1 precedence, the _step reorder seams).**
+**Review depth:** full — the designated single closure gate after the round-13 authoring pass + two narrow gates.
+**Prior verdict resolved:** Round-13's authoring pass (KITING fail-fast continuous-hold + grace; the 5 round-12 convergences; the buffered respawn re-add) — **YES at the rule/schema level, verified.** Conv-1 (canister→beacon-position, all 7 co-referencing cells) and Conv-2 (windowDurationSeconds everywhere + H.116) are confirmed reconciled clean. But round-13's OWN additions (the new `OnBeaconLineBreak` signal + the C.9 step b/c/d reorder) re-opened the recurring reconciliation/spec class a 5th time at that new surface.
+
+### Summary
+
+**Unanimous NEEDS REVISION — all six delivering lenses (none MAJOR, none APPROVED). 13th consecutive non-APPROVED; 4th consecutive non-MAJOR.** CD synthesis: **trajectory still converging, not stalled — but this is the first round whose blocking surface is design-deep rather than spec-mechanical.** The round-13 continuous-hold thesis is **SOUND — protect it** (it genuinely closes KITING and dissolves the ux-B12-2 hysteresis trap, verified in C.9/C.10). **Positive finding to PROTECT (re-confirmed a 6th consecutive round, no regression):** network — **AUTHORITY-CHAIN STATUS: SOUND**; the continuous in-radius determination is fully server-authoritative (positions via `_memberPosition`, never a client claim), the grace clock is server-only, `OnBeaconLineBreak` is push-only, `_pendingReadds` is never client-asserted, Conv-1/Conv-2 carry no client coordinate, BCT3 attribution + the `runOutcomeResolved` latch integrity hold. Neither network BLOCKING is a forge hole. Authority wins over blocker-closure.
+
+### Headline finding (design-level — needs a CD ruling, not a transcription fix)
+
+- **The "SENTRY" successor to KITING [game-designer F1].** Closing KITING pushed optimal play one ring outward: `BEACON_HOLD_RADIUS = 30` (a 60-stud-diameter sphere covering most of a safe room) + the `>=1-in-radius` rule make the optimal line "appoint ONE member to camp a defensible corner at ~28 studs while everyone else plays freely" — not Section B's "hold the line." Not an exploit; game-legal optimal play that contradicts the fantasy. The G.6 "too high" note only addresses 45+ studs; the 30 default may already be too generous. **Ruling needed:** reduce the radius (~10-15 studs) and/or require `ceil(aliveMembers/2)` holders rather than `>=1`.
+
+### Strongest convergence (the most reliable signal)
+
+- **QUADRUPLE-lens — the `OnBeaconLineBreak broken=false` debounce is a normative MUST with no concrete algorithm** *(network N14-B2, ux Finding-2, qa F-T3-2, build-from-artifact I-2)*. "Debounce to the `_lineBreakEmptySince` reset" is circular (the reset is what flaps). Result: every implementer builds a different debounce; a boundary-oscillating sole holder flaps the **squad-level win-state banner** at up to 60 Hz — a WCAG 2.3.1 flash violation H.95 doesn't cover, with no covering AC. Fix: add a `BEACON_LINE_BREAK_RESTORE_DEBOUNCE` knob + a concrete rule (min consecutive non-empty ticks) + an AC; extend H.95.
+
+### Other blocking — design rulings needed
+
+- **[game F2]** Signal Anchor's BC4 value is structurally degraded under continuous-hold (can't reposition/dodge by relocating; single-shot; the predator's commit is already audible). Section B's "decisive during the survival window" is now partly false. Redesign its BC4 role or honestly reframe it as pre-activation recon.
+- **[game F4 vs ux F1 — the load-bearing DISAGREEMENT]** `BEACON_LINE_BREAK_GRACE` is over-constrained from BOTH ends: game-designer wants the upper bound CAPPED (~4 s — G.6 itself says 6 s reopens kiting; no config-guard like H.105) while ux-designer shows the 3 s default is mobile-UNRECOVERABLE (perception ~0.3-0.8 s + orientation ~0.3-0.6 s + traverse >=1.4 s ~ 3.0 s mid-case, breaking the "scatter-defeat is never an unsignalled loss" promise — a signalled-but-impossible loss is worse than a silent one). Likely resolved by changing a DIFFERENT variable — shrink the hold radius (ruling above) so a shorter grace is traversable. **This is the CD's load-bearing round-15 ruling.**
+- **[game F5]** In-window scatter-to-craft line: a member can leave the hold, craft a Canister at a bench (the craft burst emits at `benchPosition`, not the beacon), and re-enter before grace. In-window *use* emits at the beacon (EC-3); in-window *craft* does not. Ruling on whether this is acceptable.
+- **[game F6]** The "loud finale" threat is entirely deferred to unwritten PA; under continuous-hold the squad can't flee, so if PA one-shots the holder, BC4 is a guaranteed loss. Escalate `PREDATOR_BC4_MIN_COMMIT` from "an AC the future GDD must satisfy" to a design note specifying the predator-vs-held-squad interaction.
+- **[economy E-1]** The `canister_restore < 3.5 s` ceiling derivation is circular/unit-dependent — it implicitly assumes `OXYGEN_DRAIN_BC4_FLOOR` is normalized to 1.0/s; RM could declare compliance in absolute units while the economy breaks. Restate the F.4 inequality unit-independently (`ITEM_STACK_MAX * canister_restore_s * DRAIN_per_s < oxygen_pool_critical`).
+- **[economy E-2 — CD adjudicated economy correct vs the standing fence]** RESONANT's only non-Beacon consumer is the Coil, whose value is PA-gated — so pre-PA, 2 of 3 node tiers are Beacon-components-only and the catalog is "2 decorative items + 1 win-con." The *values* are fenced, but the *structural* "does any node tier have a rational non-Beacon consumer pre-PA" question is in-scope. Add a binding minimum (RM/PA must make >=1 Coil worth crafting per winning run) or honestly declare RESONANT a Beacon-only material.
+
+### Other blocking — mechanical / spec-completeness (no ruling needed)
+
+- **[build-from-artifact B-1 — sharpest]** Scatter-vs-wipe precedence inverts on the grace-expiry-and-death tick: C.9 step (b) fires `OnBeaconWindowFailed(reason="scatter")` and latches `runOutcomeResolved` BEFORE step (c)'s wipe drain — contradicting "wipe takes precedence" (E.24/H.115). Make step (b) compute-only; fire the scatter terminal after step (c), gated on `aliveMembers` still non-empty.
+- **[network N14-B1]** `OnBeaconLineBreak` fires on the wipe tick, contradicting C.14's "NOT fired for the wipe path." Add a `runOutcomeResolved` guard before C.9 step (d) + an AC that it never fires on a tick `OnBeaconWindowFailed` fires.
+- **[ux F3]** The HOLDING/BROKEN binary — the most safety-critical HUD element — has no colorblind-safe (shape/icon) encoding, unlike the locked surface-4 Coil fix. Lock a shape/icon redundancy + AC.
+- **[build B-3]** The position-validity re-add gate is untestable: `_enqueueReadd` fires "only after the HRP exists AND is positioned" but "positioned" has no observable predicate. Specify the concrete production trigger.
+- **[build B-5]** `OnBeaconActivated` and `OnEscapeBeaconActivated` both fire on the same tick with identical payloads and both "open the survival-window countdown" — no rule for which the client acts on; UI.3 lists only the former. Assign each a single non-overlapping consumer + add the missing UI.3 row.
+- **[qa F-T2-1]** H.108 doesn't drive the re-add through the `_enqueueReadd` seam in its WHEN (a tester could use a real `CharacterAdded` — an illegal live dependency), and there is no AC for the `_enqueueReadd` de-dup. Add both.
+- **[qa F-T3-1]** No AC for the "break-within-grace -> recover -> subsequently win" path — the exact scenario that justifies the grace existing. An impl that resets the clock but still fires scatter at window-end would pass the current suite.
+
+### Recommended (fold into the round-15 authoring pass)
+
+game: 2-player bench-vs-hold inversion -> make bench<->beacon spacing a BLOCKING F.2 LD obligation; Section B honesty on the 3-4-player "overlapping 2-holder coverage" optimal; 3D-distance upper-floor safe-hide; surface-13 line-break-countdown vs escalation-lead overlap priority; the 31-33-stud hysteresis-band vs strict-binary residual disagreement. economy: EC-3 made the beacon-position Canister emission a stale bunker-counter rationale (reframe G.4/E.32/C.5.6a — the predator is already committed to the beacon); C.2 18-gather sanity check understates Canister demand ~4-5x; add the gather-budget order-of-magnitude (a real LD node-density dependency); `SQUAD_INVENTORY_TYPE_CAP=8` is a dead knob. network: lock `OnOxygenPulseRequest` fire-and-forget (else breaks H.80 zero-yield); add `AND NOT runOutcomeResolved` to the in-window Canister emission (post-wipe emission into an ended run); specify `_craftSessions` RunEnded cleanup (round-12 REC-5 still open). ux: add the BROKEN grace-countdown to H.111 reduced-motion; lock the beacon direction-vector in the collapsed "N/M holding" state on 375pt; scope the gamepad abort-haptic gamepad-only + distinguish abort/commit pulses; define the Conv-5 escalation animation; <=2-banner coalesce priority. build: define a named `_runEndCleanup()` with an explicit clear-list (the "centralized cleanup" claim has no named function); pin D.1 BT2/BT4 anchor-reset timing; bind the interim re-add connections + supersession-latch lifecycle at RunStarted; state the one-tick enqueue->drain lag's effect on the continuous grace. qa: ~14 AC fixes (H.38 Logic/Integration split; H.114(d) trivially-true headless; H.115/H.116/H.73/H.89 setup ambiguities; H.57 mislabel; H.95/H.111 dual-label; H.66 split; second-break-recover-cycle AC; Conv-4 BT3-suppression AC).
+
+### Specialist Disagreements (adjudicated by creative-director)
+
+- **Grace duration (game-designer vs ux-designer)** — genuinely incompatible constraints on the same dial (cap ~4 s vs raise to 5-6 s). CD: not silently resolved — flagged as the load-bearing round-15 ruling; likely resolved by shrinking `BEACON_HOLD_RADIUS` so a shorter grace is traversable. **User's call.**
+- **Aid-necessity fence (economy E-2 vs the standing CD fence)** — CD ruling: the *values* are fenced on RM/PA, but the *structural* node-tier-consumer question is in-scope — economy is correct on the structural half.
+
+### Senior Verdict (creative-director)
+
+Trajectory still converging, not stalled. The reconciliation-miss class re-opening a 5th time is real but confined to the round-13 thesis's OWN new surface (the C.9 step b/c/d reorder + the `OnBeaconLineBreak` signal) while every old seam is confirmed reconciled — the under-scoped-gate signature (de-escalates), not the survived-a-converged-sweep signature (holds at MAJOR). Methodology-MAJOR arc stays resolved; network authority SOUND a 6th round. The continuous-hold thesis is sound; closing KITING simply exposed the next ring of optimal play (sentry-camping) and the new grace mechanism's spec gaps. Held at **NEEDS REVISION**.
+
+### Binding CD next-step sequence (user may override)
+
+- **Round-15 Step 1 — CD ruling session FIRST**, before any authoring: the 7 design rulings (BEACON_HOLD_RADIUS/holder-count, Signal Anchor BC4 role, the grace dial [the load-bearing one — resolve jointly with the radius], scatter-to-craft emission position, PA predator-vs-held-squad interaction, the unit-independent canister inequality, the RESONANT/Coil minimum-consumer).
+- **Step 2 — ONE authoring pass** closing the rulings + the ~9 mechanical/spec blockers (B-1 precedence, the debounce algorithm, the wipe-tick `OnBeaconLineBreak` guard, the colorblind encoding, the re-add predicate, the dual-signal consumer, the H.108 seam + de-dup AC, the break-within-grace-win AC, the mobile-recoverability AC). The pass MUST carry a reconciliation checklist covering the new-signal/new-mechanism seam class (a new signal must inherit its sibling's already-solved contracts — debounce, win-tick suppression, colorblind, reduced-motion).
+- **Step 3 — round-15 gates (NOT a full panel):** a re-scoped build-from-artifact gate (general-purpose fresh agent) covering the C.9 step b/c/d ordering + the new-signal contracts; a narrow network gate re-confirming authority on the radius/grace/debounce changes. Reserve the full 7-spec panel for round-16.
+- **Authority chain is a hard constraint on every fix.** **DO NOT predict APPROVED for round-16.**
+
+### Process note
+
+The gameplay-programmer subagent type remains unusable (not attempted this round); the systems-designer subagent type failed to deliver its final report twice this session (truncated reasoning line both times) — for round-15 gates, prefer the general-purpose agent type for the build-from-artifact lens, and if a dedicated systems lens is needed, instruct it explicitly that its FINAL message must BE the report. Two reusable patterns the CD recorded: **exploit-closure-exposes-next-ring** (closing one degenerate line moves optimal play one ring outward — re-stress the new boundary) and **new-signal-must-inherit-sibling's-solved-contract** (a newly-added signal must carry the debounce/suppression/accessibility contracts its sibling signals already solved).
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (round-13 authoring pass; ~2122 lines; NOT committed). Load-bearing defects: C.9 step (b)/(c)/(d) ordering (B-1 precedence + N14-B1 wipe-tick fire); the `OnBeaconLineBreak` debounce spec (C.10/C.14/C.15); `BEACON_HOLD_RADIUS = 30` (G.6, the sentry finding); `BEACON_LINE_BREAK_GRACE = 3 s` (G.6, the grace-dial disagreement); the C.10 `_pendingReadds`/`_enqueueReadd` position-validity predicate; the dual activation-signal HUD consumer (C.9 BCT3, C.14, UI.3); F.4 RM inequality (economy E-1) + OQ.15 (economy E-2).
+- Cross-cited still-blocking: `player-controller.md` (round-6 MAJOR — owes T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` respawn — all unverified-until-PC); `ecological-disturbance.md` (owns `BEACON_HALF_LIFE`; owes the R4-1 `[64,128]s` registry edit, backstopped by H.105). Not-Started + load-bearing for the fenced aid-necessity: `resource-management.md` (`OXYGEN_DRAIN_BC4_FLOOR`, `canister_restore`), `predator-ai.md` (`PREDATOR_BC4_MIN_COMMIT`); also Not-Started: `resource-node.md`, `hud.md`.
+- Registry: `design/registry/entities.yaml` (round-13 `BEACON_LINE_BREAK_GRACE` present; ED `BEACON_HALF_LIFE` value/range unchanged per coordination rules).
+
+**User chose to STOP and revise in a fresh session.** Branch `crafting-round2-patch`; rounds 3-14 work all still NOT committed.
+
+---
+
+## Authoring Pass — 2026-06-05 — Round-15 (CD ruling session + ~9 mechanical blockers) — NOT a verdict
+
+**Type:** Authoring pass (the CD-prescribed round-15: CD ruling session FIRST → ONE authoring pass → [pending] two narrow gates). This is a patch, NOT a `/design-review` verdict. Reconciliation checklist: `reviews/crafting-and-items-round15-patch-plan.md`.
+
+### CD rulings locked (user-approved 2026-06-05; all 4 forks = recommended option)
+1. **Hold-zone + grace (load-bearing):** `BEACON_HOLD_RADIUS` 30→**12**; hold requirement `>=1`→**`requiredHolders = ceil(#aliveMembers/2)`** (`held ⟺ #windowAliveInRadius >= requiredHolders`); `BEACON_LINE_BREAK_GRACE` kept **3 s**, range capped 0–6→**0–4**; mid-window line-break threshold moves "empty"→"below requiredHolders". Resolves the round-14 game-vs-ux grace disagreement by shrinking the radius (3 s is mobile-traversable in a 12-stud zone) rather than stretching the grace. Closes the **SENTRY** line (one of four can no longer hold for the rest). Lone survivor still wins (`ceil(1/2)=1`).
+2. **Signal Anchor (game F2):** reframed as **pre-activation / opening-read recon**; dropped the "decisive during the survival window" claim (Section B + C.7).
+3. **In-window craft (game F5):** in-window craft burst **emits at beacon position** (E.17 rewrite + C.8 BT3 BC4-conditional `emitPosition` + H.52 rewrite), parallel to in-window Canister use (E.32).
+4. **RESONANT (economy E-2):** **binding RM/PA forward obligation** — ≥1 Dampener Coil worth crafting per winning run (F.4 PA row (d) + OQ.15 update; honest fallback = declare RESONANT Beacon-only + recut the Coil).
+5. **E-1 (default):** F.4 RM oxygen inequality restated **unit-independently** (`oxygen_pool_start + ITEM_STACK_MAX × canister_restore_oxygen < BEACON_SURVIVAL_WINDOW_min × OXYGEN_DRAIN_BC4_FLOOR`, all in oxygen units) — the `< 3.5 s` ceiling is now illustrative only.
+6. **F6 (default):** `PREDATOR_BC4_MIN_COMMIT` escalated to a **two-sided** binding obligation (F.4 PA row (c)): telegraph the BC4 commit with reaction lead + no one-shot of a sole holder; **BC4 must be winnable by holding** (C.5.6a aid-necessity note).
+
+### Mechanical blockers closed (no ruling)
+- **Quadruple-lens debounce (the strongest round-14 signal):** new `BEACON_LINE_BREAK_RESTORE_DEBOUNCE` knob (6 ticks) + `_lineBreakRestoreTicks` RunSession counter + **concrete rule** (`broken=true` immediate, `broken=false` only after N consecutive at-threshold ticks) — **replacing the circular "debounce to the `_lineBreakSince` reset" in the C.14 signal-def**; extended H.95 + new H.119.
+- **B-1 scatter-vs-wipe precedence:** C.9 step (b) is now compute-only; the scatter terminal fires in step (c) after both drains, gated on `aliveMembers` non-empty, so a same-tick wipe wins (H.115).
+- **N14-B1 wipe-tick guard:** step (d) (and `OnBeaconLineBreak`) skipped entirely when `runOutcomeResolved` is set this tick.
+- **ux F3 colorblind:** HOLDING/BROKEN carries a closed-ring/broken-ring shape glyph, not color alone (C.9 step d, C.10, C.14, UI-13, H.95).
+- **B-3 positioned predicate:** concrete observable `hrp.Position.Magnitude > POSITION_SETTLED_EPSILON` (new G.6 knob) gating `_enqueueReadd` (C.10).
+- **B-5 dual activation signal:** `OnBeaconActivated` = activation cue only; `OnEscapeBeaconActivated` = countdown owner (single non-overlapping consumers; added the missing UI.3 row).
+- **qa F-T2-1:** H.108 WHEN now drives the re-add through `_enqueueReadd` + a de-dup variant.
+- **qa F-T3-1:** new H.120 (break-within-grace → recover → WIN).
+- **ux F1:** new H.121 (mobile-recoverability: 12-stud traverse < 3 s grace).
+
+### Field rename
+`_lineBreakEmptySince` → `_lineBreakSince` (the trigger is now "below threshold", not "empty") — global; 0 occurrences of the old name remain in the GDD.
+
+### Reconciliation checklist (the round-14-mandated new-signal-inherits-sibling's-contracts sweep)
+Every hold-predicate surface moved from `>=1`/"empty"/30-stud to `requiredHolders`/"below threshold"/12-stud: Section B, C.5.6a (victory/defeat/aid), C.9 (BC5/BCT4/BCT-DEFEAT/concurrency/steps a–d/post-prose), C.10 (windowAliveInRadius derivation/`_lineBreakSince`/hold-state/invariants/init/`aliveMembers`), C.12/C.14 (PC contract + `OnBeaconWindowFailed`/`OnBeaconLineBreak` defs), E.17/E.24/E.27/E.30, F.2/F.4 PC rows, UI surface 13, and ACs H.44/H.52/H.73/H.77/H.85/H.89/H.92/H.108/H.114. Confirmed only the unrelated `SIGNAL_ANCHOR_DETECTION_RADIUS = 30` remains at 30.
+
+### Counts
+ACs 109→**113** (H.118 respawn, H.119 restore-debounce, H.120 break-recover-win, H.121 mobile-recoverability); edge cases +1 (E.33); knobs +3 (`BEACON_HOLD_MIN_HOLDERS` derived, `BEACON_LINE_BREAK_RESTORE_DEBOUNCE`, `POSITION_SETTLED_EPSILON`) + 1 range cap; RunSession +1 field (`_lineBreakRestoreTicks`). `entities.yaml` updated (radius 12, grace 0–4, rename, +3 constants).
+
+### Flagged to user (awaiting confirmation)
+**E.33 — respawn raises `requiredHolders` mid-window** (2→3 alive moves required 1→2; a respawned member spawns out-of-radius, so a previously-sufficient hold can briefly fall below threshold and must recover within the grace). A deliberate consequence of "half the *living* squad holds"; documented + made recoverable (12-stud radius + 3 s grace), but a feel trade the user should confirm. Easy denominator swap (max-alive-so-far / starting count) if it plays badly.
+
+### Round-15 narrow gates — RAN SAME SESSION (2026-06-05), findings fixed in-session
+
+Both CD-prescribed narrow gates ran (build-from-artifact via **general-purpose**; network via **network-programmer** — both delivered):
+
+- **Network re-confirm → AUTHORITY CHAIN SOUND (7th consecutive round, PROTECT).** All 5 vectors SOUND, **0 BLOCKING**: holder-threshold determination (positions via server `_memberPosition`, `requiredHolders` server-derived, no client assertion); respawn re-add (`_enqueueReadd`/`POSITION_SETTLED_EPSILON` server-side + idempotent); line-break terminal fail-closed + debounce/B-1 reorder open no race; in-window craft emits at server `beaconWorldPosition` (no client coordinate); `runOutcomeResolved` single-fire intact across the B-1 reorder. 3 non-blocking ADR-clarity notes (1 folded in — see below; 2 are forward ADR obligations: the near-origin-spawn `POSITION_SETTLED_EPSILON` fallback, already noted in C.10; and "the in-step return must precede (d)", now explicit).
+- **Build-from-artifact → 2 BLOCKING + 3 IMPORTANT + 3 MINOR, ALL fixed in-session** (BLOCKING + IMPORTANT + the dangling-ref MINOR; 2 cosmetic MINOR left, gate-confirmed harmless):
+  - **BLOCKING-1 (a defect this pass introduced):** the restore-debounce had a reset-on-fire contradiction (C.10 hold-state para said "resets the counter when it reaches the knob", contradicting the edge-trigger intent → duplicate `broken=false` fires every N ticks while holding). **Fixed:** the restore fires on the single tick `_lineBreakRestoreTicks` becomes *exactly equal* to the knob; NOT reset on fire (only reset to 0 on a below-threshold tick) → exactly one restore per line-break episode. Reconciled across C.9 step (d), the C.10 schema field, and the C.10 hold-state para; H.119 already asserts "exactly one".
+  - **BLOCKING-2 (a miss the sweep didn't catch):** the PC contract C.12.1(b) still encoded the retired round-3/9 scatter predicate ("window elapses … none within `BEACON_HOLD_RADIUS`"). **Fixed** to "below `requiredHolders` for the full grace, resolvable at any BC4 tick", matching C.9/E.27/C.14.
+  - **IMPORTANT-1:** the "post-segment guard returns before (d)" justification was structurally false (the post-segment guard runs *after* the segment that contains (d)). **Fixed:** (d) begins with its own in-step `if runOutcomeResolved then return`; reconciled in C.9 step (d) + C.10.
+  - **IMPORTANT-2:** `graceElapsed` local now explicitly initialised `false` before the (a)/(b) branch (C.9 steps intro) so step (c) reads it on either path.
+  - **IMPORTANT-3:** H.92 negative reworded — the 13.0-stud lone holder yields scatter **only after the grace elapses**, not an immediate terminal.
+  - **MINOR (fixed):** G.6 `BEACON_HOLD_MIN_HOLDERS` row dangling ref "E.34" → **E.33**.
+  - **Network note-1 folded in:** `requiredHolders` is computed from the **same pre-drain `aliveMembers`** the snapshot reads (top of tick), so numerator/denominator share one alive-set (C.10).
+  - **Build-gate VERDICT (post-fix):** the BC4 tick algorithm — snapshot → (a) victory / (b) compute line-break / (c) drain-then-wipe-vs-scatter / (d) presentation — and the `requiredHolders` threshold are self-consistent and buildable.
+
+### NEXT
+**Round-15 is COMPLETE** (authoring + both narrow gates, gate findings fixed). NEXT = **round-16 full 7-spec `/design-review`** (the full panel, deferred from round-15 per the CD prescription) in a fresh session. **DO NOT predict APPROVED for round-16** (the empirical "DO NOT predict APPROVED" caution has held 13 rounds). Branch `crafting-round2-patch`; rounds 3–15 all still NOT committed.
+
+---
+
+## Review — 2026-06-06 — Verdict: NEEDS REVISION (round-16 full-panel closure gate)
+
+**Scope signal:** XL (cross-cutting win-condition system; 6 declared dependencies, 4 not-yet-authored with 2 load-bearing [RM, PA]; 7+ formulas; 121 ACs; 5 flagged ADR obligations)
+**Specialists:** game-designer, systems-designer (via general-purpose — the systems-designer subagent type's prior delivery-failure), economy-designer, ux-designer (via general-purpose — re-spawned after the ux-designer subagent type returned only intermediate output, no final report), network-programmer, qa-lead (via general-purpose — re-spawned for the same non-delivery reason), creative-director (senior synthesis). **All six delivering lenses returned NEEDS REVISION.**
+**Review depth:** full — the single closure gate after the round-15 authoring pass + two narrow gates (deferred from round-15 per the CD prescription).
+**Prior verdict resolved:** Round-15's authoring pass (the SENTRY fix `BEACON_HOLD_RADIUS` 30→12 + `requiredHolders = ceil(#aliveMembers/2)`; the quadruple-lens restore debounce; B-1 scatter-vs-wipe precedence; N14-B1 wipe-tick guard; ux F3 colorblind; B-3 positioned predicate; B-5 dual signal; the 4 CD rulings) — **YES at the rule/schema level for most items, verified.** But **both round-15 headline deliverables failed to fully hold** (the 30→12 radius left 5 stale `30 studs` literals; the restore debounce fixed only the `broken=false` edge while its ACs assert the `broken=true` behaviour backwards), so the recurring reconciliation/spec class re-appeared a 6th time — again confined to round-15's OWN new surface.
+
+### Summary
+
+**Unanimous NEEDS REVISION across all six delivering lenses + CD (none MAJOR, none APPROVED). 14th consecutive non-APPROVED; 5th consecutive non-MAJOR.** The continuous-hold + holder-threshold thesis is **SOUND — protect it.** **Network re-confirmed AUTHORITY/ATTRIBUTION CHAIN SOUND an 8th consecutive round (PROTECT)** — all 5 forge vectors re-derived against the round-15 changes (the `requiredHolders` derivation, the in-window Canister emission position, the buffered re-add, the restore debounce); no forge path. Held at NEEDS REVISION (not MAJOR): the prior MAJOR holds (rounds 4/6/8/10/14) were *sweep-methodology* failures; round-16 is a closure gate against a ruling+authoring round where the recurrence is **single-mechanism and fully enumerable** (seven concentrated misses, not a diffuse class) and qa verified the AC section's hold-rule wording is itself clean. Every blocker is closable in one authoring pass.
+
+### Strongest convergences
+
+- **Stale `BEACON_HOLD_RADIUS = 30 studs` survives the 30→12 change in 3 player-facing locations [systems B1 / game B-2 / ux B-UX-1 — TRIPLE].** Worst: **VA.3 Moment 26 (~line 1136)** — the worldspace ground-ring (the primary in-world "where do I stand to win" cue) authored at **2.5× the real win radius**, actively mis-signalling the win zone → manufactures the unsignalled loss the continuous-hold redesign fights. Also **F.2 LD row (~line 895)** (LD validation at 2.5× radius) and **UI.5 item 4 (~lines 1262/1264)** (the `/ux-design` brief). *(`SIGNAL_ANCHOR_DETECTION_RADIUS = 30` is a different, legitimate knob — leave it.)*
+- **The round-15 restore-debounce is mechanically incomplete + its ACs invert the rule [systems B2 (strongest) / qa B1 — AC-vs-spec contradiction; ux R-UX-1 concurs].** Only `broken=false` is debounced; `broken=true` re-fires on EVERY below-threshold tick (~30/s for a boundary oscillation). **H.119 + H.95 assert "at most one `broken=true`"** — an impl matching the C.9 step-(d)/C.10 rule FAILS H.119; one passing H.119 VIOLATES the spec. The "quadruple-lens flap fix" only half-closed.
+- **Post-defeat orphaned in-window Canister emission [network BLOCKING-1 / qa B2 — double].** `beaconActivated && !beaconWindowSurvived` stays true after a *defeat* (the flag is set only on victory); a `RequestUseItem` interleaving with the Heartbeat handler between ticks fires `DisturbanceService:Emit` at a stale `beaconWorldPosition` into an ended run. Fix: predicate → `beaconActivated && not runOutcomeResolved` in C.6/C.11/E.32/C.15 + a covering AC (none exists). *(Carryover from round-14 REC — not applied in round-15.)*
+- **E.33 respawn-raises-`requiredHolders` [game B-4 / ux B-UX-2 / systems R2 / qa R3 — QUADRUPLE].** A respawn (2→3 alive) raises the threshold 1→2 and can force a line-break the holders didn't cause — flagged "awaiting user confirm." Contradicts Section B; has **no HUD affordance explaining the cause**; H.118 [P0] locks the gate to an unconfirmed denominator.
+
+### Other blocking
+
+- **F.6 line 941 "Replace with the 8 named events" → should be 7** [game B-1 / systems B3 / qa R1] — the Squad Relay cut made it 7 everywhere else; would steer the PC author to a non-existent 8th event.
+- **C.15 `OnBeaconWindowFailed` scatter description still uses round-13 "none in radius"** [game B-3] — not the round-15 `requiredHolders` rule; a HUD/PC programmer would implement scatter as "zero holders," wrong for 3–4-player squads.
+- **Economy honesty [economy ×3]:** the Signal Anchor's section claims it "bears directly on the window" while its own round-15 spec calls its in-window value "honestly limited" (internal contradiction; possible next cut candidate); RESONANT is functionally Beacon-components-only at MVP (only non-Beacon sink is the PA-gated Coil); the aid-necessity fence is buried in F.4 rather than surfacing at the point of each Overview/C.5.6a/Player-Fantasy claim. Also **C.6 Signal Anchor "deliberately shorter than the window" rationale is stale** vs the round-15 "pre-activation recon" reframe [game B-5].
+- **No AC for the round-15 `POSITION_SETTLED_EPSILON` re-add predicate** [qa B3] — the only round-15 rule with a named test seam and no AC.
+
+### Recommended
+
+economy: write the F.4 RM inverse inequality (tank-the-damage line) as a formula parallel to the supply-side one (H.106 currently non-exhaustive); state the C.2 illustrative-loadout opportunity cost. network (round-14 carryover, still unapplied): `reason` typed `"scatter"|"wipe"` union not `string`; specify `RequestUseItem`→RM call fire-and-forget (else threatens H.80 zero-yield); sweep `_craftSessions` at `RunEnded` (+AC); F.5 acknowledges `HumanoidRootPart.Position` is client-replicated (platform exploit caveat on the hold-radius predicate). ux: H.121 mobile recoverability is asserted not resolved (omits the knockback displacement that causes line-breaks + touch latency + unverified PC `MoveSpeed`) — re-run as a real gate once PC locks `MoveSpeed`; BC4 surface-13 internal overload on 375pt needs a worst-case wireframe. qa: `requiredHolders` enumeration AC for 1/2/3/4 alive = `{1,1,2,2}`; tighten H.121 to arithmetic; H.118 [P0] note that the denominator is a tuning knob pending playtest.
+
+### Nice-to-have
+
+systems: non-monotonic difficulty cliff (losing a 3rd teammate, 3→2 alive, *relaxes* `requiredHolders` 2→1) — surface as intended or flag. network: reconnect-during-BC4 end-to-end AC; `OnBeaconHoldStateChanged` bandwidth-bound AC. qa: cross-link H.120 from H.114; same-tick scatter-grace-expiry-AND-wipe sub-assertion (B-1 ordering as a test, not just prose). OQ.9 (bench-open RemoteEvent still unnamed after 16 rounds).
+
+### Specialist Disagreements (adjudicated by creative-director)
+
+- **F.6 "8 named events":** network-programmer read line 941 as "8 was the old count, consistent, no miss" — a MISREAD (the line is an instruction to use 8). game/systems/qa + the literal text say it's a stale reconciliation miss. **Adjudicated: real reconciliation miss → BLOCKING.**
+- **`broken=true` re-fire severity:** ux argues it's not a WCAG 2.3.1 flash (the banner stays visually BROKEN) and reframes the harm as alarm-fatigue + bandwidth; systems/qa hold it BLOCKING as an AC-vs-spec contradiction. **Adjudicated: BLOCKING — the AC-vs-spec contradiction is domain-independent of the WCAG question; ux's reframe is additive, not exculpatory.**
+
+### Binding CD rulings (user may override)
+
+- **R16-1 — E.33 denominator → FREEZE `requiredHolders` at window-open** (compute from the alive-set at BCT3, do not raise on a mid-window respawn) — eliminates the respawn-punishes-holders fantasy violation; a respawned member still helps by re-entering the hold but never *raises the bar*. (Alternates the user may pick: max-alive-so-far ratchet, or keep the current live-count.)
+- **R16-2 — `broken=true` → fire once per episode** (edge-triggered on the HOLDING→BROKEN transition, suppressed while `_lineBreakSince ~= nil`), reconciling C.9 step (d) / C.10 / C.14 with a corrected H.119 + H.95.
+- **R16-3 — Signal Anchor → reframe as an out-of-window (pre-activation) recon tool**; drop the "bears directly on the window" claim from C.2/Overview/Section B; reconcile the C.6 lifetime rationale.
+- **R16-4 — RESONANT → keep as a Beacon-justified premium material**; surface the aid-necessity honesty hedge at the point of each claim (Overview, C.5.6a, Player Fantasy) rather than recutting the Coil now; the binding RM/PA "≥1 Coil per winning run" AC (F.4 PA row d) stands.
+
+### Sequencing guidance (CD)
+
+Round-17 = **ONE authoring pass** (R16-1..R16-4 + the 7 BLOCKING + the recommended sweep) carrying **(a) a mandatory canonical-literal fanout sweep** — grep every constant *value* (not just the named-changed surface): all `30 studs` / `>=1` / "none in radius" / "8 events" residue — **and (b) a mandatory AC-vs-rule consistency pass** (the H.119 class: every AC re-derived against the rule it cites). Then **TWO narrow fresh-agent gates**: a network re-confirm (authority on the predicate + emission-guard changes) and a `general-purpose` build-from-artifact gate (the `broken=true` edge + the post-defeat emission guard + the stale-literal sweep verification) — **NOT the systems-designer / gameplay-programmer subagent types** (they fail to deliver in this harness; the ux-designer and qa-lead subagent types also returned no final report this round — prefer general-purpose with explicit "your final message must BE the report" instruction). Reserve the full 7-spec panel for round-18. **Authority chain is a hard constraint on every fix. DO NOT predict APPROVED for round-17.**
+
+### Process note
+
+This round, FOUR custom subagent types (systems-designer, gameplay-programmer per prior rounds; ux-designer + qa-lead this round) failed to deliver a final report — the systems lens was routed through general-purpose from the start; ux + qa were re-spawned through general-purpose after returning only intermediate output. **For future Crafting panels, route the systems / build / ux / qa lenses through general-purpose with an explicit "FINAL message must BE the structured report" instruction; only game-designer, economy-designer, network-programmer, and creative-director delivered as their native types this round.** No `SendMessage` continuation tool is available in this harness — a non-delivering agent must be re-spawned.
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (round-15 authoring pass; 2165 lines; NOT committed). Load-bearing defects: stale `BEACON_HOLD_RADIUS = 30` at F.2 (~895) / VA.3 Moment 26 (~1136) / UI.5 item 4 (~1262/1264); the `broken=true` re-fire (C.9 step d ~212, C.10 ~246/255, H.119 ~2119, H.95); the in-window Canister emission guard (C.6 ~126, C.11 ~317, E.32, C.15 ~404); F.6 "8 events" (~941); C.15 `OnBeaconWindowFailed` scatter prose (~419); E.33 / H.118 denominator (~867 / ~2109); C.6 Signal Anchor lifetime rationale (~128); economy honesty (Overview / C.5.6a / Section B / OQ.15).
+- Cross-cited still-blocking: `player-controller.md` (MAJOR REVISION — owes T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` — all unverified-until-PC, and PC `MoveSpeed` for H.121); `ecological-disturbance.md` (owns `BEACON_HALF_LIFE`; owes the R4-1 `[64,128]s` registry edit, backstopped by H.105). Not-Started + load-bearing for the fenced aid-necessity: `resource-management.md` (`OXYGEN_DRAIN_BC4_FLOOR`, `canister_restore_oxygen`), `predator-ai.md` (`PREDATOR_BC4_MIN_COMMIT` + the RESONANT/Coil consumer AC); also Not-Started: `resource-node.md`, `hud.md`.
+- Registry: `design/registry/entities.yaml` (round-15 `BEACON_HOLD_RADIUS = 12` + `requiredHolders` present; ED `BEACON_HALF_LIFE` unchanged per coordination rules).
+
+**User chose to STOP and revise in a fresh session.** Branch `crafting-round2-patch`; rounds 3–16 work all still NOT committed.
+
+---
+
+## Authoring Pass — 2026-06-06 — Round-17 (CD rulings R16-1..R16-4 + 7 BLOCKING + recommended sweep + both narrow gates) — NOT a verdict
+
+**Type:** Authoring pass executing the round-16 CD-prescribed sequence (ONE authoring pass carrying a mandatory canonical-literal fanout sweep + AC-vs-rule consistency pass → TWO narrow fresh-agent gates; the full panel is reserved for round-18). This is a patch, NOT a `/design-review` verdict. **DO NOT predict APPROVED for round-18.**
+
+### CD rulings applied (user-approved 2026-06-06; all 3 forks = the recommended option; R16-2 applied as prescribed)
+
+1. **R16-1 — `requiredHolders` FROZEN at window-open.** New `RunSession.requiredHoldersBaseline` (set ONCE at BCT3 step 6 = `ceil(#aliveMembers/2)`, frozen, cleared in `_runEndCleanup`); per-tick `requiredHolders = min(requiredHoldersBaseline, #aliveMembers)`. The `min` clamps DOWN to current alive (preserves the lone-survivor win `min(baseline,1)=1`; never demands more holders than alive) but NEVER UP — so a mid-window respawn can never raise the bar above the activation baseline (closes the round-16 quadruple-lens E.33 fantasy violation) and a death never relaxes it below baseline (monotonic difficulty — also closes the round-16 systems non-monotonic-cliff nice-to-have). Touched C.5.6a, C.9 BC5/BCT3 step 6/BCT4/BCT-DEFEAT/step a, C.10 schema + window-participant derivation + invariants + init + cleanup, G.6 `BEACON_HOLD_MIN_HOLDERS`, E.33 (rewritten — "respawn never raises the bar above the activation baseline"), H.118 (rewritten to test the freeze), new H.124 (baseline enumeration `{1,1,2,2}`). Added a C.10 **shorthand convention** note so the ~15 inline `ceil(#aliveMembers/2)` glosses are sanctioned shorthand for the frozen value.
+2. **R16-2 — `broken=true` EDGE-TRIGGERED (fire once per episode).** New `RunSession._lineBreakBroadcast` boolean (the last `broken` value pushed; false=HOLDING). `OnBeaconLineBreak(broken=true)` fires only on the HOLDING→BROKEN edge (when `_lineBreakBroadcast` was false), `broken=false` only on BROKEN→HOLDING after the `_lineBreakRestoreTicks` debounce — completing the round-15 restore debounce (which fixed only `broken=false`). Resolves the round-16 systems-B2/qa-B1 AC-vs-spec contradiction (H.119/H.95 assert "at most one `broken=true`"; the round-15 spec re-fired it every below-threshold tick). Touched C.9 step d, C.10 schema + hold-state para, C.14, H.119 (rewritten).
+3. **R16-3 — Signal Anchor reframed to pre-activation recon** at every claim point: C.2 effect cell + catalog note, C.6 lifetime rationale (the stale "deliberately shorter, place it during the window" framing retired), C.7 (already reframed round-15), Overview, OQ.15. Resolves the economy internal contradiction ("bears directly on the window" vs "honestly limited") + game B-5.
+4. **R16-4 — RESONANT kept Beacon-premium + honesty hedge surfaced** at the Overview + C.5.6a claim points (was buried in F.4): pre-PA, RESONANT is functionally a Beacon-premium material (its only non-Beacon sink, the Coil, is PA-gated); closure is the binding F.4 PA row (d) AC, with the honest fallback (declare Beacon-only + recut the Coil) noted.
+
+### The 7 BLOCKING + recommended sweep
+
+- **Stale `BEACON_HOLD_RADIUS = 30`→12** swept at F.2 LD row, VA.3 Moment 26 (the worldspace ground-ring — the worst miss, was at 2.5× the real win radius), UI.5 item 4 (+ a "render the ring at the true `BEACON_HOLD_RADIUS`, read from config" lock so it can't drift again). `SIGNAL_ANCHOR_DETECTION_RADIUS = 30` correctly left untouched (different knob).
+- **Post-defeat orphaned Canister emission (network BLOCKING-1):** guard changed `beaconActivated && !beaconWindowSurvived` → **`beaconActivated && not runOutcomeResolved`** at C.6, C.11, E.32, C.15 `RequestUseItem`, H.93 (variant c added) — `runOutcomeResolved` is set by every terminal (victory AND defeat) whereas `beaconWindowSurvived` flips only on victory, so the new guard closes the post-defeat orphaned-emission window.
+- **F.6 "8 named events"→7** (game/systems/qa); **C.15 `OnBeaconWindowFailed` scatter prose** "none in radius" → "fewer than `requiredHolders`" (game B-3); **`OnBeaconWindowFailed.reason`** typed `"scatter"|"wipe"` union (was `string`); **`POSITION_SETTLED_EPSILON` re-add predicate AC** added (H.123, qa B3 — the only round-15 rule with a named seam and no AC); **`_craftSessions` `_runEndCleanup` sweep** (H.122, round-12 REC-5 / network recommended); **RM fire-and-forget** note on `OnOxygenPulseRequest` (protects H.80 zero-yield).
+
+### Counts
+ACs 113→**116** (H.122 run-end cleanup sweep, H.123 re-add predicate, H.124 baseline enumeration; H.118 + H.119 revised; AC-section header corrected — it was stale at "109/H.117," predating round-15). +2 RunSession fields (`_lineBreakBroadcast`, `requiredHoldersBaseline`). Edge cases/VA moments/knobs unchanged. `entities.yaml`: `BEACON_HOLD_MIN_HOLDERS` (freeze) + `BEACON_LINE_BREAK_RESTORE_DEBOUNCE` (edge-trigger) notes updated.
+
+### Round-17 narrow gates — RAN same session (2026-06-06), findings fixed in-session
+
+- **Network re-confirm (network-programmer) → AUTHORITY/ATTRIBUTION CHAIN SOUND a 9th consecutive round (PROTECT); 0 BLOCKING.** Verified the frozen `requiredHolders` is fully server-derived (no client input; the `min` clamp not gameable), `_lineBreakBroadcast` is server-only push, the post-defeat guard closes the orphaned-emission window with attribution intact, the typed `reason` union has no security impact, and RM fire-and-forget is consistent with zero-yield. 2 clarity notes **folded in:** (1) BCT3 step 6 reads `aliveMembers` before the first BC4 drain (baseline + first snapshot share the pre-drain set); (2) `graceSeconds` is ignored on the `broken=false` payload.
+- **Build-from-artifact (general-purpose) → BUILDABLE; 0 BLOCKING.** Verified the R16-1 freeze is consistent end-to-end (declared/set/cleared/read; no surviving "recomputed each tick from current" claim; lone-survivor preserved; E.33/H.118/H.124 correct), the R16-2 edge-trigger is consistent across C.9/C.10/C.14/H.119, the post-defeat guard agrees across 5 locations, the 30→12 sweep is complete, and the 116-AC arithmetic is correct. **1 IMPORTANT fixed in-session:** the C.15 `RequestUseItem` cell still used the loose "if the beacon is in BC4" trigger → corrected to the authoritative `beaconActivated && not runOutcomeResolved` (the 5th canister-guard location). 1 MINOR label fixed (H.119 retagged round-16); MIN-2 bare glosses confirmed sanctioned by the C.10 shorthand convention (no fix).
+
+### NEXT
+**Round-18 full 7-spec `/design-review`** (the closure gate, reserved per the round-16 CD prescription). **DO NOT predict APPROVED for round-18** (the "DO NOT predict APPROVED" caution has held 14 rounds). **Process note:** route the systems / build / ux / qa lenses through **general-purpose** with an explicit "your FINAL message must BE the report" instruction; only game-designer, economy-designer, network-programmer, and creative-director deliver as their native subagent types in this harness; no `SendMessage` continuation exists — a non-delivering agent must be re-spawned.
+
+### Files Referenced
+- Target: `design/gdd/crafting-and-items.md` (round-17 authoring pass; NOT committed).
+- Registry: `design/registry/entities.yaml` (`BEACON_HOLD_MIN_HOLDERS` freeze + `BEACON_LINE_BREAK_RESTORE_DEBOUNCE` edge-trigger notes; ED `BEACON_HALF_LIFE` unchanged per coordination rules).
+- Cross-cited still-blocking (unchanged): `player-controller.md` (MAJOR REVISION — T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` / `MoveSpeed`); `ecological-disturbance.md` (`BEACON_HALF_LIFE` → `[64,128]s` registry edit, backstopped by H.105); Not-Started + load-bearing: `resource-management.md`, `predator-ai.md`; also Not-Started: `resource-node.md`, `hud.md`.
+
+**Branch `crafting-round2-patch`; rounds 3–17 work all still NOT committed.**
+
+---
+
+## Review — 2026-06-06 — Verdict: NEEDS REVISION (round-18 full-panel closure gate)
+
+**Scope signal:** XL (cross-cutting win-condition system; 6 declared dependencies, 4 not-yet-authored with 2 load-bearing [RM, PA]; 7+ formulas; 116 ACs; 5 flagged ADR obligations)
+**Specialists:** game-designer, economy-designer, network-programmer (native types); systems-designer, ux-designer, qa-lead, and a build-from-artifact gate (all via general-purpose per the round-16/17 process note — the native systems/ux/qa subagent types fail to deliver a final report in this harness); creative-director (senior synthesis). **All seven delivering lenses + CD.**
+**Review depth:** full — the single closure gate after the round-17 authoring pass (4 CD rulings R16-1..R16-4 + 7 BLOCKING + recommended sweep) and its two narrow gates.
+**Prior verdict resolved:** Round-17's authoring pass — **YES at the rule/schema level, verified.** The round-16 HEADLINE (the AC-vs-spec contradiction on `broken=true`) is **closed correctly** by R16-2: H.119 now tests the edge-trigger off `_lineBreakBroadcast` and AGREES with the C.9 step-d/C.10 rule (qa confirmed). The R16-1 freeze, the post-defeat Canister guard, F.6→7, and the 116-AC arithmetic all verified consistent. The defect class did NOT recur on the edge-trigger/freeze surface — but the 30→12 sweep recurred a 7th time on its own surface (see below).
+
+### Summary
+
+**NEEDS REVISION across all seven delivering lenses + CD (none MAJOR, none APPROVED). 15th consecutive non-APPROVED; 6th consecutive NEEDS REVISION.** Thesis (continuous-hold + frozen holder-threshold) **SOUND — protect it.** **Network re-confirmed AUTHORITY/ATTRIBUTION CHAIN SOUND a 10th consecutive round (PROTECT)** — frozen `requiredHolders` fully server-derived, `min`-clamp ungameable, `_lineBreakBroadcast` server-only, post-defeat guard correct at all 5 locations; no forge path through the round-17 surface. Held at NEEDS REVISION not MAJOR: the recurring reconciliation class this round is **single-mechanism and fully enumerable** (the 30→12 sweep again skipping non-executable prose — 4 literals), an authoring-round self-inflicted miss, NOT a sweep-methodology failure (the sweep caught every executable hit; it under-scoped to prose/seam/label text). Every blocker is closable in one authoring pass once two design forks are decided.
+
+### Strongest convergences
+
+- **Stale `BEACON_HOLD_RADIUS = 30` literals survive the round-17 30→12 sweep in non-executable prose [build-from-artifact ×3-4].** C.10 hysteresis rationale (~L257), C.16 `_memberPosition` seam descriptions (~L458/L467 — **load-bearing: these would make an implementer write the H.92 boundary test at 30.0 not 12.0**), H.92 summary label (~L1875). `SIGNAL_ANCHOR_DETECTION_RADIUS = 30` correctly NOT flagged (different knob). This is the round-16-prescribed-fanout-sweep miss class recurring on the round's own surface (7th time).
+- **NEW degenerate line — "activate-late-for-low-baseline" [game-designer B-1 + economy-designer R-4 — double].** R16-1's freeze closed respawn-RAISES-bar but opened the symmetric lane: a 4-player squad that delays activation until 2 teammates are dead locks `requiredHoldersBaseline = 1` for the whole window (needs 1 holder, not 2). Contradicts the "activate together at peak tension" fantasy + Pillar 2. The genuine new design fork round-17's own ruling opened.
+- **H.121 mobile recoverability asserted, not substantiated [ux-designer B-1 + qa-lead B-2 — double].** The 3s-grace model assumes the displaced holder is exactly at the 12-stud edge, but the knockback that CAUSES most line-breaks pushes outward (20–30 studs → traverse exceeds 3s); omits touch latency + unverified PC `MoveSpeed`. An advisory narrated-prose AC cannot close "the load-bearing game-vs-ux disagreement." Includes the still-missing BC4 worst-case surface-13 wireframe / pixel budget for 375pt.
+- **Frozen-baseline legibility [game-designer B-2 + ux-designer R-1 — double].** The "N/M holding" denominator (`M = requiredHolders`) changes silently mid-finale (death lowers it, respawn restores toward baseline) with no rule/AC/HUD cue explaining why.
+- **Signal Anchor trap-recipe [game-designer B-3 + economy-designer B-3/N-1 — double].** Post-R16-3 reframe its value is "honestly limited" but it costs as much as the Coil; by the GDD's own Patch/Wrap/Relay cut criteria it qualifies for cut-scrutiny; only structural defense is the PA-gated OQ.15 BIOMASS sink.
+
+### Other blocking
+
+- **Position-replication trust gap [network-programmer N18-B1, P0].** `HumanoidRootPart.Position` is client-replicated in Roblox — `_memberPosition` reads the client's last-replicated value. Spoof into radius = forge-win (`OnBeaconWindowSurvived`/T8); spoof out = grief line-break. Escalated round-16-nice-to-have → BLOCKING because R16-1's `requiredHolders=2`-for-a-4-squad means one spoofed position flips the threshold. No exploit edge case (E.20–E.28), no AC, no F.5 caveat.
+- **`graceSeconds` on `broken=false` [network-programmer N18-B2].** Relies on an unwritten HUD GDD honoring a "client IGNORES it" parenthetical; send `graceSeconds=0` server-side + AC.
+
+### Recommended
+
+economy: write the inverse-degenerate inequality `oxygen_pool_start < BEACON_SURVIVAL_WINDOW_min × OXYGEN_DRAIN_BC4_FLOOR` explicitly (F.4 RM / H.106 — round-16 recommendation still unfulfilled); propagate the R16-4 RESONANT honesty hedge to G.3 (the balance-pass entry point); include in-window Canister noise cost in the C.2 18-gather opportunity-cost framing; give MINERAL the same explicit sink analysis RESONANT now gets. qa: H.124 straddles (make the respawn sub-case a concrete THEN, don't cross-ref H.118); add a standalone AC for the same-tick scatter-grace-expiry-AND-wipe precedence (B-1 wipe-wins ordering); add a reconnect-during-BC4 end-to-end AC (mobile backgrounding). systems: tighten E.33 "monotonic difficulty" wording (the baseline is monotone; the live `requiredHolders` is non-monotone 2→1→2 by design); add shorthand-convention pointers inline to the bare `ceil(#aliveMembers/2)` glosses in P0 ACs H.73/H.85/E.27. game: write the Signal Anchor BIOMASS-sink justification now if keeping (R18-2).
+
+### Nice-to-have
+
+qa: H.95 (WCAG flash cap on the safety-critical win banner) labeled P2 → bump to P1. ux: affordability dimming (C.3.3/H.2) is color/opacity-only — add a text deficit label (violates the GDD's own colorblind rule); tap-hold 0.5s should respect the OS hold-duration accessibility setting.
+
+### Specialist Disagreements (adjudicated by creative-director)
+
+- **C.14 `OnBeaconLineBreak` (L389) stale?** systems-designer B-1 read it as still carrying round-13 "broken=false on re-establish" text → a BLOCKING reconciliation miss. build-from-artifact (sweep item-3 PASS) + ux-designer both verified it consistent. **Adjudicated (CD confirmed by re-reading L389): systems-designer MISREAD — L389 contains the full round-16 `_lineBreakBroadcast` edge-trigger + restore-debounce contract. DISMISSED, not a defect.** This keeps the recurrence single-mechanism (the stale-30 sweep), not two.
+- **N18-B1 severity:** systems/build read position-replication as out-of-scope; network escalated to BLOCKING. **Adjudicated: network is RIGHT — newly load-bearing because R16-1 made one spoofed position sufficient to flip the threshold.**
+
+### Binding CD rulings (user may override)
+
+- **R18-1 (USER FORK) — activate-late exploit → default: max-alive-so-far ratchet baseline** (compute `requiredHoldersBaseline` from the high-water alive count, ratcheted from run start, not the activation snapshot — delaying activation buys nothing; preserves R16-1's anti-respawn-raise + the lone-survivor `min`-clamp). Alternative: accept the late-activate lane as a legitimate tactical choice. CD recommends the ratchet (the lane contradicts the stated peak-tension fantasy and is a degenerate-optimal line, the class Patch/Wrap/Relay were cut for).
+- **R18-2 (USER FORK) — Signal Anchor → default: KEEP with the BIOMASS-sink justification written now** (as a concrete F.4 forward obligation, not implicit). Alternative: cut to a 4-recipe set. CD recommends KEEP (it is the only pre-activation read-the-threat tool, Pillar 1; not economically dominated the way Relay was).
+- **R18-3 (binding) — position-spoof → FENCE-style explicit risk-acceptance for MVP** (E.20–E.28 exploit edge case + F.5 caveat naming forge-win + grief-line-break vectors) + name the server-side position-delta velocity sanity check as the designated post-MVP hardening with a forward-obligation AC. Document-and-fence, do NOT build anti-cheat now (out of MVP scope; protects the 18-round-stabilized authority chain).
+- **R18-4 (binding) — send `graceSeconds = 0` on the `broken=false` payload** server-side + add AC; remove the "client IGNORES it" instruction.
+- **R18-5 — E.33 respawn-raises-live-`requiredHolders` feel (the round-17 "awaiting user confirm") is RESOLVED by R18-1** (under the ratchet, restore-toward-baseline is the intended legible recovery).
+
+### Sequencing guidance (CD)
+
+Round-19 = **confirm R18-1/R18-2 forks FIRST** → **ONE authoring pass** (5 BLOCKING + 10 recommended; all enumerable, no design unknowns once the forks land) ending in a **MANDATORY canonical-literal fanout sweep** — grep every numeric literal that appears in any executable rule (`12`, `3`, `6`, the holder threshold, the grace) across ALL prose/seam/label/AC text, not just rule sections (the durable fix for the recurring sweep-skips-prose class) — plus an AC-vs-rule consistency pass. Then **TWO narrow fresh-agent gates only**: network re-confirm (authority chain + the N18-B1/B2 caveats landed) and a re-scoped general-purpose build-from-artifact gate (literal fanout verified, R18-1 ratchet buildable). **Reserve the full 7-spec panel for round-20** (two full panels — 16, 18 — have now returned the same enumerable class; a third would confirm, not find). **Authority chain is a hard constraint on every fix. DO NOT predict APPROVED for round-19.**
+
+### Process note
+
+Native subagent types game-designer, economy-designer, network-programmer, creative-director delivered as themselves this round. The systems / ux / qa / build-from-artifact lenses were routed through **general-purpose** with an explicit "your FINAL message must BE the structured report" instruction and all delivered cleanly. No `SendMessage` continuation tool exists in this harness — a non-delivering agent must be re-spawned.
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (round-17 authoring pass; 2197 lines; NOT committed). Round-18 fix targets: stale-30 at C.10 ~L257 / C.16 ~L458/L467 / H.92 label ~L1875; E.33 activate-late + freeze ~L873-877 + C.9 BCT3 step 6 ~L198 + C.10 baseline derivation ~L248/L255; N18-B1 exploit edge case in E.20–E.28 + F.5 ~L933; N18-B2 `graceSeconds` C.9 step d ~L212 / C.14 ~L389; H.121 ~L2137-2142 + surface-13 wireframe UI.5 item 7.
+- Registry: `design/registry/entities.yaml` (round-15/16/17 values present; ED `BEACON_HALF_LIFE` unchanged per coordination rules).
+- Cross-cited still-blocking (unchanged): `player-controller.md` (MAJOR REVISION — T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` / `MoveSpeed`); `ecological-disturbance.md` (`BEACON_HALF_LIFE` → `[64,128]s` registry edit, backstopped by H.105). Not-Started + load-bearing for the fenced aid-necessity: `resource-management.md` (`OXYGEN_DRAIN_BC4_FLOOR`, `canister_restore_oxygen`), `predator-ai.md` (`PREDATOR_BC4_MIN_COMMIT` + RESONANT/Coil consumer AC); also Not-Started: `resource-node.md`, `hud.md`.
+
+**User chose to STOP and revise in a fresh session.** Branch `crafting-round2-patch`; rounds 3–17 work all still NOT committed.
+
+---
+
+## Authoring Pass — 2026-06-06 — Round-19 (R18-1/R18-2 forks confirmed + 5 BLOCKING + 10 recommended + 3 nice-to-haves + both narrow gates) — NOT a verdict
+
+**Type:** Authoring pass executing the round-18 CD-prescribed sequence (confirm the two USER FORKS → ONE authoring pass closing all 5 BLOCKING + 10 recommended, ending in the MANDATORY canonical-literal fanout sweep + AC-vs-rule pass → TWO narrow fresh-agent gates; the full panel is reserved for round-20). This is a patch, NOT a `/design-review` verdict. **DO NOT predict APPROVED for round-19/20.**
+
+### User forks confirmed (both = the CD-recommended option)
+- **R18-1 → max-alive-so-far ratchet baseline** (recommended). Closes the "activate-late-for-low-baseline" degenerate lane.
+- **R18-2 → KEEP the Signal Anchor (5 recipes) with the BIOMASS-sink justification written** (recommended).
+
+### The 5 BLOCKING — all closed
+1. **Stale `BEACON_HOLD_RADIUS = 30`→12 fanout sweep.** Fixed the 4 flagged prose/seam/label literals (C.10 hysteresis rationale; C.16 `_memberPosition` seam ×2 — the load-bearing H.92-calibration ones; H.92 section label) PLUS 2 the round-18 list missed (the Squad-Relay-cut rationale prose at C.2 + the recipe-table CUT row, genericised to `BEACON_HOLD_RADIUS`). A full re-grep confirms the only surviving `30`s are legitimate (`SIGNAL_ANCHOR_DETECTION_RADIUS = 30`, the `1–30`-tick debounce range, `1/30 s` Heartbeat dt, oxygen `30 s`, AC numbers, and intentional `30→12` history notes).
+2. **R18-1 — `requiredHoldersBaseline` now `ceil(peakAliveCount/2)` from a new max-alive-so-far ratchet field** (`peakAliveCount`: a RunSession field, init `#squadRoster` at RunStarted, ratcheted `max(...,#aliveMembers)` every tick, read once at BCT3 step 6), NOT the activation snapshot. Closes the activate-late lane (a 4-squad that waits for 2 deaths still gets baseline 2, not 1). Touched the C.10 schema + RunStarted init + the every-tick drain + BCT3 step 6 + the window-participant derivation + the shorthand convention + the invariants + C.5.6a + G.6 `BEACON_HOLD_MIN_HOLDERS`. **E.33 rewritten** to cover BOTH baseline edges (respawn-never-raises [freeze] + activate-late-never-lowers [ratchet]) with the tightened monotonic wording (baseline monotone-frozen; live `requiredHolders` non-monotone 2→1→2). **H.118 rewritten** peak-consistent with a freeze-discriminating variant; **H.124 restated** to the peak-source + a concrete inline respawn THEN (qa straddle fix); **new H.129** tests the ratchet / activate-late closure.
+3. **R18-3 — position-replication trust gap FENCED.** New exploit edge case **E.34** (forge-win + grief-line-break vectors, bounded MVP risk-acceptance, NOT anti-cheat) + an **F.5 caveat** (the `HumanoidRootPart.Position` client-replication note) + a **post-MVP velocity-check forward-obligation AC (H.126)** (`MAX_PLAYER_SPEED` teleport detector). Document-and-fence; no anti-cheat built in MVP.
+4. **R18-4 — `graceSeconds = 0` on the `broken=false` payload, sent server-side** (C.9 step d + both C.14 tables + new **H.125**); the round-16 "client IGNORES it" convention is retired.
+5. **H.121 mobile-recoverability substantiated.** Reframed from an asserted radius-edge claim into a **falsifiable JOINT inequality** `t_react + t_latency + (displacement / MoveSpeed) < BEACON_LINE_BREAK_GRACE`, where the displacement is bounded by a **new PA forward obligation `PREDATOR_BC4_MAX_KNOCKBACK`** (F.4 PA row c-mobile) — resolving the load-bearing game-vs-ux grace disagreement by bounding the knockback (PA), NOT stretching the grace (stays ≤ 4 s). Marked Integration / unverified-until-PA+PC. PLUS the locked **BC4 worst-case surface-13 375pt pixel budget** (UI.5 item 7 — ≤ 25% safe-area height, no row-expansion at 375pt, concrete wireframe a required `/ux-design` deliverable).
+
+### The 10 RECOMMENDED — all closed
+Explicit inverse-degenerate inequality `oxygen_pool_start < BEACON_SURVIVAL_WINDOW_min × OXYGEN_DRAIN_BC4_FLOOR` (F.4 RM); R16-4 RESONANT honesty hedge + a MINERAL sink analysis propagated to G.3 (the balance entry point); in-window Canister noise opportunity-cost in the C.2 18-gather framing; H.124 straddle → concrete respawn THEN; new **H.127** (same-tick scatter-grace-expiry-AND-wipe → wipe precedence) + **H.128** (reconnect-during-BC4); E.33 monotonic-difficulty wording tightened; shorthand-convention pointers added inline to H.73/H.85/E.27; Signal Anchor keep-justification written (R18-2 — sole pre-activation recon tool + BIOMASS/MINERAL sink, with an F.4 PA readable-approach forward fence).
+
+### Nice-to-haves (3, cheap)
+H.95 P2→P1 (it guards the safety-critical win banner); affordability text-deficit label on the dimmed-recipe AC H.2 (colorblind rule); tap-hold respects the OS hold-duration accessibility setting (UI.2).
+
+### Counts
+ACs **116 → 121** (H.125–H.129; H.118/H.121/H.124 revised). Edge cases corrected **→ 32** (E.34 added; the "30 through E.32" header was stale — E.33 was round-16 — corrected to "32 through E.34"). +1 RunSession field (`peakAliveCount`). +1 PA forward obligation (`PREDATOR_BC4_MAX_KNOCKBACK`). Registry `BEACON_HOLD_MIN_HOLDERS` updated to the ratchet source (denominator source now LOCKED, no longer a pending swap).
+
+### Round-19 narrow gates — RAN same session (2026-06-06), findings fixed in-session
+- **Network re-confirm (network-programmer) → AUTHORITY/ATTRIBUTION CHAIN SOUND an 11th consecutive round (PROTECT); 0 BLOCKING.** Verified `peakAliveCount` is fully server-derived and the ratchet+`min`-clamp ungameable; the E.34 position-spoof fence is honestly scoped and bounded (a client can spoof only its OWN one position; server-only flags + attribution untouched; no larger forge path — a spoof cannot skip the window or set the victory flag); `graceSeconds = 0` is presentation-only with zero security impact; H.125–H.129 + E.34 consistent with the server-authority model. 3 non-blocking clarity notes.
+- **Build-from-artifact (general-purpose) → BUILDABLE; 0 BLOCKING, 0 IMPORTANT.** Verified the R18-1 ratchet is consistent end-to-end (declared/init/ratcheted/read; no surviving activation-snapshot baseline computation; worked numbers correct; lone-survivor preserved), the 30→12 sweep is complete (only legitimate 30s remain), E.34/F.5/H.126 + graceSeconds=0 + H.121/PA-cap mutually consistent, and the counts are arithmetically correct (121 ACs through H.129, no dup/skip; 32 edge cases through E.34). **1 MINOR fixed in-session:** the second C.14 formal-table row omitted the `graceSeconds = 0` value for `broken=false` (a parallel-table parity gap, not a contradiction) — added.
+
+### NEXT
+**Round-20 full 7-spec `/design-review`** (the closure gate, reserved per the round-18 CD prescription — two full panels [16, 18] have now returned the same enumerable reconciliation class; the third confirms, not finds). **DO NOT predict APPROVED for round-20** (the caution has held 15 rounds). Process note: route the systems / ux / qa / build-from-artifact lenses through **general-purpose** ("your FINAL message must BE the report"); only game-designer, economy-designer, network-programmer, creative-director deliver as native types; no `SendMessage` — re-spawn a non-deliverer.
+
+### Files Referenced
+- Target: `design/gdd/crafting-and-items.md` (round-19 authoring pass; NOT committed).
+- Registry: `design/registry/entities.yaml` (`BEACON_HOLD_MIN_HOLDERS` → ratchet source).
+- Cross-cited still-blocking (unchanged): `player-controller.md` (MAJOR REVISION — T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` / `MoveSpeed`); `ecological-disturbance.md` (`BEACON_HALF_LIFE` → `[64,128]s`, backstopped by H.105). Not-Started + load-bearing: `resource-management.md` (`OXYGEN_DRAIN_BC4_FLOOR`, `canister_restore_oxygen`), `predator-ai.md` (`PREDATOR_BC4_MIN_COMMIT` + `PREDATOR_BC4_MAX_KNOCKBACK` + RESONANT/Coil consumer AC + Anchor-readable-approach); also Not-Started: `resource-node.md`, `hud.md`.
+
+**Branch `crafting-round2-patch`; rounds 3–19 work all still NOT committed.**
+
+---
+
+## Review — 2026-06-06 — Verdict: NEEDS REVISION → **APPROVED (accepted)** (round-20 full-panel closure gate + same-session closure pass)
+
+**Scope signal:** L (the GDD itself; cross-cutting win-condition system, 6 declared dependencies / 4 not-yet-authored with 2 load-bearing, 7+ formulas, 122 ACs, 5 flagged ADRs) — but the *remaining work* after the panel was **S** (one registry line + two design rulings with recommended defaults + one UX requirement+AC + clarity adds).
+**Specialists:** game-designer, economy-designer, network-programmer (native types); systems-designer, ux-designer, qa-lead, and a build-from-artifact gate (all via general-purpose per the round-16/17/18 process note — the native systems/ux/qa subagent types fail to deliver a final report in this harness); creative-director (senior synthesis). **All seven delivering lenses + CD.**
+**Review depth:** full — the third full panel (the closure gate reserved per the round-18 CD prescription: two full panels [16, 18] had returned the same enumerable reconciliation class; round-20 confirms, not finds).
+**Prior verdict resolved:** Round-19's authoring pass (R18-1 max-alive-so-far ratchet baseline; R18-2 keep Signal Anchor + BIOMASS-sink justification; the 5 round-18 BLOCKING + 10 recommended + the mandatory canonical-literal fanout sweep + AC-vs-rule pass) — **YES, verified.** The 19-round stale-literal/AC-vs-rule recurring class **did NOT recur in the GDD** (systems + build lenses both confirmed the sweep CLEAN; the C.10 shorthand convention is the structural fix that extinguished it). The class did, however, **relocate to the registry** (see RBI-1).
+
+### Summary
+
+**Panel verdict: NEEDS REVISION across all seven delivering lenses' synthesis (split 3 APPROVED/clean + 1 BUILDABLE vs 3 NEEDS REVISION) + CD. 16th consecutive non-APPROVED, 7th non-MAJOR.** Thesis (continuous-hold + frozen/ratcheted holder-threshold) **SOUND — PROTECT. Network re-confirmed AUTHORITY/ATTRIBUTION CHAIN SOUND a 12th consecutive round (0 BLOCKING — PROTECT):** the `peakAliveCount` ratchet is fully server-derived and ungameable; the E.34 position-spoof fence is honestly bounded (one own position only, no larger forge path, attribution intact); `graceSeconds=0` has no security impact; the post-defeat Canister guard is correct at all 5 sites; rate-limit math sound. **The mechanical spine is clean for the first time in 20 rounds** — AC arithmetic verified (122 live, no dup/skip; 32 edge cases), every formula boundary-safe, buildable-from-artifact, the AC-vs-rule contradiction class (the round-16 headline) closed and staying closed. The four open items were: one concrete registry contradiction, one UX legibility gap, two design positions the document had never explicitly staked, and an economy justification gap. **The user reviewed the closure pass and ACCEPTED the revisions, marking Crafting & Items APPROVED** (electing not to run a 7th full panel — the spine is verified clean by four independent lenses and the remaining items are advisory).
+
+### Required-before-implementation (4 BLOCKING) — ALL CLOSED in-session
+
+- **RBI-1 [economy EC-B1, verified by orchestrator]** — `design/registry/entities.yaml` had a **duplicate `notes:` key** on `MAGNITUDE_CANISTER_INWINDOW_USE` (L549 + L550). YAML resolves duplicate keys to the *last*, so a registry reader got L550 — which carried **both** the pre-EC-3 reversed emission position ("USING player's `HumanoidRootPart.Position`" instead of `beaconWorldPosition`) **and** the round-17-superseded guard (`beaconActivated && !beaconWindowSurvived` instead of `not runOutcomeResolved`). A build from it would reintroduce the scatter-to-breathe defect EC-3 foreclosed. → **Deleted L550; consolidated into one correct note.** *(This is the 19-round recurring reconciliation class, relocated from the GDD into the registry — the GDD's own sweep was clean.)*
+- **RBI-2 [game-designer G-B1]** — the "Pillar 1 enforced economically" claim (C.2) self-contradicted the all-BIOMASS gather line (gather cheap Light/BIOMASS, pool Beacon mats, stack Oxygen Canisters, rarely touch loud RESONANT/Heavy nodes — so quiet routing is *rewarded* in the gather phase, not *forced*). **Ruling (user, recommended default): accept it explicitly.** → C.2 narrowed: Pillar 1 in the gather phase rewards quiet routing but does not mandate loud gathers; the unavoidable loud beat is the finale. No forcing function added (would risk a new trap/dominant line of the Patch/Wrap/Relay class).
+- **RBI-3 [game-designer G-B2]** — 2-player squad → `requiredHolders = ceil(2/2) = 1`, so the 2nd player is free during the finale; the "hold the loudest thing TOGETHER / Pillar 2" fantasy doesn't bind for 2-player squads. **Ruling (user, recommended default): intended asymmetry.** → Section B note: one holds, one works the predator — the 2-player shape of the Pillar-2 fellowship test; a 2-holder floor is rejected (it would break the lone-survivor win C.17/E.30).
+- **RBI-4 [ux-designer UX-B1]** — the "N/M holding" denominator (M = `requiredHolders`) changes mid-finale (death lowers it via the min-clamp; respawn raises it toward the frozen baseline); E.33 *claimed* legibility but no UI requirement or AC delivered a cause cue — a silently shifting win-target reads as unfairness (worst when a respawn raises 1→2). → **Surface-13 REQUIRED denominator-change cue** (text + non-color, names the new value AND its cause; presentation-only; client-derivable; WCAG/reduced-motion bound) + covering AC **H.130**.
+
+### Also closed in-session (economy marked BLOCKING; CD treated as a clarity add since the inequality is mathematically sound)
+
+- **EC-B2** — the F.4 RM over-supplied oxygen inequality stresses against a full `ITEM_STACK_MAX = 10` Canister stack, but the justification for why 10 (vs a realistic ~3–4) is the right stress denominator was absent. → Added a BIOMASS-ceiling argument (Canisters cost 2 BIOMASS each, BIOMASS is the cheapest/most-plentiful tier, so a real run can stack to near-cap; RM must calibrate `OXYGEN_DRAIN_BC4_FLOOR` against the full-stack denominator).
+
+### Recommended (deferred to implementation / polish — NOT applied, logged here)
+
+- **economy:** G.3 should note MINERAL's "two consumers" edge over RESONANT collapses to one PA-gated consumer if the Anchor fails PA review (F.4 PA row e); the "Anchor cost-neutral at 3 gathers" phrasing is gather-count-neutral but ~31% cheaper in *disturbance* — reword; OQ.13 should note Canister-use *timing* (not just count) is a calibration lever.
+- **game-designer:** acknowledge the Anchor may be "nice-if-time" not decision-forcing (intended); add HUD forward obligations for per-member hold-status indicators and a "Beacon-craftable" squad signal (Pillar 2 legibility, F.4 HUD row).
+- **ux:** H.121's worked envelope hard-codes `MoveSpeed ≈ 16` — require re-derivation if PC ships a lower BC4 speed; promote the tap-hold OS-accessibility honoring from SHOULD to an AC-backed requirement.
+- **qa:** refresh the stale determinism-preamble enumeration (L1295) to include H.118/H.120/H.127/H.128 (no testability gap — each individually cites C.16).
+- **network:** stub a CI test for the H.126 post-MVP velocity check so the hardening doesn't slip a sprint gate; clarify `peakAliveCount` ratchets after *both* the departure and re-add drains; HUD-author note that `graceSeconds=0` on `broken=false`.
+
+### Specialist disagreements (adjudicated by creative-director)
+
+1. **Verdict split** (network/systems/qa APPROVED + build BUILDABLE vs game/economy/ux NEEDS REVISION) → the three clean lenses own the implementability spine (sound for the first time); the three NEEDS-REVISION lenses own pillar fidelity / legibility / economy honesty (open). Different axes, both right; verdict reflects the lower.
+2. **Has the recurring reconciliation class been extinguished?** → Extinguished in the GDD (systems + build verified CLEAN), but relocated to the registry (RBI-1). NEEDS REVISION not MAJOR — a single enumerable scope gap (the round-19 sweep covered the GDD, not `entities.yaml`), not a methodology failure.
+3. **Are G-B1/G-B2 blocking?** → BLOCKING at a closure gate (a self-contradicting pillar claim + an unexamined pillar edge), but closable by ruling + prose, not redesign.
+
+### Specialist note (positive dissent — PROTECT)
+
+network-programmer: the win-condition AUTHORITY/ATTRIBUTION chain is **SOUND — no forge path** (12th consecutive round). All five round-19-surface vectors re-derived. Any future change MUST NOT touch the server-authoritative completion/attribution path.
+
+### Counts
+
+ACs 121 → **122** (H.130 added). Edge cases unchanged (32). Both G-B1/G-B2 rulings = the user-confirmed recommended defaults. GDD header + Last-Updated + systems-index (row 6 status + effort row + approved/needing-revision metrics) all updated. `entities.yaml` `MAGNITUDE_CANISTER_INWINDOW_USE` de-duplicated.
+
+### Cross-GDD obligations still owed by siblings (unchanged, tracked for the implementation phase)
+
+- **PC** (MAJOR REVISION): T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` / `MoveSpeed`.
+- **ED** (In Review): `BEACON_HALF_LIFE` → `[64,128]s` registry edit (backstopped by H.105).
+- **RM** (Not Started, load-bearing): `OXYGEN_DRAIN_BC4_FLOOR`, `canister_restore_oxygen` (the F.4 oxygen inequalities + H.106).
+- **PA** (Not Started, load-bearing): `PREDATOR_BC4_MIN_COMMIT` + `PREDATOR_BC4_MAX_KNOCKBACK` + the RESONANT/Coil consumer AC + the Anchor readable-approach expectation.
+- **HUD** (Not Started): consume the C.14 client-bound signals incl. the new surface-13 denominator-change cue.
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (round-20 closure pass; 122 ACs; NOT committed). Edits: C.2 Pillar-1 claim narrowed; Section B 2-player asymmetry note; F.4 RM `ITEM_STACK_MAX` ceiling justification; UI.1 surface 13 denominator-change cue requirement; new AC H.130; header + Last-Updated + AC-section count (121→122) reconciled.
+- Registry: `design/registry/entities.yaml` (`MAGNITUDE_CANISTER_INWINDOW_USE` duplicate `notes:` key deleted).
+- Systems index: `design/gdd/systems-index.md` (Crafting row 6 → APPROVED-by-acceptance; effort row; approved 0→1 / needing-revision 3→2).
+
+**User ACCEPTED the revisions and marked Crafting & Items APPROVED. Branch `crafting-round2-patch`; rounds 3–20 work all still NOT committed (awaiting user instruction per CLAUDE.md).**

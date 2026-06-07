@@ -1,6 +1,6 @@
 # Unity 6.3 LTS — Breaking Changes
 
-**Last verified:** 2026-02-13
+**Last verified:** 2026-04-21
 
 This document tracks breaking API changes and behavioral differences between Unity 2022 LTS
 (likely in model training) and Unity 6.3 LTS (current version). Organized by risk level.
@@ -149,6 +149,87 @@ When upgrading from 2022 LTS to Unity 6.3 LTS:
 
 ---
 
+---
+
+## Additional Breaking Changes (Verified 2026-04-21)
+
+### GraphicsFormat Removals — COMPILE ERROR
+**Versions:** Unity 6.0+
+
+The following `GraphicsFormat` enum values were removed:
+
+```csharp
+// ❌ REMOVED — compile error
+GraphicsFormat.DepthAuto
+GraphicsFormat.ShadowAuto
+GraphicsFormat.VideoAuto
+
+// ✅ NEW — specify the format explicitly
+GraphicsFormat.D32_SFloat          // depth
+GraphicsFormat.D32_SFloat_S8_UInt  // depth + stencil
+```
+
+---
+
+### Object Finding API — Changed Signature
+**Versions:** Unity 6.0+
+
+```csharp
+// ❌ OLD (deprecated, implicit sort)
+var objs = Object.FindObjectsOfType<Enemy>();
+var obj  = Object.FindObjectOfType<Player>();
+
+// ✅ NEW — explicit sort mode required
+var objs = Object.FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+var obj  = Object.FindFirstObjectByType<Player>();   // deterministic
+var obj  = Object.FindAnyObjectByType<Player>();     // fastest, non-deterministic
+```
+
+**Impact**: Any initialization code using the old API produces deprecation warnings and potential sort-order bugs.
+
+---
+
+### SerializeField on Abstract Classes — COMPILE ERROR
+**Versions:** Unity 6.3+
+
+```csharp
+// ❌ COMPILE ERROR in Unity 6.3+
+public abstract class BaseEnemy : MonoBehaviour {
+    [SerializeField] private float _health; // error — abstract class
+}
+
+// ✅ Move to concrete types
+public class AlienEnemy : BaseEnemy {
+    [SerializeField] private float _health; // OK
+}
+```
+
+---
+
+### UI Toolkit Event Handler Methods — RENAMED
+**Versions:** Unity 6.0+
+
+```csharp
+// ❌ OLD
+protected override void ExecuteDefaultAction(EventBase evt) { }
+protected override void ExecuteDefaultActionAtTarget(EventBase evt) { }
+
+// ✅ NEW
+protected override void HandleEventBubbleUp(EventBase evt) { }
+protected override void HandleEventTrickleDown(EventBase evt) { }
+```
+
+---
+
+### URP AfterRendering Timing — BEHAVIOR CHANGE
+**Versions:** Unity 6.2+
+
+`AfterRendering` injection point now executes **after** final blit to back buffer (was before).
+If you need pre-blit behavior, use `AfterRenderingPostProcessing` instead.
+
+---
+
 **Sources:**
 - https://docs.unity3d.com/6000.0/Documentation/Manual/upgrade-guides.html
 - https://docs.unity3d.com/Packages/com.unity.entities@1.3/manual/upgrade-guide.html
+- https://docs.unity3d.com/6000.3/Documentation/Manual/WhatsNewUnity63.html

@@ -1,6 +1,6 @@
 # Unity 6.3 LTS — Current Best Practices
 
-**Last verified:** 2026-02-13
+**Last verified:** 2026-04-21
 
 Modern Unity 6 patterns that may not be in the LLM's training data.
 These are production-ready recommendations as of Unity 6.3 LTS.
@@ -328,7 +328,120 @@ Debug.Log($"Player {playerName} scored {score} points");
 
 ---
 
+---
+
+## Large Open World Optimization (Added 2026-04-21)
+
+### GPU Resident Drawer (URP) — High Priority for Terranova
+
+Transfers static geometry batching to GPU, dramatically reducing CPU overhead for large scenes with many repeated meshes (trees, rocks, environment props).
+
+**Requirements to enable:**
+1. Graphics Settings → Shader Stripping → `BatchRendererGroup Variants` = **Keep All**
+2. URP Asset → SRP Batcher = **Enabled**
+3. URP Asset → GPU Resident Drawer = **Instanced Drawing**
+4. Rendering Path = **Forward+** (recommended)
+5. Mesh Renderers must: use static GI only, not use Light Probe Proxy Volume
+
+**When to use**: Large open-world scenes with repeated meshes. Expected 2x+ improvement on CPU draw call overhead.
+
+---
+
+### Adaptive Probe Volumes — Replaces Manual Light Probes
+
+Automatically generates light probe grids based on geometry density. Eliminates tedious manual probe placement for large worlds.
+
+**Setup:**
+1. Lighting → Light Probe System → **Adaptive Probe Volumes**
+2. Create APV GameObject → Mode = **Global**
+3. Set all lights to **Mixed** or **Baked**
+4. Bake via Lighting window
+
+**Why this matters for Terranova**: Open-world environments with dynamic time-of-day or atmospheric lighting benefit enormously from APV — no more dark patches or bright seams between probe regions.
+
+---
+
+### Netcode for GameObjects 2.0 — Distributed Authority (Co-op)
+
+For Terranova's co-op mode (2–4 players, cooperative, not competitive):
+
+```csharp
+// ✅ Distributed Authority topology (Unity 6.0+)
+// Players own their own objects — no central authority required
+// Suitable for cooperative survival, NOT competitive PvP
+
+using Unity.Netcode;
+
+public class PlayerSurvival : NetworkBehaviour {
+    // NetworkVariable syncs state to all clients
+    private NetworkVariable<float> _oxygenLevel = new NetworkVariable<float>(100f);
+    private NetworkVariable<float> _disturbanceLevel = new NetworkVariable<float>(0f);
+
+    [ServerRpc(RequireOwnership = true)]
+    public void GatherResourceServerRpc(ResourceType type, float amount) {
+        // Server validates, adds disturbance, syncs state
+        _disturbanceLevel.Value += amount * ResourceDisturbanceCost(type);
+    }
+}
+```
+
+**Note**: Distributed Authority is peer-to-peer. For an authoritative server running predator AI, consider Client-Server topology instead. The predator AI should always run server-side.
+
+---
+
+### Sentis (ML Inference) — For Predator Behavioral AI
+
+Unity 6.3 includes Sentis as a core feature — runs ONNX models locally at game runtime. Viable path for predator behavioral intelligence without cloud dependency.
+
+```csharp
+// ✅ Sentis — local ML inference (Unity 6.3+)
+using Unity.Sentis;
+
+public class PredatorBehaviorAI : MonoBehaviour {
+    [SerializeField] private ModelAsset _behaviorModel;
+    private IWorker _worker;
+
+    void Start() {
+        var model = ModelLoader.Load(_behaviorModel);
+        _worker = WorkerFactory.CreateWorker(BackendType.GPUCompute, model);
+    }
+
+    // Feed sensor data → get behavior output
+    void Update() {
+        using var input = new TensorFloat(sensorData);
+        _worker.Execute(input);
+        var output = _worker.PeekOutput() as TensorFloat;
+        ApplyBehavior(output[0]); // behavior decision
+    }
+}
+```
+
+**Relevance**: Terranova's apex predator AI is the game's highest technical risk. Sentis allows training a behavior model offline and running it locally — a valid approach if custom Behavior Trees prove insufficient.
+
+---
+
+## Updated Tech Stack Summary (2026-04-21)
+
+| Feature | Use This (2026) | Avoid This (Legacy) |
+|---------|------------------|----------------------|
+| **Input** | Input System package | `Input` class |
+| **UI** | UI Toolkit | UGUI (Canvas) |
+| **ECS** | ISystem + IJobEntity | ComponentSystem |
+| **Rendering** | URP + Render Graph | Built-in pipeline, SetupRenderPasses |
+| **Open World Perf** | GPU Resident Drawer | CPU-side batching |
+| **Lighting** | Adaptive Probe Volumes | Manual Light Probe placement |
+| **Assets** | Addressables | Resources |
+| **Jobs** | Burst + IJobParallelFor | Coroutines for heavy work |
+| **Multiplayer** | Netcode for GameObjects 2.0 | UNet |
+| **AI/ML** | Sentis (local ONNX inference) | Cloud-only AI |
+| **Object finding** | `FindObjectsByType<T>()` | `FindObjectsOfType<T>()` |
+
+---
+
 **Sources:**
 - https://docs.unity3d.com/6000.0/Documentation/Manual/BestPracticeGuides.html
 - https://docs.unity3d.com/Packages/com.unity.entities@1.3/manual/index.html
 - https://docs.unity3d.com/Packages/com.unity.inputsystem@1.11/manual/index.html
+- https://docs.unity3d.com/6000.3/Documentation/Manual/WhatsNewUnity63.html
+- https://docs.unity3d.com/6000.0/Documentation/Manual/urp/gpu-resident-drawer.html
+- https://docs.unity3d.com/6000.3/Documentation/Manual/com.unity.ai.inference.html

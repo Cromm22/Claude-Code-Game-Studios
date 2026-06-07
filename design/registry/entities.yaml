@@ -65,7 +65,7 @@ constants:
     unit: seconds
     source: design/gdd/ecological-disturbance.md
     referenced_by: [design/gdd/crafting-and-items.md]
-    notes: "Half-life for Beacon emission. Range: 45-180s."
+    notes: "Half-life for Beacon emission. Range: TIGHTENING to 64-128s (was 45-180s). CROSS-GDD LOCK RESOLVED (round-5, CD ruling R4-1, 2026-06-02; Crafting G.6 / OQ.14 CLOSED): BEACON_SURVIVAL_WINDOW = BEACON_HALF_LIFE * log2(0.95/0.65) = BEACON_HALF_LIFE * 0.5476 (at 90s -> ~49s). The Crafting survival-window design-safe band [35,70]s requires BEACON_HALF_LIFE in [64,128]s; the old [45,180]s produced windows ~[25,99]s (too short to demand aid at the low end, dead-wait at the high end). CD ruled: ED TIGHTENS BEACON_HALF_LIFE to [64,128]s; Crafting does NOT decouple (the 'window = ED lure interval' identity is preserved). ED applies the registry range edit at its next revision (forward obligation, Crafting F.4 ED row). Default 90s is inside the new band. ROUND-9 (2026-06-03, Crafting Blocker #7): Crafting now enforces a fail-fast INIT ASSERTION (Crafting G.6 / H.105) that the DERIVED window = BEACON_HALF_LIFE * 0.5476 falls in [35,70]s, refusing to start otherwise — so an as-yet-unapplied ED range edit cannot reach a live run with a degenerate (~25s bunker-through or ~99s dead-wait) window. The authoritative range tightening to [64,128]s remains ED's to apply (ED-owned constant; Crafting reads it and asserts, but does not edit it unilaterally per coordination rules)."
 
   - name: MAGNITUDE_FLOOR
     category: constant
@@ -516,15 +516,13 @@ constants:
     unit: dimensionless (t)
     source: design/gdd/crafting-and-items.md (C.2, G.4)
     referenced_by: []
-    notes: "Craft-emission burst magnitude for Dampener Coil (recipe 2) and Signal Anchor (recipe 3). MID tier per VA.1. Range: 0.12-0.30 (G.4). Equals MAGNITUDE_CRAFT_BEACON_MIDPULSE at default but conceptually distinct (separate constants per G.4). Recipe numbers updated 2026-06-01 round-2 (catalog cut to 5 recipes)."
+    notes: "Craft-emission burst magnitude for Dampener Coil (recipe 2) and Signal Anchor (recipe 3). MID tier per VA.1. Range: 0.12-0.30 (G.4). Equals MAGNITUDE_CRAFT_BEACON_MIDPULSE at default but conceptually distinct (separate constants per G.4). History: round-2 (2026-06-01) catalog cut to 5 recipes; round-3 merged Squad Relay's burst to MID (retired MAGNITUDE_CRAFT_RELAY); round-5 (2026-06-02, R4-2) CUT the Squad Relay recipe entirely — only Coil + Anchor remain in the MID tier (4-recipe catalog)."
 
-  - name: MAGNITUDE_CRAFT_RELAY
-    category: constant
-    value: 0.20
-    unit: dimensionless (t)
-    source: design/gdd/crafting-and-items.md (C.2, G.4)
-    referenced_by: []
-    notes: "Craft-emission burst magnitude for Squad Relay (recipe 4). RELAY tier per VA.1 — sits between MID and HEAVY to reflect squad-coordination scope (broadcasts position ping to all squad). Range: 0.15-0.32 (G.4). Recipe number updated 2026-06-01 round-2 (catalog cut to 5 recipes)."
+  # MAGNITUDE_CRAFT_RELAY — RETIRED 2026-06-01 (round-3). Was 0.20 (RELAY tier).
+  # The Squad Relay's completion burst is merged into MAGNITUDE_CRAFT_MID = 0.18 — the
+  # 0.20 sub-tier sat inside HYSTERESIS_BAND of MID and bought no balance differentiation
+  # (the Relay's distinct value is its position-ping broadcast + RM-owned oxygen transfer,
+  # not a louder burst). Constant deleted; name NOT reused. See Crafting C.2/G.4/VA.1.
 
   - name: MAGNITUDE_CRAFT_HEAVY
     category: constant
@@ -532,7 +530,7 @@ constants:
     unit: dimensionless (t)
     source: design/gdd/crafting-and-items.md (C.2, G.4)
     referenced_by: []
-    notes: "Craft-emission burst magnitude for Escape Beacon completion (recipe 5) — the loudest pre-activation craft burst. HEAVY tier per VA.1. Range: 0.25-0.55 (G.4). MAGNITUDE_BEACON (0.95) is the Beacon's separate ACTIVATION emission, not its completion burst. Recipe number updated 2026-06-01 round-2 (catalog cut to 5 recipes)."
+    notes: "Craft-emission burst magnitude for Escape Beacon completion (recipe 5) — the loudest pre-activation craft burst. HEAVY tier per VA.1. Range: 0.25-0.55 (G.4). MAGNITUDE_BEACON (0.95) is the Beacon's separate ACTIVATION emission, not its completion burst. Beacon stays recipe #5 (number not reused); catalog is 4 live recipes post-round-5 (Squad Relay #4 cut 2026-06-02, R4-2; was 5 post-round-2)."
 
   - name: MAGNITUDE_CRAFT_BEACON_MIDPULSE
     category: constant
@@ -541,6 +539,14 @@ constants:
     source: design/gdd/crafting-and-items.md (C.2, D.7, G.4)
     referenced_by: []
     notes: "Beacon mid-craft warning pulse magnitude. Fires once per Beacon craft session at CRAFT_BEACON_MIDPULSE_PROGRESS = 0.5. Equals MAGNITUDE_CRAFT_MID at default but kept as a separate constant for future divergent tuning. Range: 0.10-0.35 (G.4)."
+
+  - name: MAGNITUDE_CANISTER_INWINDOW_USE
+    category: constant
+    value: 0.18
+    unit: dimensionless (t)
+    source: design/gdd/crafting-and-items.md (C.2, C.6, C.11, G.4)
+    referenced_by: []
+    notes: "Round-7 Group-B bunker counter (CD Group-B ruling, Hybrid A+B), the bunker-counter that makes 'stack ~10 Canisters and wait out the window quietly' non-free. Emitted as a 'Craft' burst (emissionType 'Craft', MID tier default) when an Oxygen Canister is USED while the beacon is in BC4 (gated server-side by `beaconActivated && not runOutcomeResolved`, round-17 — fires through victory AND defeat-edge resolution, silent outside BC4). Round-11 EC-3 ruling: the emission fires at RunSession.beaconWorldPosition (NOT the using player's position, NOT benchPosition) so in-window oxygen spend concentrates at the beacon and cannot bait the predator off the hold; sourcePlayerId is the using player. Tunes jointly with the RM OXYGEN_DRAIN_BC4_FLOOR forward obligation (OQ.13). Does NOT touch the beacon completion/attribution path. Range: 0.10-0.35 (G.4). Verified by H.93 / E.32. (Round-20: removed a duplicate `notes:` key that carried the pre-EC-3 emission position [using player's HumanoidRootPart.Position] and the round-17-superseded `beaconActivated && !beaconWindowSurvived` guard — a YAML duplicate key resolved to the stale value.)"
 
   - name: BENCH_MAX_CRAFTERS
     category: constant
@@ -580,7 +586,7 @@ constants:
     unit: count
     source: design/gdd/crafting-and-items.md (C.4, G.2)
     referenced_by: []
-    notes: "Maximum distinct item types in squad shared pool. 5 distinct types exist in MVP post-round-2 (Oxygen Canister, Dampener Coil, Signal Anchor, Squad Relay, Beacon); cap of 8 leaves headroom. Range: 5-12 (G.2). Was 7 pre-round-2 (Composite Patch + Quiet Step Wrap cut 2026-06-01)."
+    notes: "Maximum distinct item types in squad shared pool. 4 distinct types exist in MVP post-round-5 (Oxygen Canister, Dampener Coil, Signal Anchor, Beacon); cap of 8 leaves headroom. Range: 5-12 (G.2). Was 7 pre-round-2 (Composite Patch + Quiet Step Wrap cut 2026-06-01); 5 post-round-2; 4 post-round-5 (Squad Relay cut 2026-06-02, R4-2)."
 
   - name: ITEM_STACK_MAX
     category: constant
@@ -604,7 +610,7 @@ constants:
     unit: multiplier
     source: design/gdd/crafting-and-items.md (C.6, D.6, G.5)
     referenced_by: []
-    notes: "Multiplicative reduction on equipped player's Light pulse magnitude while Coil is active. Range: 0.30-0.70 (G.5). At 0.70 stationary Coil-equipped players fall below MAGNITUDE_FLOOR (non-linear interaction with PC.D.4 stationary attenuation per H.38)."
+    notes: "Multiplicative reduction on equipped player's Light pulse magnitude while Coil is active (effective_light = base * (1 - DAMPENER_REDUCTION)). Range: INTERIM 0.30-0.56 (round-11, systems BLOCK-3); 0.30-0.70 post-PC. The 0.70 ceiling's 'a moving Coil player is silenced' rationale only holds once PC applies the D.6a Stage-2 stationary factor (PC in MAJOR REVISION, unverified-until-PC); until then a moving Coil player at 0.70 emits 0.024 > MAGNITUDE_FLOOR (not silent), so the tunable ceiling is held at 0.56, with 0.70 the post-PC ceiling. Non-linear interaction with PC.D.4 stationary attenuation per H.38/D.6a."
 
   # QUIET_STEP_WRAP_REDUCTION removed 2026-06-01 round-2 patch.
   # It was the 0.50 sprint-pulse reduction multiplier for the Quiet Step Wrap recipe,
@@ -650,6 +656,70 @@ constants:
     source: design/gdd/crafting-and-items.md (C.15, G.6)
     referenced_by: []
     notes: "Maximum distance from player to placement position for RequestBeaconPlace. Range: 4-16 (G.6). At 4 placement feels overconstrained; at 16+ ritual-placement framing breaks."
+
+  - name: BEACON_HOLD_RADIUS
+    category: constant
+    value: 12
+    unit: studs
+    source: design/gdd/crafting-and-items.md (C.5.6a, C.9, G.6)
+    referenced_by: []
+    notes: "Round-3 (B1); CONTINUOUS-HOLD round-13 (fail-fast); TIGHTENED 30=>12 round-15 (2026-06-05, SENTRY fix). Proximity radius around the placed/activated beacon within which at least requiredHolders (= ceil(#aliveMembers/2), round-15) squad members must be ALIVE AND present CONTINUOUSLY through the survival window for victory (BCT4). Round-13 reversed the round-3/9 window-end-only check; round-15 raised the threshold from >=1 to ceil(#aliveMembers/2) (the SENTRY fix — one of four can no longer hold for the rest) and shrank the radius 30=>12 so 'in-radius' == 'on the beacon' AND the 3s line-break grace is mobile-traversable. The instant fewer than requiredHolders are within radius the squad enters a line-break; if the snapshot stays below threshold for BEACON_LINE_BREAK_GRACE (members alive) => scatter-defeat (E.27); if aliveMembers empty => immediate wipe-defeat (precedence over scatter, B-1). Victory = window elapses while held (>= requiredHolders). Range: 8-20 (G.6). Server tests dist3D(member.HRP, beaconWorldPosition) <= 12 EVERY BC4 Heartbeat (STRICT <=, no hysteresis — BEACON_HOLD_HYSTERESIS applies only to the presentation OnBeaconHoldStateChanged signal, never the win snapshot)."
+
+  - name: BEACON_HOLD_MIN_HOLDERS
+    category: derived
+    value: "requiredHolders = min(requiredHoldersBaseline, #aliveMembers); requiredHoldersBaseline = ceil(peakAliveCount/2) FROZEN at BCT3 (round-19 R18-1 — from the max-alive-so-far ratchet, NOT the activation snapshot)"
+    unit: members
+    source: design/gdd/crafting-and-items.md (C.5.6a, C.9, C.10, G.6)
+    referenced_by: []
+    notes: "Round-15 (2026-06-05, SENTRY fix) introduced requiredHolders = ceil(#aliveMembers/2). Round-16 (2026-06-06, R16-1 FREEZE) made it FROZEN at activation. Round-19 (2026-06-06, R18-1 RATCHET) changed the frozen denominator's SOURCE from the activation-snapshot alive count to the run's high-water alive count peakAliveCount (new RunSession field, ratcheted max(peakAliveCount,#aliveMembers) every tick from RunStarted): requiredHoldersBaseline = ceil(peakAliveCount/2) computed ONCE at BCT3, per-tick requiredHolders = min(requiredHoldersBaseline, #aliveMembers) — the min clamps DOWN to current alive (lone-survivor win via min(baseline,1)=1; never demand more holders than alive) but NEVER UP. held <=> #windowAliveInRadius >= requiredHolders. Baseline values: 1,1,2,2 for high-water alive=1,2,3,4 ('at least half the LARGEST squad the run fielded holds'). Closes BOTH the round-16 respawn-raises-bar fantasy violation (freeze) AND the round-18 activate-late-for-low-baseline lane (ratchet — delaying activation until teammates die cannot lower the bar, since peakAliveCount already recorded the bigger squad). The BASELINE is monotone-frozen; the live requiredHolders is non-monotone (2->1->2) by design via the min clamp. Closes the round-14 SENTRY line. No range (structural). Denominator source is LOCKED (round-19), no longer a pending swap. See E.33 + H.118 (freeze) + H.124 (enumeration) + H.129 (ratchet)."
+
+  - name: BEACON_HOLD_HYSTERESIS
+    category: constant
+    value: 3
+    unit: studs
+    source: design/gdd/crafting-and-items.md (C.9, C.10, C.14, G.6)
+    referenced_by: []
+    notes: "Round-11 (Convergence #4). Schmitt-trigger band on the PRESENTATION-ONLY OnBeaconHoldStateChanged HUD signal: a member enters the shown-in-radius set at dist <= BEACON_HOLD_RADIUS and leaves only at dist > BEACON_HOLD_RADIUS + BEACON_HOLD_HYSTERESIS; inside the band they keep prior state. Debounces boundary jitter so a player at the 12-stud edge (round-15) no longer floods events. NEVER affects the win snapshot (strict <= BEACON_HOLD_RADIUS, C.9/H.92). Range: 1-8 (G.6)."
+
+  - name: BEACON_HOLD_ESCALATION_LEAD
+    category: constant
+    value: 10
+    unit: seconds
+    source: design/gdd/crafting-and-items.md (UI.1 surface 13, C.14, G.6)
+    referenced_by: []
+    notes: "Round-11 (Convergence #5); repurposed round-13 (continuous-hold). Presentation-only: in the survival window's final BEACON_HOLD_ESCALATION_LEAD seconds, a HOLDING squad sees a calmer 'HOLD - Xs to go' confirmation so the finale's end is legible. (Round-13: the primary urgency cue is now the BROKEN regroup grace countdown driven by OnBeaconLineBreak, not this lead; the round-3/9 'single-frame window-end check' the lead was originally written for is retired.) Never changes the win evaluation (C.9). Range: 4-20 (G.6)."
+
+  - name: BEACON_LINE_BREAK_GRACE
+    category: constant
+    value: 3
+    unit: seconds
+    source: design/gdd/crafting-and-items.md (C.5.6a, C.9 step b, C.10, G.6)
+    referenced_by: []
+    notes: "Round-13 (B1 fail-fast); range CAPPED 0-6 => 0-4 round-15 (game-designer anti-kiting). Continuous-hold grace: during BC4, if the strict windowAliveInRadius snapshot is BELOW requiredHolders while >=1 member is alive (a scatter/displacement/sentry line-break), a grace clock (_lineBreakSince, RunSession — RENAMED from _lineBreakEmptySince round-15 since the trigger is 'below threshold', not 'empty') starts; if the snapshot stays below threshold for BEACON_LINE_BREAK_GRACE seconds, BCT-DEFEAT(reason=scatter) fires (computed in C.9 step b, fired in step c after the drains, gated on aliveMembers non-empty — B-1). Enough members re-entering (>= requiredHolders) resets the grace. WIPE (aliveMembers empty) ignores the grace and fires immediately (precedence). With BEACON_HOLD_RADIUS tightened to 12 (round-15) the 3s grace is mobile-traversable. Range: 0-4 (G.6); 0 degenerates to an instant line-break, >4 partially reopens the scatter line. Win-relevant (gates the scatter terminal)."
+
+  - name: BEACON_LINE_BREAK_RESTORE_DEBOUNCE
+    category: constant
+    value: 6
+    unit: ticks
+    source: design/gdd/crafting-and-items.md (C.9 step d, C.10, C.14, G.6)
+    referenced_by: []
+    notes: "Round-15 (2026-06-05, quadruple-lens debounce fix); round-16 (2026-06-06, R16-2) added the broken=true edge-trigger. PRESENTATION-ONLY: governs the squad-level OnBeaconLineBreak HUD banner via the two-state edge machine _lineBreakBroadcast (RunSession field). broken=true fires immediately on the HOLDING->BROKEN edge (the FIRST below-threshold tick, when _lineBreakBroadcast was false) and sets it true — it does NOT re-fire on subsequent below-threshold ticks (the round-16 fix to the round-15 per-tick re-fire — H.119/H.95 assert 'at most one broken=true'). broken=false fires only after BEACON_LINE_BREAK_RESTORE_DEBOUNCE consecutive at-threshold ticks (counter _lineBreakRestoreTicks) on the BROKEN->HOLDING edge, setting _lineBreakBroadcast false. Stops a sole boundary-holder oscillating at the 12-stud radius from flapping the win-state banner at up to 60 Hz (WCAG 2.3.1 / round-14 N14-B2). The terminal grace clock _lineBreakSince is UNAFFECTED (strict per-tick test). Range: 1-30 (G.6). Verified by H.95/H.119."
+
+  - name: POSITION_SETTLED_EPSILON
+    category: constant
+    value: 1.0
+    unit: studs
+    source: design/gdd/crafting-and-items.md (C.10, G.6)
+    referenced_by: []
+    notes: "Round-15 (2026-06-05, B-3 re-add positioned predicate). Observable predicate for 'the respawned HumanoidRootPart has been positioned': hrp.Position.Magnitude > POSITION_SETTLED_EPSILON (an unplaced root part reads world origin (0,0,0); a placed character is at a SpawnLocation away from origin). Gates the buffered respawn re-add (_enqueueReadd) so windowAliveInRadius never reads an unplaced member. Range: 0.5-4 (G.6). Assumes Terranova spawns are not near world origin."
+
+  - name: MIN_SQUAD_SIZE
+    category: constant
+    value: 2
+    unit: count
+    source: design/gdd/crafting-and-items.md (C.17, F.1, F.7, G.8)
+    referenced_by: []
+    notes: "Round-3 (2026-06-01). Minimum squad size at run start. OWNED UPSTREAM (run-start / matchmaking gate, out of Crafting scope per F.7); Crafting READS it for the benchMaxCraftersEffective cap (C.3.5) and a defence-in-depth init assertion (H.84). Solo-play (squadSize=1 at start) is UNSUPPORTED. A run may still drop to 1 alive mid-run (lone survivor, E.30) — that is normal and handled, not solo-play."
 
   - name: CRAFTING_GLOBAL_RATE_LIMIT
     category: constant
@@ -745,12 +815,12 @@ formulas:
 
   - name: craftProgress
     category: formula
-    expression: "craftProgress_new = clamp(craftProgress + craftRate * dt, 0, 1); craftRate = 1.0 / CRAFT_BASE_DWELL_TIME * effective_N (D.2)"
-    variables: [craftProgress, craftRate, dt, CRAFT_BASE_DWELL_TIME, effective_N]
+    expression: "craftProgress = clamp(progressAtRateAnchor + ((_clock() - rateAnchorClock) * crafterSpeedMultiplier_N) / CRAFT_BASE_DWELL_TIME, 0, 1)  # clock-elapsed closed form (round-5 R4-3 + qa-gate refinement); piecewise across rate changes (BT2/BT4 reset progressAtRateAnchor=craftProgress, rateAnchorClock=_clock())"
+    variables: [progressAtRateAnchor, rateAnchorClock, _clock, crafterSpeedMultiplier_N, CRAFT_BASE_DWELL_TIME]
     output_range: [0.0, 1.0]
     source: design/gdd/crafting-and-items.md (D.1, D.2)
     referenced_by: []
-    notes: "Per-Heartbeat craft progress accumulator. dt sourced from RunService.Heartbeat (typically 1/60s). Clamp to 1.0 prevents BT3 double-fire on overflow tick (per H.29). effective_N is the multi-crafter dwell-rate scalar (D.2)."
+    notes: "CLOCK-ELAPSED CLOSED FORM (round-5 R4-3 2026-06-02, refined per the round-5 qa-lead gate). REPLACED the per-tick accumulator `craftProgress + craftRate*dt` (drifted +/-1-2 ULP over 300-600 additions — round-4 IEEE-754 finding). The qa-gate found the CD's literal `stepCount*dt` form was ALSO (a) incorrect under variable Heartbeat dt (storedSteps*currentDt != true elapsed time) and (b) not provably exact (600*(1/60)/10 may not == 1.0 in IEEE-754 double). FIX: drive progress from elapsed server time (_clock() - rateAnchorClock), NOT step*dt. Each Heartbeat: recompute craftProgress fresh from _clock() (no accumulation, no stored step count). On a rate change (BT2 join / BT4 depart): progressAtRateAnchor = current craftProgress, rateAnchorClock = _clock(). Division is BY CRAFT_BASE_DWELL_TIME, NOT a multiply by a precomputed 1/dwell reciprocal. crafterSpeedMultiplier_N = crafterSpeedMultiplier(N) per D.2 (the single canonical name; this was the old `effective_N`). Tested exact via the C.16 _clock seam set to exact dwell boundaries (10.0/10.0, 5.0*2/10.0, 2.0/2.0 — all exactly representable) by H.27/H.28/H.30/H.31/H.41. Clamp to 1.0 prevents BT3 double-fire (H.29). Consistent with the survival-window timer C.5.6 (_clock() - beaconActivationTime)."
 
   - name: multiCrafterDwellRate
     category: formula
@@ -759,7 +829,7 @@ formulas:
     output_range: [1, 2]
     source: design/gdd/crafting-and-items.md (D.2, C.3.5)
     referenced_by: []
-    notes: "Multi-crafter dwell-time scalar. N=1 gives 1× rate; N=2 gives 2× rate (half wall-clock dwell). Clamped at the squad-scaled benchMaxCraftersEffective (round-2 2026-06-01: was a flat BENCH_MAX_CRAFTERS) to enforce E.2 over-cap rejection. In a 2-player squad the effective cap is 1, so the speedup is unavailable (BS3 unreachable). Progress preserved when N changes mid-craft (per H.31)."
+    notes: "Multi-crafter dwell-time scalar. NAMING (round-5 unification per qa-gate): `effective_N` here == the GDD's `crafterSpeedMultiplier(N)` (D.2) == the `crafterSpeedMultiplier_N` factor in the craftProgress closed form — ONE quantity, three historical names; canonical name is `crafterSpeedMultiplier(N)`. N=1 gives 1× rate; N=2 gives 2× rate (half wall-clock dwell). Clamped at the squad-scaled benchMaxCraftersEffective (round-2 2026-06-01: was a flat BENCH_MAX_CRAFTERS) to enforce E.2 over-cap rejection. In a 2-player squad the effective cap is 1, so the speedup is unavailable (BS3 unreachable). Progress preserved when N changes mid-craft (per H.31)."
 
   - name: multiCrafterEmissionDispatch
     category: formula
@@ -849,14 +919,14 @@ enums:
 
   - name: onCraftRejectedReason
     category: enum
-    values: [not-alive, out-of-range, insufficient-materials, beacon-already-crafted, item-unavailable, bench-full, too-late-to-join, unknown-recipe]
-    source: design/gdd/crafting-and-items.md (C.15, E.10, E.20, E.21, H.3, H.4, H.6, H.11, H.47)
+    values: [not-alive, out-of-range, insufficient-materials, beacon-already-crafted, item-unavailable, bench-full, too-late-to-join, unknown-recipe, recipe-mismatch, already-equipped]
+    source: design/gdd/crafting-and-items.md (C.15, E.10, E.20, E.21, H.3, H.4, H.6, H.11, H.47, H.88, H.96)
     referenced_by: []
-    notes: "Pre-craft validation rejection reasons. `not-alive` = PC.S4. `out-of-range` = beyond GATHER_PROXIMITY_RADIUS + BENCH_RANGE_TOLERANCE. `insufficient-materials` = E.21 schema-level defense. `beacon-already-crafted` = E.10 once-per-run gate. `item-unavailable` = E.20 RequestUseItem before BT3. `bench-full` = E.2 BENCH_MAX_CRAFTERS cap. `too-late-to-join` = E.3 boundary. `unknown-recipe` = whitelist failure (qa-lead H.4 / E.21)."
+    notes: "Pre-craft validation rejection reasons. `not-alive` = PC.S4. `out-of-range` = beyond GATHER_PROXIMITY_RADIUS + BENCH_RANGE_TOLERANCE. `insufficient-materials` = E.21 schema-level defense. `beacon-already-crafted` = E.10 once-per-run gate. `item-unavailable` = E.20 RequestUseItem before BT3. `bench-full` = E.2 BENCH_MAX_CRAFTERS cap. `too-late-to-join` = E.3 boundary. `unknown-recipe` = whitelist failure (qa-lead H.4 / E.21). `recipe-mismatch` = round-7 BT2 join with a different recipe than the active session (H.96). `already-equipped` = round-5/7 RequestEquipItem when the player already has an active instance of that equippable (H.88)."
 
   - name: onBeaconRejectedReason
     category: enum
-    values: [beacon-not-placed, already-activated, not-alive]
-    source: design/gdd/crafting-and-items.md (C.15, E.22, H.49)
+    values: [beacon-not-placed, already-activated, not-alive, invalid-placement, unreachable-placement]
+    source: design/gdd/crafting-and-items.md (C.5.5, C.15, E.22, E.28, H.49, H.83)
     referenced_by: []
-    notes: "RequestBeaconActivate validation rejection reasons. `beacon-not-placed` = E.22 false-victory attempt. `already-activated` = once-per-run guard. `not-alive` = activator must be alive at handler entry (E.9 alive guard)."
+    notes: "RequestBeaconActivate + RequestBeaconPlace validation rejection reasons. `beacon-not-placed` = E.22 false-victory attempt. `already-activated` = once-per-run guard. `not-alive` = activator must be alive at handler entry (E.9 alive guard). `invalid-placement` = clamped candidate failed raycast-to-floor / overlap (C.5.5). `unreachable-placement` = round-3 B4: LOS reachability raycast player->candidate obstructed by a wall (E.28 / H.83 cross-wall exploit closure)."

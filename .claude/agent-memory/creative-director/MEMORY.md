@@ -1,0 +1,9 @@
+# Creative Director Memory Index
+
+## Files
+
+- [feedback_cross_section_consistency_pass_partial_close.md](feedback_cross_section_consistency_pass_partial_close.md) — Round-13 cross-section consistency pass closed cross-section coherence ceiling; round-14 ceiling shifted to single-section implementability micro-defects; protocol converging.
+- [feedback_mechanical_translation_ceiling.md](feedback_mechanical_translation_ceiling.md) — L-scope-late-rounds GDD ceiling pattern; FOUR consecutive falsified-APPROVED-or-near-APPROVED predictions on the ED GDD; round-15+ NEW protocol layer = static-analysis-first authoring pass.
+- [feedback_severity_floor_for_server_authoritative_seams.md](feedback_severity_floor_for_server_authoritative_seams.md) — When IMPORTANT lands on the primary write-side seam of a server-authoritative gameplay system, auto-promote to BLOCKING regardless of original tag.
+- [feedback_metadata_severity_demotion.md](feedback_metadata_severity_demotion.md) — High specialist convergence on metadata defects (status headers, round numbers, file mtimes) does NOT inherit BLOCKING; severity is assessed against load-bearing impact, not against count of specialists who noticed.
+- [feedback_canonical_surface_name_fanout_check.md](feedback_canonical_surface_name_fanout_check.md) — Round-17 refinement to the round-13 cross-section consistency pass: add per-canonical-name fanout grep as a discrete sub-check; closes the round-15 B-CS-2 partial-close defect class where export COUNT was canonicalised but per-NAME drift persisted.

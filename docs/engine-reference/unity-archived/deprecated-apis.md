@@ -1,6 +1,6 @@
 # Unity 6.3 LTS — Deprecated APIs
 
-**Last verified:** 2026-02-13
+**Last verified:** 2026-04-21
 
 Quick lookup table for deprecated APIs and their replacements.
 Format: **Don't use X** → **Use Y instead**
@@ -151,6 +151,48 @@ rootVisualElement.Q<Label>("score-label").text = "Score: 100";
 
 ---
 
+---
+
+## Additional Deprecations (Verified 2026-04-21)
+
+### Object Queries
+
+| Deprecated | Replacement | Notes |
+|------------|-------------|-------|
+| `Object.FindObjectsOfType<T>()` | `Object.FindObjectsByType<T>(FindObjectsSortMode.None)` | Explicit sort mode required |
+| `Object.FindObjectOfType<T>()` | `Object.FindFirstObjectByType<T>()` or `FindAnyObjectByType<T>()` | First = deterministic, Any = fastest |
+
+### URP Render Features
+
+| Deprecated | Replacement | Notes |
+|------------|-------------|-------|
+| `ScriptableRendererFeature.SetupRenderPasses()` | `AddRenderPasses()` with Render Graph | Soft deprecated Unity 6.2, hard removal TBD |
+
+### UI Toolkit (Unity 6.2+)
+
+| Deprecated | Replacement | Notes |
+|------------|-------------|-------|
+| `VisualElement.transform.position` | `element.style.translate` | CSS layout compatible |
+| `VisualElement.transform.rotation` | `element.style.rotate` | CSS layout compatible |
+| `VisualElement.transform.scale` | `element.style.scale` | CSS layout compatible |
+
+### Physics (Unity 6.3+)
+
+| Deprecated | Replacement | Notes |
+|------------|-------------|-------|
+| `Rigidbody.SetDensity(value)` | `rigidbody.mass = density * volume` | Calculate mass explicitly |
+
+### Other
+
+| Deprecated | Replacement | Notes |
+|------------|-------------|-------|
+| `UnityEngine.Social` (entire namespace) | Native platform SDKs or third-party | No Unity replacement provided |
+| `UnityEngine.Experimental.AI` functions | NavMesh API or await overhaul | Marked obsolete Unity 6.2+ |
+| `com.unity.textmeshpro` package | Built into `com.unity.ugui` | Remove package; TMP now in UGUI |
+
+---
+
 **Sources:**
 - https://docs.unity3d.com/6000.0/Documentation/Manual/deprecated-features.html
 - https://docs.unity3d.com/Packages/com.unity.inputsystem@1.11/manual/Migration.html
+- https://docs.unity3d.com/6000.3/Documentation/Manual/WhatsNewUnity63.html
