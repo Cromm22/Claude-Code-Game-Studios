@@ -323,7 +323,7 @@ constants:
     unit: seconds
     source: design/gdd/player-controller.md (C.2, D.2, G.2)
     referenced_by: []
-    notes: "Wait window after sprint stops, before regen begins. Prevents bar-twitch on tap-sprint micro-inputs. Range: 0.5-4.0s. Resets on each sprint-end event (no banking of partial delay progress)."
+    notes: "Wait window after sprint stops, before regen begins. Prevents bar-twitch on tap-sprint micro-inputs. Range: 0.5-4.0s. Resets on each sprint-end event (no banking of partial delay progress). Boundary comparator (R6-I1): regen begins when (t - t_sprint_end) is STRICTLY GREATER THAN this value, i.e. the D.2 gate is `> STAMINA_REGEN_DELAY`, not `>=` — at exactly t_sprint_end + 1.5s the player is still in the delay window (regen begins on the first tick strictly past the boundary). Biases toward the player having paid the full delay before recovery starts."
 
   - name: LANTERN_VISIBILITY_RADIUS
     category: constant
@@ -420,6 +420,14 @@ constants:
     source: design/gdd/player-controller.md (C.5, G.6)
     referenced_by: []
     notes: "Server-authoritative respawn timer. Locked at game-concept level. Range: 10-60s. Validate by playtest (OQ.6)."
+
+  - name: RECONCILIATION_TICK_INTERVAL
+    category: constant
+    value: 5.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.5.3, C.11, G.6)
+    referenced_by: []
+    notes: "Death-cost reconciliation tick period on RunService.Heartbeat (R5-B2 retry surface). Governs the Pillar-2 SLA: a failed death-cost deduction is recovered within at most 2x this value (10.0 s worst case) of the original death event. Read of server-time for the tick interval gate MUST route through the C.11 getServerTime() seam. Range: 2-10s. Too Low: tick overhead grows + reconciliation thrash; Too High: the 2x-interval recovery bound exceeds RESPAWN_DELAY=30s, so a Path-A player could respawn before the squad cost is reconciled (Pillar 2 silent gap). Keep 2x value < RESPAWN_DELAY."
 
   - name: SPRINT_CLIENT_TIMEOUT
     category: constant

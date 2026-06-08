@@ -858,3 +858,82 @@ User chose **Stop here — apply Round-7 Session 2 in a fresh session**. Binding
 - `production/session-state/active.md` — NOT modified (Session 1 state remains accurate; Session 2 still pending).
 
 ---
+
+## Review — 2026-06-08 — Full-mode re-review (second same-day) — Verdict: MAJOR REVISION NEEDED
+
+**Scope signal:** M (unchanged — the deferred Round-7 Session 2 reconciliation-tick lifecycle/contract patch: multi-section coordinated edits across C.5.3/C.6/C.11/F.4/V/A.3/V/A.4/Section H + 8 ACs + 1 registry constant; ~2–3 hrs, one fresh session, 1 likely user design decision at R6-B9).
+**Specialists:** None spawned. `/design-review` was invoked in **full** mode (default), but Phase 3b was skipped by explicit user choice after the no-op situation was surfaced. No re-adjudication — standing round-6 panel findings carried.
+**Blocking items:** 8 BLOCKING (R6-B5–R6-B12, carried open by design) | **Recommended:** R6-I1–I5/I10/I11/I12 cluster (carried) | **Nice-to-have:** D.4 variable-table primitive-level cleanup.
+**Prior verdict resolved:** No — `player-controller.md` is **byte-unchanged since the Round-7 Session 1 sweep (2026-06-07)**; today's earlier lean re-review modified only the review log + systems-index, not the GDD. All 8 R6-B5–B12 blockers re-confirmed live by direct file inspection (T6 row at line 250 clears only `_deathCostPaid`; `RECONCILIATION_TICK_INTERVAL` absent from registry; reconciliation tick absent from C.11 seam table; success path omits T5 (a)/(b); `userId` keying vs F.4 `Player` keying; `player.Name` crash on Path-B retry; zero tick AC coverage; Death-SFX suppression clause absent).
+**Review depth:** lean-equivalent (full mode invoked; panel declined as a documented no-op — a 7-agent spawn would re-derive the standing verdict on items provably open *before* it spawns; cf. the 2026-05-02 "no-op re-review against unchanged text" and 2026-06-08 lean re-review precedents).
+
+### Summary
+
+A `/design-review` (full, no `--depth` flag) was invoked on `player-controller.md` with no path argument; the user selected PC as the target. Phase 1–2 completeness (8/8 sections) and Phase 3 structural/dependency-graph passes ran; before Phase 3b, the no-op situation was surfaced (GDD unchanged since today's lean re-review, which had itself re-affirmed MAJOR REVISION NEEDED with Session 2 open by design). User chose to skip the panel and re-affirm the verdict. The 8 carried blockers cluster entirely on the R5-B2 reconciliation-tick surface — the youngest, deepest design surface in the document.
+
+### Senior Verdict (carried — creative-director round-6, re-affirmed)
+
+> The GDD is exactly where the round-6 prescription expected it: Session 1 closed 8 items cleanly; Session 2 has not run. **Standing meta-warning holds** — if round-8 (after Session 2 lands) again returns NEEDS REVISION, reconsider the reconciliation-tick *architecture* rather than patching a further round. Do not advance to Theme 2 until Session 2 lands and a round-8 fresh-session panel verdicts APPROVED. **DO NOT predict APPROVED for round-8.**
+
+### Recommendation
+
+User chose **Stop here — apply Round-7 Session 2 in a fresh session**. Binding plan unchanged: the round-6 Session 2 patch list (R6-B5–B12 + R6-I1–I5/I10/I11/I12) in a clean `/clear` session, then a round-8 `/design-review`.
+
+### Process note (reusable)
+
+This is the second same-day re-review re-deriving an unchanged verdict on unchanged text. Same class as the Crafting & Items re-review loop the user broke on 2026-06-08. **Precedent: when a GDD is byte-unchanged since the last review and its open blockers are provably live before any panel spawns, surface the no-op and let the user choose rather than auto-spawning Phase 3b.** The durable fix is to land Session 2, not to re-run panels.
+
+### Files Modified This Session
+
+- `design/gdd/reviews/player-controller-review-log.md` — this entry appended.
+- `design/gdd/systems-index.md` — PC row note appended (second same-day re-confirmation; Status unchanged at MAJOR REVISION NEEDED).
+- `design/gdd/player-controller.md` — NOT modified (read-only review).
+
+---
+
+## Round-7 Session 2 Patch — 2026-06-08 — Status: APPLIED (reconciliation-tick lifecycle/contract patch)
+
+**Type:** Patch session, NOT a review verdict. The next `/design-review` of this GDD (round-8, fresh session) is the binding validation gate. **DO NOT predict APPROVED for round-8** — the standing round-6 CD meta-warning holds: if round-8 again returns NEEDS REVISION, reconsider the reconciliation-tick *architecture* rather than patching a further round.
+
+**Scope:** Session 2 of the round-6 CD two-session prescription — the heavy reconciliation-tick lifecycle/contract patch (scope M). Closes all 8 carried BLOCKING items (R6-B5–B12) plus the R6-I1/I2/I3/I4/I5/I10/I11/I12 IMPORTANT cluster. Multi-section coordinated edits across C.5.3, C.6, C.9, C.11, D.2, F.4, V/A.3, V/A.4, G.6, Section H + `entities.yaml`.
+
+**One user design decision (R6-B9 keying), locked 2026-06-08:** death-cost reconciliation rows for **removed (Path B) players** are keyed by a per-death-event **`deathEventId`** (monotonic server-session counter), snapshotting `{deathEventId, userId, playerName, lastKnownPosition}`. Live per-player flags (`_deathCostPaid`, `deathDeductionCommitted`) for **present (Path A)** players remain `Player`-instance-keyed (consistent with F.4). The two keying domains are disjoint. The rejoin-during-reconciliation race is closed: a rejoin is a fresh `Player` instance with fresh flags and never collides with the independent pending `deathEventId` row. (Options considered: deathEventId token [chosen], Player-instance-keyed-throughout, (userId, joinEpoch) composite.)
+
+**Edits applied (8 BLOCKING + 8 IMPORTANT across 2 files):**
+
+| ID | Severity | Fix | Section / file |
+|---|---|---|---|
+| **R6-B5** | BLOCKING (3-spec convergence) | C.6 T6 row now clears **both** `_deathCostPaid` AND `deathDeductionCommitted` to `false`; C.5.3 idempotency prose rewritten to explain the two-flag clearance and the multi-life silent-break it prevents (same class as round-4 B6). | `player-controller.md` C.6 T6 + C.5.3 |
+| **R6-B6** | BLOCKING | `RECONCILIATION_TICK_INTERVAL = 5.0 s` registered in `entities.yaml` + added to G.6 knobs table with the `2 × interval < RESPAWN_DELAY` invariant. | `entities.yaml` + `player-controller.md` G.6 |
+| **R6-B7** | BLOCKING | Reconciliation-tick interval gate added as a row in the C.11 seam-scope table (must route through `getServerTime()`; unblocks the F3a–F3h ACs). | `player-controller.md` C.11 |
+| **R6-B8** | BLOCKING | Reconciliation success path now invokes T5 side-effects **(a) sprint pulse-timer stop + (b) lantern force-T4** and explicitly **suppresses (c)–(f)**; idempotent re-stop is safe on both initial-T5 and reconciliation paths. Closes the phantom Sprint/Light pulse class on destroyed `HumanoidRootPart` for the rollback-then-reconcile path (R5-B1 Pillar-1 closure restored for the failure path). | `player-controller.md` C.5.3 |
+| **R6-B9** | BLOCKING (3-spec convergence) | Reconciliation working-set re-keyed to per-death-event `deathEventId` (user decision); two disjoint keying domains documented; rejoin-during-reconciliation race closed; F.4 keying-scope note added. | `player-controller.md` C.5.3 + F.4 |
+| **R6-B10** | BLOCKING | Rollback `warn(...)` reads `deathContext.playerName` (snapshotted at death-event creation), never live `player.Name` — closes the destroyed-instance nil-parent crash that killed the handler for the whole session on Path-B retries. | `player-controller.md` C.5.3 |
+| **R6-B11** | BLOCKING (2-spec convergence) | 8 reconciliation ACs **H.35–H.42** added (new H.7r block) mapping qa-lead F3a–F3h: Path-A recovery, Path-B deathEventId recovery, double-deduction guard, 10 s SLA bound, success-path exit, first-tick timing gate, `deathDeductionCommitted` T6-clearance binary signal, BindToClose in-flight loss invariant. | `player-controller.md` Section H |
+| **R6-B12** | BLOCKING (audio-director, CD-confirmed) | V/A.3 Death SFX MUST NOT fire on `deathCause="reconciliation-recovery"` (false death cue ≤10 s late); delayed notification is HUD-only. | `player-controller.md` V/A.3 |
+| **R6-I1** | IMPORTANT | D.2 regen-gate boundary comparator documented as strict `>` (not `>=`) + `entities.yaml` `STAMINA_REGEN_DELAY` note. | `player-controller.md` D.2 + `entities.yaml` |
+| **R6-I2** | IMPORTANT | F.4 PredatorService deferral prose corrected: cache-first read closes the mid-yield race (Race 1) ONLY; the PredatorService-clears-before-PC-entry race (Race 2, a Pillar-2-safe false-negative) is closed by a BINDING `task.defer` of PredatorService's clearance. | `player-controller.md` F.4 |
+| **R6-I3** | IMPORTANT | F.4 HUD forward-obligation row added for the `reconciliation-recovery` ≤10 s delayed-notification UX (HUD-only since SFX + caption are suppressed). | `player-controller.md` F.4 |
+| **R6-I4** | IMPORTANT | C.9 `OnPlayerDied` `deathCause` enumerated: `{"died", "disconnect-while-damaged", "reconciliation-recovery"}`. | `player-controller.md` C.9 |
+| **R6-I5** | IMPORTANT | Each reconciliation retry `task.spawn`'d off the Heartbeat handler (the tick body only scans + dispatches), with an in-flight guard — closes the unbounded 200–600 ms Heartbeat-block that falsified H.28. | `player-controller.md` C.5.3 |
+| **R6-I10** | IMPORTANT | V/A.4 "[Name] is down" caption suppressed on `reconciliation-recovery` (caption/audio parity with R6-B12). | `player-controller.md` V/A.4 |
+| **R6-I11** | IMPORTANT | C.5.3 lifecycle: `_deathCostPaid`/`deathDeductionCommitted` initialized to `false` (not nil) on `Players.PlayerAdded`; `reconcileRows` bootstrap-init to `{}`; (c)–(f) suppression for removed players documented. | `player-controller.md` C.5.3 |
+| **R6-I12** | IMPORTANT | C.11 Lemur `PlayerRemoving` fidelity caveat added (Path-B + reconciliation ACs confirmed in live Studio, not solely Lemur); exact-boundary AC **H.43** added (HP=25.0 / 30.0 s / 3.0 s neither-fires, paired off-boundary). H.22f already adequately white-box (verifies internal flag transitions). | `player-controller.md` C.11 + Section H |
+
+**Header status block** refreshed (Session 2 applied; round-8 pending; DO-NOT-predict-APPROVED warning carried).
+
+**Patch effort:** single fresh session, ~17 edit sites across 2 files, 1 user design decision (R6-B9) per the round-6 CD adjudication.
+
+**Verification (read-back / grep):** zero remaining `userId`-keyed / `userId index` reconciliation-row references in the GDD (the round-6 B9 contradiction text is fully replaced by the deathEventId model). All 8 R6-B5–B12 closures land at the rule level; the R6-I cluster lands inline. `deathDeductionCommitted` now appears in C.5.3 idempotency prose, C.6 T6 clearance, the reconcile-eligible predicate, and AC H.41 (binary signal).
+
+**Carried forward to round-8 `/design-review` (fresh session):** the full 7-spec panel re-validates the reconciliation-tick surface. Standing CD meta-warning: a third NEEDS REVISION on this surface should trigger an architecture reconsideration of the reconciliation tick, not a round-9 patch. Themes 2/3/4 + OQ.3 (Camera GDD) remain out of scope and PENDING.
+
+### Files Modified This Session
+
+- `design/gdd/player-controller.md` — Session 2 edits across C.5.3, C.6, C.9, C.11, D.2, F.4, V/A.3, V/A.4, G.6, Section H + header (~14 edit sites; 8 new ACs H.35–H.43).
+- `design/registry/entities.yaml` — `RECONCILIATION_TICK_INTERVAL` registered; `STAMINA_REGEN_DELAY` boundary note (R6-I1).
+- `design/gdd/reviews/player-controller-review-log.md` — this Round-7 Session 2 entry appended.
+- `design/gdd/systems-index.md` — PC row updated (Session 2 applied; Status stays MAJOR REVISION NEEDED — round-8 is the gate).
+- `production/session-state/active.md` — refreshed to round-8-pending state.
+
+---
