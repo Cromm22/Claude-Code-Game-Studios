@@ -816,3 +816,45 @@ Per CD's meta-pattern observation and `.claude/docs/context-management.md` "one 
 - `design/gdd/systems-index.md` — NOT modified (status correctly remains MAJOR REVISION NEEDED; heavy items open).
 
 ---
+
+## Review — 2026-06-08 — Lean re-review (Round-7 Session 1 validation) — Verdict: MAJOR REVISION NEEDED
+
+**Scope signal:** M (remaining = the deferred Round-7 Session 2 reconciliation-tick lifecycle/contract patch — multi-section coordinated edits + 8 ACs + 1 registry constant; ~2–3 hours, one fresh session, 1 likely user design decision at R6-B9).
+**Specialists:** None this session — Phase 3b adversarial spawn intentionally skipped (user chose lean depth after the situation was surfaced). No re-adjudication of the round-6 panel's findings; this entry re-affirms the standing verdict from direct file inspection.
+**Blocking items:** 8 BLOCKING (R6-B5–R6-B12, carried open by design) | **Recommended:** R6-I1–I5/I10/I11/I12 cluster (carried) | **Nice-to-have:** D.4 variable-table primitive-level cleanup
+**Prior verdict resolved:** Partially — Round-7 **Session 1** (trivial sweep) cleanly closed R6-B1/B2/B3/B4 + R6-I6/I7/I8/I9 (verified: predicate routes through `getServerTime()`; `PING_ORIGIN_TOLERANCE` registered in `entities.yaml`; camera-angle clause deleted from C.4.1/C.9; V/A.3 Path-B audio rules added). Round-7 **Session 2** (the heavy reconciliation-tick lifecycle/contract patch) has **not** run — the 8 R6-B5–B12 blockers remain open *by design, not regression*.
+**Review depth:** lean (no panel; the GDD is in a known intermediate state — full 7-agent spawn would re-derive the standing verdict on items provably open before it spawns; cf. the 2026-05-02 "no-op re-review against unchanged text" precedent).
+
+### Summary
+
+A `/design-review` was invoked on `player-controller.md` with no path argument; the user selected PC as the target and then chose lean depth after being shown that PC sits at a known MAJOR REVISION (Session 2 deferred by design). Structural Phases 1–4 ran; Phase 3b was skipped.
+
+Direct file-inspection confirmed all 8 carried blockers still live:
+
+- **R6-B5** — C.6 T6 row (line 250) clears only `_deathCostPaid`, not `deathDeductionCommitted` (multi-life Pillar-2 silent break; same class as round-4 B6). **The single load-bearing item.**
+- **R6-B6** — `RECONCILIATION_TICK_INTERVAL = 5.0 s` absent from `entities.yaml` (grep: 0 hits).
+- **R6-B7** — reconciliation tick has no row in the C.11 seam-scope table (lines 368–378).
+- **R6-B8** — C.5.3 reconciliation success path (~line 177) re-invokes deduction + broadcast only, not T5 side-effects (a)/(b) (phantom Sprint/Light pulses on destroyed `HumanoidRootPart` on the rollback-then-reconcile path; R5-B1 Pillar-1 closure regressed for the failure path).
+- **R6-B9** — reconciliation rows `userId`-keyed (line 179) contradict F.4 `Player`-instance keying (line 687); re-keying + rejoin-during-reconciliation race unspecified.
+- **R6-B10** — step-5 rollback `warn(... player.Name ...)` (line 164) crashes the handler for the rest of the session on Path-B reconciliation retries (instance destroyed by tick time).
+- **R6-B11** — reconciliation tick has zero AC coverage (8 missing: F3a–F3h).
+- **R6-B12** — V/A.3 Death SFX row (line 842) lacks the `deathCause="reconciliation-recovery"` suppression clause (false death cue 10s late; Pillar-3 audio-as-feedback).
+
+No new structural defects were introduced by Session 1 (grep: zero `workspace:GetServerTimeNow()` call-site violations remain in C.5.3/E.D).
+
+### Senior Verdict (structural — no creative-director synthesis this session)
+
+> The GDD is exactly where the round-6 CD prescription expected it: Session 1 closed 8 items cleanly; Session 2 has not run. The 8 carried blockers cluster entirely on the R5-B2 reconciliation-tick surface (the youngest, deepest design surface in the document). The CD's standing meta-warning holds — if round-8 (after Session 2) again returns NEEDS REVISION, reconsider the reconciliation-tick *architecture* rather than patching a further round. **Verdict re-affirmed: MAJOR REVISION NEEDED. Do not advance to Theme 2 until Session 2 lands and a round-8 fresh-session panel verdicts APPROVED. DO NOT predict APPROVED for round-8.**
+
+### Recommendation
+
+User chose **Stop here — apply Round-7 Session 2 in a fresh session**. Binding plan unchanged: the round-6 Session 2 patch list (R6-B5–B12 + R6-I1–I5/I10/I11/I12) in a clean fresh session, then a round-8 `/design-review`.
+
+### Files Modified This Session
+
+- `design/gdd/reviews/player-controller-review-log.md` — this lean re-review entry appended.
+- `design/gdd/systems-index.md` — PC status row updated (Session 1 applied note + lean re-review note; Status unchanged at MAJOR REVISION NEEDED).
+- `design/gdd/player-controller.md` — NOT modified (read-only review).
+- `production/session-state/active.md` — NOT modified (Session 1 state remains accurate; Session 2 still pending).
+
+---

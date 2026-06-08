@@ -1131,3 +1131,152 @@ ACs 121 → **122** (H.130 added). Edge cases unchanged (32). Both G-B1/G-B2 rul
 - Systems index: `design/gdd/systems-index.md` (Crafting row 6 → APPROVED-by-acceptance; effort row; approved 0→1 / needing-revision 3→2).
 
 **User ACCEPTED the revisions and marked Crafting & Items APPROVED. Branch `crafting-round2-patch`; rounds 3–20 work all still NOT committed (awaiting user instruction per CLAUDE.md).**
+
+---
+
+## Review — 2026-06-08 — Verdict: NEEDS REVISION (round-21 full-panel re-verification) → doc-integrity reconciliation applied; round-20 APPROVED-by-acceptance UNCHANGED
+
+**Scope signal:** Remaining work **S** (5 doc-integrity edits + a few clarity adds; no redesign, nothing touching the protected thesis or authority chain). The GDD as a whole remains XL.
+**Specialists:** game-designer, economy-designer, network-programmer (native); systems-designer, ux-designer, qa-lead, build-from-artifact gate (general-purpose per the standing harness process note); creative-director (senior synthesis). **All seven delivering lenses + CD.** Process note: native subagent types game-designer + network-programmer FAILED to deliver this round (returned mid-work text) — re-spawned via general-purpose, which delivered. economy-designer + creative-director delivered native. No `SendMessage` continuation tool exists in this harness — re-spawn a non-deliverer.
+**Review depth:** full — the first genuine fresh full panel against the post-round-20-acceptance GDD (round-20's APPROVED was a user-acceptance decision, NOT a clean panel verdict; no full panel has ever returned a clean APPROVED in 16 prior attempts — now 17).
+**Prior verdict resolved:** Round-20's closure pass — **YES, verified.** The mechanical spine, thesis, and server-authoritative win/attribution chain all re-confirmed clean.
+
+### Summary
+
+**Panel verdict NEEDS REVISION (17th consecutive non-APPROVED) — but it did NOT overturn the round-20 user acceptance.** Every finding was either (a) enumerable doc-integrity residue (now fixed) or (b) a design critique re-opening a user-accepted ruling. **Network re-confirmed the AUTHORITY/ATTRIBUTION CHAIN SOUND a 13th consecutive round (0 BLOCKING — PROTECT):** no forge path; `peakAliveCount` server-derived, min-clamp ungameable, E.34 position-spoof fence honestly bounded, `graceSeconds=0` presentation-only, rate-limits sound. **Build BUILDABLE; systems boundary-safe (all formulas D.1–D.7 degenerate-free at extremes; survival-window derivation exact at [64,128]→[35,70]s); AC arithmetic exact (122 live through H.130; 32 edge cases through E.34).** The headline finding: **the 19-round recurring reconciliation class recurred a 20th time** — the round-20 build lens had wrongly declared it "extinct," but it had merely relocated (GDD→registry at round-20; now back into ACs + the determinism preamble at round-21), found by the systems + qa lenses and MISSED by the build lens (under-scoped to the radius literal again, same pattern as prior rounds).
+
+### Required-before-clean-APPROVED (3 doc-integrity BLOCKING) — ALL CLOSED in-session
+
+- **B-1 [qa-lead, verified]** — the determinism preamble (L1295) time-driven enumeration was STALE (stopped at the round-13 ACs H.85/H.114/H.115; omitted H.118/H.120/H.127/H.128 — the EXACT round-20 deferred item, not fixed). A test author reading the stale list could reintroduce a wall-clock grace timer. → Extended the enumeration to include H.118/H.120/H.127/H.128 (+ noted the `_step`-edge H.119/H.123/H.130) and added a **forward-maintenance rule** ("any new time-dependent AC MUST be appended") so the list can't silently go stale again.
+- **B-2 [systems-designer, verified]** — stale **2-field** `OnEscapeBeaconActivated(activatorPlayerId, timestamp)` at H.15 (L1401), H.56 (L1655), and the F.2 PC row (L912) contradicted the canonical **3-field** form (`+ windowDurationSeconds`, round-13 Conv-2) at C.12.1/C.15/UI.3/schema — a genuine AC-vs-rule contradiction the PC implementer reads to wire T8. → All three updated to the 3-field form; grep confirms 0 stale 2-field call forms remain.
+- **B-3 [qa-lead, verified]** — H.105 carried a contradictory dual "Logic / Config-Data" label and asserted the survival-window band via the rounded `0.5476` coefficient rather than the closed form the service computes (the 64 s boundary was ambiguous). → THEN pinned to `log₂(MAGNITUDE_BEACON/HUNT_THRESHOLD)` = `log₂(0.95/0.65)` with the boundary predicate `>= 35.0 AND <= 70.0` (64 s → 35.05 s, in-band); label settled to **Logic**.
+
+### Recommended — closed in-session (cheap sweep)
+
+- **[economy EC-21-1]** F.4 (L938) labeled the inverse-degenerate inequality "**strictly stronger**" — mathematically backwards (the over-supplied form is the stronger one; OS ⟹ ID). Functionally mitigated (the sentence requires "both hold" + H.106 binds the over-supplied form, so the bunker line was never actually open), but the inverted rationale was a real correctness defect. → Corrected to "**strictly weaker**," stated the implication direction, and made explicit that RM MUST carry the over-supplied inequality (H.106) as the binding AC.
+- **[systems R3]** the bare `requiredHolders = ceil(#aliveMembers/2)` gloss at the C.12.1 T8 contract row omitted the freeze/ratchet qualifier (governed by the C.10 convention but load-bearing where PC wires T8). → Spelled out `min(requiredHoldersBaseline, #aliveMembers)` with `requiredHoldersBaseline = ceil(peakAliveCount/2)` frozen-at-activation.
+- **[systems R2]** orphaned "relay-activate" tokens at C.12.4 (L356, twice) to the round-5-cut Squad Relay. → Scrubbed both.
+
+### Deferred (advisory, NOT applied — logged for the implementation/polish phase)
+
+- **economy:** state the full-cap Canister-stockpile disturbance ratio vs the Beacon line (C.2/OQ.13); reword "cost-neutral at 3 gathers" to separate gather-count from disturbance; note MINERAL's two-consumer health is contingent on the Anchor surviving PA review; assemble a dominant-line disturbance budget.
+- **ux:** re-measure the surface-13 375pt pixel budget to include the H.130 cue (now a 5th element) + specify its placement vs the BROKEN grace countdown; pin `BEACON_LINE_BREAK_GRACE` to its 4 s upper bound as the pre-PC/PA default; add a respawn-driven-line-break recoverability clause (H.121 covers only knockback displacement); add the cue to the H.95/H.111 flash/reduced-motion GIVEN sets; "capacity restored" framing for the 1→2 raise.
+- **qa:** stub a `pending` CI test for H.126 (post-MVP velocity check); broaden C.16 seam coverage beyond departures; add the D.2 2-player clamp test; H.52/H.130 split-label tidy.
+- **network:** doc the race-free guard read in C.11 §1; note the grief-vector continuous exercisability for the post-MVP hardening priority.
+
+### Specialist disagreements (adjudicated by creative-director)
+
+1. **build "stale-literal class extinct" vs systems/qa "it recurred."** → **Systems/qa RIGHT** (orchestrator verified all three recurrences against source): the class recurred a 20th time on new surfaces (payload arity, preamble enumeration, relay orphan); the build lens under-scoped to the radius literal again. **NEEDS REVISION, not MAJOR** — single-mechanism, enumerable, the 20th instance of a known class, not a methodology collapse. The round-20 "extinguished" claim was premature.
+2. **economy EC-21-1 severity.** → **RECOMMENDED, not BLOCKING** — mislabeled rationale, not a functional hole (both-hold required + H.106 binds the stronger form).
+3. **game B1 (2-player asymmetry) / B2 (Signal Anchor) re-open user-accepted round-20 rulings (RBI-3 "intended asymmetry"; R18-2 "keep Anchor").** → **Closed by user ruling — a fresh panel surfaces the critique but cannot overturn a decision the user already made and accepted.** Noted for the record; NOT blocking. (Live forks if the user ever wants to revisit: floor `requiredHolders = min(2, peakAliveCount)` for the 2-player co-stand; upgrade F.4 PA(e) SHOULD→MUST or cut to 4 recipes for the Anchor.)
+
+### Specialist note (positive dissent — PROTECT)
+
+network-programmer: the win-condition AUTHORITY/ATTRIBUTION chain is **SOUND — no forge path** (13th consecutive round). Any future change MUST NOT touch the server-authoritative completion/attribution path.
+
+### Counts
+
+ACs unchanged (**122**, H.130 the highest). Edge cases unchanged (**32**, through E.34). 6 GDD locations edited (preamble, H.15, H.56, F.2 PC row, H.105, F.4 economy label, C.12.1 T8 row, C.12.4 relay scrub) + header + Last-Updated. No registry edit (entities.yaml clean — round-20 dup-key fix held; build lens re-confirmed no dup keys).
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (round-21 reconciliation pass; 122 ACs; NOT committed).
+- Systems index: `design/gdd/systems-index.md` (Crafting row 6 — round-21 note added; status unchanged at APPROVED-by-acceptance).
+- Cross-GDD obligations still owed by siblings (unchanged): **PC** (MAJOR REVISION — T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` / `MoveSpeed`); **ED** (`BEACON_HALF_LIFE` → `[64,128]s`, backstopped by H.105); **RM** (Not Started, load-bearing — `OXYGEN_DRAIN_BC4_FLOOR`, `canister_restore_oxygen`); **PA** (Not Started, load-bearing — `PREDATOR_BC4_MIN_COMMIT` / `PREDATOR_BC4_MAX_KNOCKBACK` / RESONANT-Coil consumer AC / Anchor readable-approach); **HUD** (Not Started — C.14 signals incl. the surface-13 denominator-change cue).
+
+**User chose to STOP after the reconciliation pass. Branch `crafting-round2-patch`; rounds 3–21 work all still NOT committed (awaiting user instruction per CLAUDE.md).**
+
+---
+
+## Review — 2026-06-08 — Verdict: NEEDS REVISION (round-22 full-panel re-verification) → 6 doc-integrity BLOCKING fixed in-session; round-20 APPROVED-by-acceptance UNCHANGED
+
+**Scope signal:** Remaining work **S** (6 one-clause doc-integrity edits + a small canonical-literal fanout; no redesign, nothing touching the protected thesis or authority chain). The GDD as a whole remains **XL**.
+**Specialists:** game-designer, systems-designer, economy-designer (native); network-programmer, qa-lead, ux-designer, build-from-artifact gate (general-purpose); creative-director (senior synthesis). **All seven delivering lenses + CD delivered natively this round (no re-spawn needed — unlike rounds 14/16/21).**
+**Review depth:** full — first fresh full panel against the post-round-21 GDD. 18th consecutive non-APPROVED full-panel verdict; round-20 APPROVED-by-acceptance stands (a fresh panel cannot overturn a user-accepted ruling).
+**Prior verdict resolved:** Round-21's reconciliation pass — **partially. The 6 round-21 edits were individually correct, but 5 of 7 lenses found that round-21's OWN same-day edits SPAWNED new instances of the recurring reconciliation class** (the documented "fix-creates-next-gap" pattern). Verified and fixed this pass.
+
+### Summary
+
+**Panel verdict NEEDS REVISION (18th consecutive non-APPROVED full panel) — did NOT overturn the round-20 user acceptance.** Every finding was enumerable doc-integrity residue; all 6 BLOCKING fixed in-session. **Network re-confirmed the AUTHORITY/ATTRIBUTION CHAIN SOUND a 14th consecutive round (0 BLOCKING — PROTECT):** no forge path; all 5 exploit vectors re-derived; E.34 position-spoof fence honestly bounded; round-21 edits did not perturb the chain. **Build BUILDABLE; systems boundary-safe (all D.1–D.7 degenerate-free at extremes EXCEPT the window-derivation upper edge — B1); AC arithmetic exact (122 live through H.130; 32 edge cases through E.34).** Headline: **the recurring reconciliation class recurred a 22nd time, self-inflicted by round-21's own same-day edits** — H.105's closed-form pin opened a boundary degeneracy; the new preamble forward-maintenance rule shipped with a still-incomplete list; the arity fix elsewhere left stale siblings at H.109 + surface-13. The build lens AGAIN returned APPROVED/BUILDABLE by under-scoping to only the round-21-edited surfaces, missing the 4 new instances the systems/qa/ux/game lenses caught — the documented durable weakness of that lens (it confirms build-wiring; it is NOT a closure gate).
+
+### Required-before-clean-APPROVED (6 doc-integrity BLOCKING) — ALL CLOSED in-session
+
+- **B1 [systems-designer, verified]** — H.105's round-21 closed-form pin created a boundary crash: `k = log₂(0.95/0.65) = 0.547488`, so the CD-mandated ED upper-band edge `BEACON_HALF_LIFE = 128 s` → window = `70.08 s`, which FAILED H.105's own `<= 70.0` startup predicate → `CraftingService` refuses to start at a legal, mandated config. G.6 L1065 already wrote the band as `[35.0, 70.1]`, so H.105 was the outlier. → predicate ceiling loosened to `<= 70.1` (the CD-recommended tolerance fix, not an ED band re-tighten); H.105 header band + boundary-case parenthetical (both edges shown) + rationale updated; **G.6 L1067 aligned to the exact closed form `log₂(0.95/0.65)` + `[35.0, 70.1] s`** and L1061's rounded constant marked `≈` (folds in the H.105↔G.6 form residue). *(crafting-and-items.md:2021, :2024, :1061, :1067)*
+- **B2 [game-designer, verified]** — H.109's THEN still read `beaconActivated && !beaconWindowSurvived` — the RETIRED narrower suppression gate (build-gate A4 dropped `&& !beaconWindowSurvived` because it released suppression at the victory write and reopened a post-victory defeat-race). Every governing rule uses `beaconActivated == true` alone (C.9 L202/L348, F.2 L912, F.4 L934). As written, the AC would certify the post-victory defeat-race the design exists to prevent. → corrected to the whole-lifecycle gate. *(crafting-and-items.md:2058)*
+- **B3 [ux-designer, verified]** — UI.1 surface-13 (the load-bearing finale HUD surface) carried the stale `requiredHolders = ceil(#aliveMembers/2)` (pre-round-16 live-recompute form), contradicting the locked frozen-baseline model `min(requiredHoldersBaseline, #aliveMembers)`, baseline `ceil(peakAliveCount/2)` frozen at BCT3 (H.118 "denominator-source decision is locked"; H.124/H.129/C.10). A HUD programmer reading the authoritative surface-13 spec would mis-render the `N/M holding` win-target — the exact perceived-unfairness bug H.130's cue exists to prevent. → corrected to the frozen-baseline form. *(crafting-and-items.md:1224)*
+- **B4 [qa-lead, verified]** — the determinism preamble's round-21 forward-maintenance rule shipped with a list still omitting ≥5 time-dependent ACs: **H.22** (Signal Anchor `SIGNAL_ANCHOR_LIFETIME` expiry — cites the preamble but wasn't in it), **H.37** (Dampener Coil 60 s `expiresAt`), **H.92** (window-end grace), **H.102** (backward server-time-slew window guard), **H.129** (activate-late ratchet); also **H.125** (`broken=false` restore `_step` edge). → all appended to the enumeration (H.125 in the `_step`-edge list). *(crafting-and-items.md:1295)*
+- **B5 [economy-designer, verified]** — the H.102–H.107 group-header index (L1998) labeled H.106 "RM inverse-degenerate forward obligation," but H.106 now binds BOTH the over-supplied bunker line AND the inverse-degenerate tank-the-damage line — an RM author could miss it's the binding AC for the full canister-stacking strategy. → index relabeled "closes BOTH the over-supplied bunker line AND the inverse-degenerate tank-the-damage line." *(crafting-and-items.md:1998)*
+- **B6 [economy-designer, verified]** — F.4 (L938) "~16 BIOMASS (8 Light-node pulls) funds ~8 Canisters after the Beacon's 2 BIOMASS" was wrong: `16 − 2 = 14 → 7` Canisters; 8 needs 18 BIOMASS. The worked claim justifying `ITEM_STACK_MAX` as the stress denominator had bad arithmetic. → corrected to ~18 BIOMASS (9 pulls at ~2 each) → 8 Canisters with the `(18−2)/2 = 8` working. *(crafting-and-items.md:938)*
+
+### Recommended — deferred (advisory, NOT applied; logged for the implementation/polish phase)
+
+- **economy:** F.4 "strictly weaker" prose is correct but easy to misread — add a clarifying gloss; add an OQ.15 "≥1 Signal Anchor per winning run" floor analogous to RESONANT's binding Coil AC; add a caveat that H.106's per-member form closes the bunker line only if RM does not pool oxygen across members.
+- **qa:** H.92 carries the bare `ceil(1/2)` shorthand not the frozen-baseline gloss its siblings carry (value correct); H.52/H.130 split-label tidy still open; H.126 CI `pending` stub still deferred.
+- **ux:** UI.1/VA Moment-26 still say the countdown is "opened by `OnBeaconActivated`/`OnEscapeBeaconActivated`" while UI.3 (authoritative) says `OnEscapeBeaconActivated` alone owns it; H.121 worked envelope hard-codes `MoveSpeed≈16` with no published BC4 floor; surface-13 ≤25%-height pixel budget (L1287) doesn't enumerate the H.130 cue as a concurrent element; tap-hold OS-accessibility is SHOULD not AC-backed (prior-ruled advisory).
+- **game:** Section B "~49 s" reads as a fixed beat while the window is variable `[35,70] s` — add a one-clause hedge.
+- **network:** C.15 L445 cosmetic stale literal ("16 events/2 s" in one clause vs the canonical "3 s burst window" elsewhere).
+
+### Specialist disagreements (adjudicated by creative-director)
+
+1. **Verdict split — network + build APPROVED vs game/systems/economy/qa/ux NEEDS REVISION.** Not a real disagreement: network (authority chain) and build (mechanical wiring) verify *contracts*; the 5 content lenses verify *doc content*. Disjoint surfaces, both correct. Verdict follows the content axis.
+2. **Build lens APPROVED while missing 4 real defects** (H.109, H.105 boundary, surface-13, preamble omissions). CD ruling: the build-from-artifact gate's documented structural scope is build-wiring confirmation; it is NOT a closure gate and never overrides the content lenses.
+3. **Severity — MAJOR vs NEEDS REVISION.** NEEDS REVISION: the class did not survive a sweep that targeted it (that would be methodology failure) — it relocated to surfaces the round-21 arity fix never claimed to cover. Enumerable, single-class, all one-clause fixes.
+
+### Specialist note (positive dissent — PROTECT)
+
+network-programmer: the win-condition AUTHORITY/ATTRIBUTION chain is **SOUND — no forge path** (14th consecutive round). Any future change MUST NOT touch the server-authoritative completion/attribution path.
+
+### Counts
+
+ACs unchanged (**122**, H.130 the highest). Edge cases unchanged (**32**, through E.34). 8 GDD locations edited (H.105 header + THEN, G.6 L1061 + L1067, H.109, surface-13, determinism preamble, H.106 index, F.4 arithmetic) + header Status + Last-Updated + systems-index row 6. No registry edit.
+
+**User chose to apply the 6 BLOCKING fixes in-session and keep the system APPROVED (residue sweep, not a verdict change). Branch `crafting-round2-patch`; rounds 3–22 work all still NOT committed (awaiting user instruction per CLAUDE.md).**
+
+---
+
+## Review — 2026-06-08 — Verdict: NEEDS REVISION (round-23 full-panel re-verification) → 3 doc-integrity BLOCKING fixed in-session; round-20 APPROVED-by-acceptance UNCHANGED
+
+**Scope signal:** Fix-pass **S** (~30 min + a 3-locus canonical-literal fanout; no redesign, nothing touching the protected thesis or authority chain). GDD overall remains **XL**.
+**Specialists:** systems-designer, qa-lead, game-designer, economy-designer, ux-designer, network-programmer, build-from-artifact gate (game/economy native; systems/qa/ux/network/build via general-purpose); creative-director (senior synthesis). **All seven delivering lenses + CD delivered natively — zero re-spawns, 2nd consecutive round.**
+**Review depth:** full — triggered specifically to check whether round-22's 6 same-day edits spawned new instances of the recurring reconciliation class. 19th consecutive non-APPROVED full-panel verdict; round-20 APPROVED-by-acceptance stands.
+**Prior verdict resolved:** Round-22's reconciliation pass — **partially.** 4 of 6 round-22 edits were clean; **2 spawned new contradictions**, and a 3rd pre-existing stale sibling (untouched by all 22 prior rounds) was reached this round.
+
+### Summary
+
+**Panel verdict NEEDS REVISION (19th consecutive non-APPROVED full panel) — did NOT overturn the round-20 user acceptance.** Split: game/ux/network/build = APPROVED; systems/qa = NEEDS REVISION. All 3 BLOCKING fixed in-session. **Network re-confirmed the AUTHORITY/ATTRIBUTION CHAIN SOUND a 15th consecutive round (0 BLOCKING — PROTECT):** no forge path; H.109's round-22 edit *strengthens* the mutual-exclusion protocol; position-spoof (E.34) honestly fenced with H.126. **Systems: all D.1–D.7 degenerate-free at boundaries; window derivation exact at both `[64,128]→[35.04,70.08]` edges admitted by the new `<=70.1` predicate; counts exact (122 live / E.34=32).** Headline: **the recurring reconciliation class recurred a 23rd time — 2 self-inflicted by round-22's own edits + 1 pre-existing stale sibling the prior 22 rounds never reached.**
+
+### Required-before-clean-APPROVED (3 doc-integrity BLOCKING) — ALL CLOSED in-session
+
+- **B1 [qa-lead, decisive — the only one on a LIVE path] — H.52 (L1623/L1625) + C.8 BT3 (L166)** carried the retired `beaconActivated and not beaconWindowSurvived` predicate as the in-window **CRAFT** emit-position selector. The sibling in-window **USE** path was hardened round-16 (`beaconActivated == true && not runOutcomeResolved`; H.93(c) locks it) and H.109's suppression gate was fixed round-22 — but the craft sibling was never reconciled. A craft completing AFTER a scatter/wipe defeat (`beaconWindowSurvived==false`, `runOutcomeResolved==true`, in the window between the terminal tick and the H.122 `_craftSessions` sweep) would **emit at a stale `beaconWorldPosition` into an ended run** — the exact orphaned-emit bug H.93(c) forecloses for the use path. → L166 + L1623 changed to `beaconActivated == true and not runOutcomeResolved`; H.52 GIVEN/THEN extended with variant (c) (post-resolution craft → `benchPosition`, never the stale beacon position). *(CD adjudicated the build-vs-qa contradiction in qa's favor — the build lens grepped the suppression-guard form and missed this emit-selector form, its documented under-scoping.)*
+- **B2 [systems-designer] — H.105 THEN (L2024)** prose still said the window "falls outside `[35,70] s`" while the same sentence's predicate is `<= 70.1` — the CD-mandated `128 s → 70.08 s` edge "falls outside [35,70]" literally but is admitted by `<=70.1`, re-seeding the round-22 startup-crash trap for a QA author. Self-inflicted by the round-22 edit (predicate loosened, prose band literal left stale). → prose band → `[35.0, 70.1] s` (the enforced predicate band).
+- **B3 [systems-designer / qa-lead] — determinism preamble (L1295)** still omitted **H.97** (bit-exact clock-boundary, `_clock()=startClock+2.5 → 0.50` exact, structurally identical to the enumerated H.27/H.30/H.31/H.41) and **H.89** (window-elapse + full-grace line-break) — the round-22 forward-maintenance rule's first application already violated it. → H.97 appended to the bit-exact cluster; H.89 to the time-driven cluster.
+
+### Recommended — deferred (advisory, NOT applied; logged for the implementation/polish phase)
+
+- **[systems]** H.105 lower-edge prints `35.05 s` where the closed form gives `35.04 s` (`64 × 0.547488 = 35.039`); add a normative gloss distinguishing the design-target band `~[35,70]` from the enforced predicate band `[35.0,70.1]` (the durable fix for the band-literal recurrence).
+- **[qa]** H.52 type label Integration → Logic (matches sibling H.93, now that variant (c) makes it a deterministic position-argument assertion); H.130 dual-label → explicit Part-1/Part-2 split; H.92 shorthand gloss; H.126 CI stub.
+- **[ux]** UI.1 surface-13 + VA Moment-26 still credit `OnBeaconActivated` as a countdown opener vs UI.3's authoritative `OnEscapeBeaconActivated`-alone (cleanest remaining instance of the class — low severity, same-tick same-payload, no runtime double-open); H.121 has no published BC4 MoveSpeed FLOOR (could silently invert mobile-recoverability if PC ships a BC4 slow); surface-13 ≤25% pixel budget omits the H.130 cue; H.130↔H.95/H.111 enumeration loop is one-directional.
+- **[game]** "49 vs 49.3 s" display gloss.
+- **[process / TD+qa]** a **CI grep hook** for the determinism-preamble enumeration + the canonical band literal, to retire the author-discipline dependence the forward-maintenance rule currently relies on (logged as a separate, larger tech-debt task — NOT this fix pass).
+
+### Specialist disagreements (adjudicated by creative-director)
+
+1. **Build "the `beaconWindowSurvived==false` form is extinct" vs qa "it's LIVE at H.52/C.8-BT3."** → **qa RIGHT** (CD verified L166/L1623 directly). The build lens grepped the suppression-guard form and missed the emit-selector form of the same predicate — its **3rd consecutive round** returning APPROVED while a content lens caught a real stale instance. **CD ruling: the build lens is trustworthy for wiring/lifecycle/arity (a PROTECT-grade signal like network's) but structurally CANNOT catch a class that mutates its surface form (a grep tracks one form; the class moved guard→selector). Reconciliation-clearance moves PERMANENTLY to the content axis (systems/qa); add a CI grep hook to remove the author-discipline dependence; do not run another full panel for this class.**
+2. **systems (BLOCKING) vs qa (RECOMMENDED) on the H.105 band literal + preamble omission.** → **systems RIGHT** — for a doc whose entire failure history is implementers calibrating against stale literals, both are BLOCKING for the fix pass (the trap framing beats the residue framing). Rank B1 > B2 > B3 (active mis-instruction on a live path > stale trap > latent omission).
+3. **Severity — MAJOR vs NEEDS REVISION.** → **NEEDS REVISION.** 23rd instance of one known class: 2 self-inflicted by round-22's non-sweep touch-up edits + 1 pre-existing stale sibling. A recurring class holds MAJOR only when it survives a sweep that *claimed to target it* — round-22 was a 6-edit touch-up, not a sweep. Enumerable, trivial fixes, sound spine.
+
+### Specialist note (positive dissent — PROTECT)
+
+network-programmer: the win-condition AUTHORITY/ATTRIBUTION chain is **SOUND — no forge path** (15th consecutive round). Any future change MUST NOT touch the server-authoritative completion/attribution path.
+
+### Counts
+
+ACs unchanged (**122**, H.130 the highest). Edge cases unchanged (**32**, through E.34). 5 GDD locations edited (C.8 BT3 L166, H.52 L1623/L1625, H.105 THEN L2024, determinism preamble L1295 ×2) + header Status + Last-Updated + systems-index row 6. No registry edit.
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (round-23 reconciliation pass; 122 ACs; NOT committed).
+- Systems index: `design/gdd/systems-index.md` (Crafting row 6 — round-23 note prepended; status unchanged at APPROVED-by-acceptance).
+- Cross-GDD obligations still owed by siblings (unchanged): **PC** (MAJOR REVISION — T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` / `MoveSpeed`); **ED** (`BEACON_HALF_LIFE` → `[64,128]s`, backstopped by H.105); **RM** (Not Started, load-bearing — `OXYGEN_DRAIN_BC4_FLOOR`, `canister_restore_oxygen`); **PA** (Not Started, load-bearing — `PREDATOR_BC4_MIN_COMMIT` / `PREDATOR_BC4_MAX_KNOCKBACK` / RESONANT-Coil consumer AC / Anchor readable-approach); **HUD** (Not Started — C.14 signals incl. the surface-13 denominator-change cue).
+
+**User chose to apply the 3 BLOCKING fixes in-session and keep the system APPROVED (residue sweep, not a verdict change). Branch `crafting-round2-patch`; rounds 3–23 work all still NOT committed (awaiting user instruction per CLAUDE.md).**
