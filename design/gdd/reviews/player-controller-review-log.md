@@ -937,3 +937,253 @@ This is the second same-day re-review re-deriving an unchanged verdict on unchan
 - `production/session-state/active.md` — refreshed to round-8-pending state.
 
 ---
+
+## Review — 2026-06-08 — Round-8 (binding gate; first fresh full panel against the round-7-patched GDD) — Verdict: NEEDS REVISION
+
+**Scope signal:** M trending L (producer should verify before sprint planning). Round-9 = a CD ruling session + one structural authoring pass (a state-machine refactor of the death-cost flag cluster) + two narrow gates; reserve the full 7-spec panel for round-10.
+**Specialists:** game-designer, systems-designer, network-programmer, ai-programmer, audio-director, qa-lead, gameplay-programmer (build-from-artifact lens), creative-director (senior synthesis). 7 lenses spawned in parallel adversarially; CD synthesized. (The ai-programmer lens truncated on first spawn and was re-run via a general-purpose agent per the no-SendMessage harness precedent.)
+**Blocking items:** ~14 BLOCKING | **Recommended:** ~11 IMPORTANT | **Nice-to-have:** several
+**Prior verdict resolved:** Yes — all 12 round-6 BLOCKING (R6-B1–B12) + 12 IMPORTANT confirmed closed at the rule level by the round-7 Session 1 + Session 2 patches. This was a genuine fresh full panel against the materially-changed GDD (NOT a no-op re-review). The round-8 BLOCKING items are NEW / second-order, not carried R6 items.
+**Review depth:** full (7 lenses + CD synthesis).
+
+### The DO-NOT-predict-APPROVED caution held
+Round-8 returned NEEDS REVISION, the empirically-expected non-APPROVED outcome the standing caution predicted. The meaningful good news beneath it: the spine is sound on three independent axes and the architecture is NOT being torn up.
+
+### What the panel confirmed genuinely CLEAN (previously-broken surfaces)
+- **Server-authority + cost-attribution chain SOUND** [network-programmer] — no client trust for gameplay-critical state; deathEventId keying resolves the rejoin race; no exploit/DoS regression.
+- **All formulas D.1–D.6 degenerate-free; D.5 30 s trace verified row-by-row; registry 28/28 PC constants ZERO divergence** [systems-designer] — the recurring registry-divergence class (R3-B5/R5-B4/R6-B2/B6) is clean this round.
+- **Predicate nil-safety sound; Race 1 + Race 2 pair correctly reasoned; strict-`<` boundary semantics correct + Pillar-2-safe; R6-B10 destroyed-instance log crash closed** [ai-programmer].
+- **All round-6 audio items (R6-B12/I7/I8/I9/I10) genuinely closed with normative language** [audio-director] — not nominal closures.
+- **Overall buildability = BUILDABLE-WITH-FIXES; the two-keying-domain architecture is conceptually sound** [gameplay-programmer].
+
+### Round-8 BLOCKING — convergences (binding multi-lens evidence)
+- **CONV-1 — In-flight marker lifecycle unspecified [FIVE-lens: systems, network B1, gameplay F2, qa GAP-1/IMP-2/IMP-3, game-designer B2].** C.5.3 names a per-row in-flight marker in one sentence but never specifies set / clear-on-success / **clear-on-failure**. Naive impl leaves a row permanently in-flight after any transient RM failure → squad oxygen permanently lost (Pillar-2 silent break). **This is the 4th reproduction of the "flag SET specified, CLEAR-ON-FAILURE omitted" class** (`_deathCostPaid`-on-T6 = R4-B6; `deathDeductionCommitted` = R6-B5; in-flight marker = R8). No AC covers the failure path.
+- **CONV-2 — `task.defer` Race 2/Race 3 [TRIPLE-lens: network B2, ai B-AI-1, gameplay F5].** The binding Race-2 closure rests on an unverified post-cutoff Roblox API ordering claim (`task.defer` vs Knit's `PlayerRemoving` dispatch); and the defer opens a new Race 3 (deferred-clear instance-key semantics not pinned — must clear the exact `Player` instance key, never userId, with a no-op-if-replaced guard; else a Wi-Fi-flap rejoin reopens the stale-entry false-positive/negative class).
+- **CONV-3 — deathContext snapshot surface incomplete [TRIPLE-lens: game-designer B1, gameplay F1+F3, audio F1].** (a) Path-A `deathContext` existence ambiguous (C.5.3 says every death creates one, but Path A uses Player-instance flags with no reconcileRows entry — implementers either omit it (breaking the rollback log) or add a reconcileRows entry (creating double-dispatch)); (b) Path-B `PlayerRemoving` skeleton omits `lastKnownPosition`/`playerName` from the pre-yield cache block + no nil-coalesce for `HumanoidRootPart.Position` (nil propagates to the world-anchored Death SFX); (c) Path A vs B remote-Death-SFX emitter-attachment strategy unspecified.
+- **CONV-4 — Path-A SLA claim false [DOUBLE-lens: systems Finding 1, game-designer B3].** A T5 failure within the last tick-interval before T6 → T6 clears both flags + moves the player to S1 before the next tick → tick finds them not-in-S4 → cost permanently lost. And the "10 s" bound assumes a retry completes within one interval (false under RM load; true worst case is N×interval).
+
+### Round-8 BLOCKING — singles (concrete)
+- **systems Finding 4** — cross-knob invariant `2 × RECONCILIATION_TICK_INTERVAL < RESPAWN_DELAY` is VIOLATED within the stated G.6 ranges (`RECONCILIATION_TICK_INTERVAL ∈ [2,10]`, `RESPAWN_DELAY ∈ [10,60]`; at 10 & 10 → 20<10 false). Must be a coupled-knob constraint, not a too-high note citing only the default.
+- **network B3** — `OnPlayerDied(deathCause="reconciliation-recovery")` recipient set unspecified for a player who has LEFT the server (Path B). Who receives it? Late-joiners with unknown playerId? Must be specified in C.9.
+- **ai B-AI-2** — predator target-lock / aggro release on player death is an UNFLAGGED forward obligation (flagged round-1 A3 AND round-5 I.4, still absent from F.4); now incoherent with T6 clearing `lastPredatorDamageTimestamp`. CD escalated to BLOCKING (carried-unfulfilled rule); **PC's contract to own** (caller owns the contract).
+- **game-designer B4** — `RunEnded` authority conflict: PC T7 (all-S4 + oxygen<1) and Crafting's Beacon victory/window-fail path can BOTH broadcast RunEnded for a full-squad-wipe during the Beacon window (common at 2-player floor). T8 victory leaves S4-player handling undefined. CD ruling: **PC emits, does not broadcast (single owner).**
+- **game-designer B5** — "Scenario C" acknowledged false-negative escalated to BLOCKING **at the 2-player floor** — a systematic Pillar-2 cost-evasion path framed as an accepted design choice without 2-player analysis. **CD design ruling required** (recommend closing the evasion window; user may override to explicitly accept).
+- **game-designer B6** — `t_lastGracePulse_sprint/_light` NOT reset on `Players.PlayerAdded` (only on Humanoid.Died/T5, suppressed for Path B) → Wi-Fi-flap rejoin within 6 s carries a stale grace-cooldown anchor into the new life (Pillar-1 wrong magnitude + Pillar-4 unfairness).
+- **qa BLK-1..4** — H.41 is a downstream proxy, not the binary R6-B5 signal it claims; H.42 BindToClose is not Lemur-injectable but is labeled AUTO-INTEGRATION; H.36/H.38/H.39 per-AC Lemur-caveat labeling inconsistent with C.11; H.28 perf budget doesn't exercise the reconciliation scan + no longer covers the `task.spawn` dispatch model.
+
+### Round-8 IMPORTANT (representative)
+audio F2 (Respawn SFX/caption no `reconciliation-recovery` guard — timeline compression), audio F3 (walk-SFX mechanical-equivalence test vacuous post-OQ.1; walk volume floor unprotected), network I1 (PlayerHeartbeat drop-first write ordering not normative), network I4 (RequestEmote slot type/integer constraint), systems (FIRST_PULSE_GRACE_WINDOW + RECONCILIATION_TICK_INTERVAL + SPRINT_CLIENT_TIMEOUT boundary comparators undocumented — B11 class), ai I1 (only-predator-writes-timestamp not architecturally enforceable), ai I2 (Scenario-C sibling — single-scalar last-writer-wins makes attribution graze-timing-sensitive), qa coverage gaps (in-flight mid-retry skip + rejoin-during-reconciliation race — both untested; the latter load-bearing for the R6-B9 deathEventId decision), Themes 2/3/4 accumulated debt after 8 rounds, Scenario C documented in C.5.3 prose not E.E.
+
+### Senior Verdict (creative-director)
+
+> **NEEDS REVISION (scope M trending L). Architecture reconsideration NOT triggered.** The meta-warning's real target is whack-a-mole, and the panel evidence shows the *opposite* of a wrong architecture — three independent lenses confirm the spine sound (authority SOUND, formulas degenerate-free, registry zero-divergence, buildable). What recurs (the in-flight marker, the 4th instance of the flag-set/clear-omitted class) is a **missing abstraction inside a sound architecture**, not a flawed architecture. **ONE more round is authorized — but a STRUCTURAL one that earns the reprieve:** encapsulate the three scattered death-cost booleans (`_deathCostPaid`, `deathDeductionCommitted`, in-flight marker) into a single `DeathCostReconciliation` state record (Pending / InFlight / Committed / Abandoned) with one mandatory set / clear-on-success / clear-on-failure contract per transition, so a fifth free boolean can't be added with a missing clear path.
+>
+> **Binding bar: if round-9's "fifth-flag" design test still answers 'a new free boolean, clear-path TBD,' architecture reconsideration triggers at round-10 with no further warning.**
+>
+> **Design rulings to lock before authoring:** B5 Scenario-C at 2-player floor (BLOCKING — recommend closing the evasion window, user override available); B4 RunEnded single-owner (PC emits, does not broadcast); CONV-2 `task.defer` API posture (do not ship a binding correctness claim on an unverified post-cutoff API — verify or downgrade to an intent claim); B-AI-2 predator target-lock = PC's contract to own (escalated to BLOCKING per the carried-unfulfilled rule).
+>
+> **Round-9 structure:** CD ruling session → one authoring pass (the state-machine refactor as the spine + the ~14 BLOCKING) → two re-scoped narrow gates (network re-confirm + build-lens transition-completeness, NOT old flag-name greps). Reserve the full 7-spec panel for round-10. **Do not predict APPROVED for round-10.** Themes 2/3/4 + OQ.3 (Camera GDD) remain out of scope and PENDING until round-10 verdicts APPROVED.
+
+### Recommendation
+
+User chose **Stop here — apply round-9 in a fresh `/clear` session** (matching the established PC patch cadence + the context-management "one heavy surface per session" rule). Binding plan: the round-9 CD ruling session (lock B5/B4/CONV-2/B-AI-2) → the `DeathCostReconciliation` state-machine authoring pass closing the ~14 BLOCKING → network + build narrow gates → then a round-10 full `/design-review`.
+
+### Files Modified This Session
+
+- `design/gdd/reviews/player-controller-review-log.md` — this round-8 entry appended.
+- `design/gdd/systems-index.md` — PC row updated with the round-8 verdict + the CD round-9 structural prescription (Status stays MAJOR REVISION NEEDED — round-8 is the gate, not yet APPROVED).
+- `design/gdd/player-controller.md` — NOT modified (read-only review).
+- `production/session-state/active.md` — to be refreshed to round-9-pending state.
+
+---
+
+## Patch — 2026-06-08 — Round-9 (CD-prescribed STRUCTURAL authoring pass + two narrow gates) — Type: PATCH, not a verdict
+
+**Type:** Authoring pass, NOT a review verdict. The binding gate is a **round-10 full 7-spec `/design-review` in a fresh session. DO NOT predict APPROVED for round-10.** Status stays MAJOR REVISION NEEDED until round-10 verdicts APPROVED. GDD heavily edited this session; NOT committed (branch `crafting-round2-patch`).
+
+### What round-9 was
+The single CD-authorized structural round from the round-8 synthesis: dissolve the recurring "flag SET specified, CLEAR-ON-FAILURE omitted" defect class (4 reproductions: R4-B6, R6-B5, R8 CONV-1) by replacing the three scattered death-cost booleans (`_deathCostPaid`, `deathDeductionCommitted`, in-flight marker) with a single per-death-event **`DeathCostReconciliation` state record** — states **Pending / InFlight / Committed / Abandoned**, keyed by `deathEventId`, with a `currentDeathRecord[player]` convergence pointer. Reconcile-eligibility collapses to `state == "Pending"`. Architecture reconsideration was NOT triggered (CD round-8 ruling); this is the "missing abstraction inside a sound architecture" fix.
+
+### 2 user design rulings locked this session
+- **B5 (Scenario-C cost-evasion) → CLOSE the evasion window.** Implemented as imminent-death predicate **arm 3** + a PredatorService-owned `predatorCausedImminent` latch (set on predator damage crossing/striking-below `HP_IMMINENT_THRESHOLD`; cleared on HP-recovery or T6). Sidesteps the damage-magnitude ADR the round-4 prose feared (keys on threshold-crossing causality, not magnitude). Stale-graze round-3 false-positive stays closed.
+- **CONV-2 (`task.defer` Race-2) → DOWNGRADE to a Studio-verify intent.** The binding correctness claim on the unverified post-cutoff scheduler ordering is removed; correctness now rests on the robust no-op-if-replaced exact-`Player`-instance-key guard (closes Race 3 regardless of scheduler order). Race 2 residual is the accepted Pillar-2-safe under-charge. Added to the Theme-2 API-verification list.
+
+### CD-ruled items applied (no user fork)
+- **B4 RunEnded single-owner:** PC raises the T7 whole-squad-wipe *condition*; does NOT broadcast. Single arbiter (forward-flagged `RunController`) broadcasts once with **victory(T8)-over-wipe(T7) precedence**. T8 + S4 player = rescued (S4→S5 victory, respawn cancelled, counted survivor).
+- **B-AI-2 predator target-lock release:** new F.4 row — on T5 (either path) PC's contract triggers `PredatorService:ReleasePredatorLock(player)` (caller owns the contract), paired with the T6 `lastPredatorDamageTimestamp` + latch clearance. Carried-unfulfilled since round-1 A3 / round-5 I.4 — now closed.
+
+### Keystone dissolutions (one refactor closed five round-8 findings)
+CONV-1 (in-flight marker lifecycle) → InFlight is a first-class state with mandatory exits. CONV-3(a) (Path-A deathContext existence) → Path A/B unified (every death mints a record). CONV-4 + systems Finding 4 (cost lost if T6 respawns before a failed tick recovers; cross-knob `2×INTERVAL<RESPAWN_DELAY` violable) → a `Pending` record is `deathEventId`-keyed and survives T6; the cross-knob relation downgraded to an advisory UX coupling (G.6). R6-B5/H.41 (second-life pays zero) → structurally impossible; H.41 re-pointed to assert record independence.
+
+### Other BLOCKING closed
+CONV-3(b)/(c) (Path-B pre-yield snapshot + nil-coalesce + world-anchored Death-SFX emitter strategy for both paths, V/A.3); network B3 (`OnPlayerDied` reconciliation-recovery recipient set, C.9); game B6 (`t_lastGracePulse_*` reset on `PlayerAdded`, E.E); qa BLK-1..4 (H.41 re-point; H.42 re-label MANUAL/in-Studio + Abandoned transition; H.36/H.38/H.39 Lemur-caveat labels; H.28 extended to the reconciliation scan + `task.spawn` dispatch). IMPORTANT cluster folded: audio F2 (Respawn SFX/caption guarded vs reconciliation-recovery), F3 (walk-volume floor `WALK_FOOTSTEP_VOLUME_FLOOR` + de-vacuous equivalence test), network I1 (heartbeat drop-first-write normative), I4 (`slot` integer ∈{1..6}), systems gate-comparator docs (G.6), Scenario C relocated to E.E as CLOSED, +3 new coverage ACs (H.44 arm-3, H.45 mid-retry skip, H.46 rejoin-during-reconciliation).
+
+### Two narrow gates (CD-prescribed — NOT a full panel)
+- **Network re-confirm [network-programmer, native]: SOUND — 0 BLOCKING, 2 IMPORTANT (both closed in-session).** Server-authority + exactly-once attribution preserved under the state record; two-path convergence race-safe under the InFlight guard; CONV-2 downgrade robust; B3/B4 sound; no new exploit/DoS/forge path from arm-3 latch, drop-first-write, or slot-integer validation. N-F1 (latch HP-recovery clear had no named watcher) + N-F2 (late-joiner × reconciliation-recovery HUD guidance) → both fixed (F.4 named forward obligation; C.9 HUD contract note).
+- **Build-lens transition-completeness [general-purpose, native]: BUILDABLE-WITH-FIXES — 1 BLOCKING, 3 IMPORTANT (all closed in-session).** The "fifth-flag" CD bar **PASSED** (no surviving free boolean with an undefined clear path). **BLOCKING B-F1:** an `InFlight` row could be stranded forever if the `task.spawn`'d retry coroutine errored between step 2 and the outcome classification (tick only re-selects `Pending`) — the exact stuck-state the refactor was meant to preclude. **Closed** by mandating a whole-span error guard (any thrown error after `Pending→InFlight` → `InFlight→Pending`), plus an optional staleness-sweep backstop. IMPORTANT: B-F2 (`currentDeathRecord` clear-on-removal had no implementation site → named the `PlayerRemoving` teardown bullet); B-F3 (`nextDeathEventId()` counter + `lastServerTrackedPosition` referenced but undeclared → defined both in bootstrap init); B-F4 (no AC asserted the `currentDeathRecord` clear → added a THEN clause to H.22e). All closed.
+
+### Next
+**Round-10 = full 7-spec `/design-review` in a fresh `/clear` session. DO NOT predict APPROVED for round-10.** Binding bar from round-8 CD still stands: if round-9's "fifth-flag" test had answered "a new free boolean, clear-path TBD," architecture reconsideration would trigger at round-10 — it did NOT (the state record passed the bar), so the reprieve is earned, but round-10 is a fresh adversarial gate. Themes 2/3/4 + OQ.3 (Camera GDD) remain PENDING until round-10 APPROVED.
+
+### Files Modified This Session
+- `design/gdd/player-controller.md` — round-9 structural authoring pass applied across C.5.3 (state-record refactor), C.5.8 (RunEnded arbiter), C.6 (T5/T6/T7/T8), C.9 (B3/I1/I4), E.E, F.4 (CONV-2/B5 latch/B-AI-2/B4), G.6 (coupled-knob + gate comparators), V/A.3/V/A.4 (CONV-3c/F2/F3), Section H (H.22b/d/e/f, H.28, H.35–H.43 reworked + H.44/H.45/H.46 new), header status block. Both narrow gates' findings closed inline.
+- `design/gdd/reviews/player-controller-review-log.md` — this round-9 entry.
+- `design/gdd/systems-index.md` — PC row → round-9 applied (Status stays MAJOR REVISION NEEDED — round-10 is the gate).
+- `production/session-state/active.md` — refreshed to round-9-complete / round-10-pending.
+
+---
+
+## Review — 2026-06-08 — Round-10 (binding gate; first fresh full 7-spec panel against the round-9 DeathCostReconciliation refactor) — Verdict: NEEDS REVISION
+
+**Scope signal:** M trending L (producer should verify before sprint planning). Round-11 = a CD ruling session + ONE authoring pass + ONE re-scoped narrow gate; the full 7-spec panel is reserved for round-12 as the closure gate.
+**Specialists:** game-designer, systems-designer, network-programmer, ai-programmer, audio-director, qa-lead, gameplay-programmer (build-from-artifact lens), creative-director (senior synthesis). 7 lenses spawned in parallel adversarially; CD synthesized.
+**Blocking items:** ~10 BLOCKING clusters | **Recommended:** ~15 IMPORTANT | **Nice-to-have:** several
+**Prior verdict resolved:** Yes — the round-9 structural authoring pass (DeathCostReconciliation state-record refactor + ~14 round-8 BLOCKING) was confirmed applied. This is a genuine fresh full panel against the materially-changed GDD. Round-8 qa items VERIFIED CLOSED (H.41 now a genuine binary signal, H.42 relabeled MANUAL, H.28 exercises the reconciliation scan).
+**Review depth:** full (7 lenses + CD synthesis).
+
+### The DO-NOT-predict-APPROVED caution held — but the texture is the healthiest in 10 rounds
+Round-10 returned NEEDS REVISION (the empirically-expected non-APPROVED). Beneath it: the spine is verified sound on three independent axes and the defect surface is migrating OUTWARD to the seams.
+
+### Architecture-reconsideration ruling: NOT triggered; fifth-flag bar PASSED and retired for the death-cost record
+The round-8 binding bar measured one thing — can a new lifecycle concern be bolted onto the death-cost surface as a free boolean with no clear path? The round-10 build-from-artifact lens re-confirmed BUILDABLE-WITH-FIXES + fifth-flag PASS: the two new build BLOCKING are undeclared **scalars** (`lastTickTime`, a dispatch timestamp), not sticky booleans. The `DeathCostReconciliation` record's transitions are complete. **CD ruling: the new defect cluster (the `predatorCausedImminent` latch) is provably OUTSIDE the record's abstraction scope** — it is a PredatorService-owned predicate input introduced by the round-9 B5 user-ruling, found by a fresh adversarial gate doing its job ("the next ring," not a missed sweep). Class-name identity ≠ scope identity. A recurrence *inside* the record's surface fails the bar; a recurrence *outside* it is the next ring — cured with the same medicine the record got (name its states, mandate every transition's clear-watcher, assign PredatorService the binding F.4 obligation), NOT a re-architecture.
+
+### What the panel confirmed genuinely CLEAN
+- **Build:** state machine complete; the round-9 whole-span error guard is correctly placed INSIDE the `task.spawn` body (the pcall catches the spawned coroutine's throws), so the "stuck-InFlight cannot exist" claim is TRUE — no sibling hole.
+- **Network:** server-authority + cost-attribution chain intact; deathEventId keying holds; no forge/DoS regression in the core machinery.
+- **Systems:** D.1–D.6 boundary-checked degenerate-free; D.5 30s trace arithmetically correct row-by-row.
+- **qa:** the four round-8 qa BLOCKING all verified closed.
+
+### Round-10 BLOCKING clusters
+- **(a) `lastTickTime`/`_lastReconcileTick` uninitialized [systems B4 + build B2 — DOUBLE, clean show-stopper].** The tick gate reads `(now − lastTickTime)` but the symbol is never declared/seeded in bootstrap → first-Heartbeat `now − nil` arithmetic crash kills the entire reconciliation tick (the whole Pillar-2 safety net) for the server session. One-line fix.
+- **(b) `:ReleasePredatorLock(player)` missing from C.5.3 step-5 enumeration [systems B6/B9 + ai].** Present in the C.6 T5 row + F.4 but absent from the (a)–(f) block the implementer copies. Add as row (g), both paths.
+- **(c) Arm-3 latch lifecycle cluster [network 2.1 + ai + qa — round-9's own headline fix spawned this round's headline].** N-F1 HP-recovery watcher mis-specified (a `HealthChanged` clear with no `>= HP_IMMINENT_THRESHOLD` guard clears on every sub-threshold hit); permanent-latch over-charge tail (fires on a disconnect after long pure-oxygen draining — weak attribution the GDD doesn't acknowledge); latch Race-2 re-opens Scenario C entirely (it inherited the timestamp's race without the timestamp's mitigation).
+- **(d) RunController arbiter + T7/T8 [game B3/B4 + network 6.1 + qa — TRIPLE].** PC correctly raises-not-broadcasts (B4 single-owner landed), but the arbiter has no provisional contract and T7 (whole-squad-wipe) + T8 (S4-player rescue) have ZERO covering ACs (flagged round-1, still open). Caller owns the contract.
+- **(e) Double-deduct race [network 1.3].** Path A commits, removes the row, clears `currentDeathRecord[player]=nil`; Path B then arrives, sees nil, mints a NEW deathEventId → second deduction. Needs a terminal-record guard before Path B mints.
+- **(f) Reconciliation-success (a)/(b) pulse-timer-stop unverified [qa] + H.8 tests the wrong regen-delay boundary (proves `>=` not the documented strict-`>`) [systems] + caption queue/priority for simultaneous multi-death unspecified → WCAG floor regression [audio].**
+- **(g) Staleness-sweep reads a dispatch-timestamp field the record schema doesn't carry [build B1 + systems].** Add `dispatchedAt` to the record, set at the Pending→InFlight transition.
+- **(h) H.22b/H.22d/H.22f/H.44 missing the C.11 Lemur-caveat label [qa].** Same `PlayerRemoving` instance-lifecycle path round-8 flagged for H.36/H.38/H.39.
+
+### Specialist disagreement (CD-resolved)
+network 1.1 ("error guard must be the first statement inside `task.spawn` or a pre-pcall throw strands the row") vs build N1 (traced the skeleton; the guard IS inside the spawned body → stuck-InFlight-impossibility is TRUE). **CD resolved in build's favor** — network's point downgrades to an IMPORTANT hardening preference. The "staleness-sweep MUST not MAY" half stands as IMPORTANT.
+
+### CD design rulings R10-1..R10-6 (lock before round-11 authoring; user owns R10-1 + R10-6)
+- **R10-1 (USER)** — arm-3 permanent-latch vs time-bounded → recommend a long outer staleness ceiling (`LATCH_MAX_AGE ≈ 120s`, range 60–180s) capping the weak-attribution over-charge tail without re-opening Scenario C. Alternative: pure-permanent, accepting the over-charge tail as the symmetric price (must be stated, not left unacknowledged).
+- **R10-2 (CD)** — latch Race-2 → CLOSE by inheriting the `lastPredatorDamageTimestamp` mitigation (cache-first read [already done] + the `task.defer` no-op-if-replaced instance-key guard).
+- **R10-3 (CD)** — double-deduct race → CLOSE via a terminal-record guard: Path B's mint gates on "no Committed/InFlight record for this player's current life," not just a live pointer.
+- **R10-4 (CD)** — silence-at-vanish-time → make it intentional AND stated (Pillar 3 — the squad notices the absence); enforce nil-position caption/audio parity; author the multi-death caption queue+priority+hold-time rule (WCAG; deferred since round-1 U3/Ac3).
+- **R10-5 (CD)** — RunController → author the caller-side provisional contract NOW (`RunEndConditionRaised(conditionType, squadState)` + victory-T8-over-wipe-T7 precedence) so the arbiter conforms to PC; add the T7/T8 ACs against it.
+- **R10-6 (USER)** — stationary-sprint Pillar-1 policy → recommend floor-and-feel (cost = the act of holding sprint, not displacement; kills the 0.03 stealth-sprint micro-exploit). Alternative: disallow/auto-revert stationary sprint. Genuine design fork touching the core fantasy + mobile-input story (game I6).
+
+### Senior Verdict (creative-director)
+> NEEDS REVISION (not MAJOR; not APPROVED). Scope M→L. Architecture reconsideration NOT triggered; fifth-flag bar PASSED and retired for the death-cost record. The recurrence is the next ring (the latch seam the round-9 B5 ruling introduced), not whack-a-mole — rounds 1–8 the recurrences were INSIDE the core cost-attribution machinery; round-10 that machinery is verified clean on three axes and the live defects have migrated OUTWARD to the seams (predator-side wiring, an undeclared tick scalar, a forward-system arbiter contract, missing ACs on already-correct rules). That is the signature of a GDD approaching done. Not MAJOR because there is no methodology failure and no unsound spine. Not APPROVED because six BLOCKING clusters remain, including a clean show-stopper (the uninitialized tick scalar) and a Pillar-1 fantasy question (R10-6). **New round-11 binding bar: if the `predatorCausedImminent` latch can be left in any state with no specified clear-watcher after round-11, that holds the verdict — the latch must leave round-11 with the same lifecycle rigor the record got.** If round-11 lands these seams cleanly, round-12 is a credible APPROVED.
+
+### Recommendation
+User chose **Stop here — apply round-11 in a fresh `/clear` session** (matching the established PC patch cadence + the context-management "one heavy surface per session" rule). Binding plan: round-11 CD ruling session (lock R10-1..R10-6) → ONE authoring pass (trivial-first sweep: `lastTickTime` bootstrap, `:ReleasePredatorLock` enumeration, (a)/(b) + T7/T8 ACs; THEN the heavy seams: latch state-discipline, double-deduct guard, caption queue, RunController contract — do NOT co-resident) → ONE re-scoped narrow gate (build transition-completeness + network re-confirm), NOT a full panel → then a round-12 full `/design-review` closure gate. **DO NOT predict APPROVED for round-12.** Themes 2/3/4 + OQ.3 (Camera GDD) remain out of scope and PENDING until round-12 verdicts APPROVED.
+
+### Files Modified This Session
+- `design/gdd/reviews/player-controller-review-log.md` — this round-10 entry appended.
+- `design/gdd/systems-index.md` — PC row updated with the round-10 verdict + the CD round-11 prescription (Status stays MAJOR REVISION NEEDED — round-10 is the gate, round-12 is the closure gate).
+- `design/gdd/player-controller.md` — NOT modified (read-only review).
+- `production/session-state/active.md` — to be refreshed to round-11-pending state.
+
+---
+
+## Review — 2026-06-09 — Round-11 (full 7-lens panel, run against the UNMODIFIED round-9 disk artifact per user choice) — Verdict: NEEDS REVISION
+
+**Scope signal:** L (multi-system cost-attribution + cross-GDD contract + accessibility; 6 formulas; RunController ADR still owed).
+**Specialists:** game-designer, systems-designer, network-programmer, ai-programmer, audio-director, qa-lead, build-from-artifact (general-purpose) + creative-director (senior synthesis). **All 7 lenses + CD delivered natively (zero re-spawns).**
+**Blocking items:** 12 BLOCKING clusters (10 re-confirming round-10 (a)-(h) + 5 NEW seam-level findings; some overlap) | **Recommended:** ~18 IMPORTANT | **Nice-to-have:** several
+**Prior verdict resolved:** No — the GDD is byte-unchanged since the round-9 DeathCostReconciliation refactor; the CD-prescribed round-11 **authoring pass had NOT been applied**. The user invoked `/design-review` on Player Controller anyway (warned it would largely re-confirm round-10). The panel re-confirmed all round-10 clusters AND surfaced 5 new seam findings. Status remains **MAJOR REVISION NEEDED**.
+**Review depth:** full (7 specialists spawned in parallel adversarially, then creative-director synthesis).
+
+### Summary
+
+Run against the unmodified round-9 artifact, so re-confirmation of the round-10 clusters was the expected floor — the panel met it and exceeded it with 5 NEW findings that justify having run it.
+
+**Re-confirmed round-10 clusters (a)-(h):** (a) `lastTickTime` uninit [build+systems+network triple-lens — show-stopper]; (b) `:ReleasePredatorLock` absent from C.5.3 step-5 enum [systems+ai]; (c) arm-3 HP-recovery watcher unguarded/un-deploy-gated [network+ai+qa]; (d) RunController arbiter contract undefined + T7/T8 zero ACs [game+qa+network]; (e) double-deduct [network — now a traced reproduction]; (f) H.8 wrong regen comparator + multi-death caption queue [systems+qa, audio]; (g) staleness-sweep reads undeclared schema field [build]; (h) reconciliation-recovery silence/caption-parity [audio].
+
+**5 NEW seam-level findings (what round-10 missed):**
+1. **GD-02 [cross-GDD, VERIFIED]** — PC's T8 victory subscribes to `OnEscapeBeaconActivated()` (activation edge), but `crafting-and-items.md` (round-2) explicitly designates `OnBeaconWindowSurvived` (BCT4) as "PC's T8 victory subscription" and marks `OnEscapeBeaconActivated` "**NOT** the victory trigger." PC would declare victory the instant the beacon lights, bypassing Crafting's entire survival-window thesis. A regression where Crafting moved and PC didn't follow.
+2. **N-2** — double-deduct traced concretely: step-5 success sets Committed -> removes row -> clears pointer; a replayed `Humanoid.Died` (C.5.2 admits it fires twice) then mints a fresh `deathEventId` -> second squad-oxygen deduction.
+3. **N-3** — arm-3 has no recency check, so Race-2 lets H.44 (auto-integration AC) pass in controlled-order test and fail in production.
+4. **AI-3** — `lastServerTrackedPosition` not in the T6 respawn clearance list -> predator can read a 30s-stale death-point position. A3 closed for death, not respawn.
+5. **SD-B4** — the whole-span error-guard claim ("ANY error rolls InFlight->Pending") contradicts step-5's commit-before-side-effects ordering: the row is Committed+removed before T5 side-effects run, so a side-effect error has no InFlight row to roll back to.
+
+**Confirmed CLEAN / PROTECT:** network authority + cost-attribution chain re-confirmed SOUND (no client forge path on `deathEventId`/record/`RequestSquadOxygenSpend`) — ~11th round, PROTECT. Formula boundary sweep D.1/D.2/D.6 clean; D.5 30 s trace re-verified line-by-line CLEAN. Build: 4-state transitions complete, InFlight double-dispatch guard no off-by-one, error guard correctly placed inside the `task.spawn` body, no forbidden patterns. OQ.1 footstep perception boundary CONFIRMED CLEAN (audio).
+
+### Senior Verdict (creative-director)
+
+> NEEDS REVISION; status holds at MAJOR REVISION NEEDED. The show-stopper (`lastTickTime`) is a one-line bootstrap **omission**, not a logic defect; the authority chain re-confirmed SOUND; and every NEW finding lands at the seams (cross-GDD boundary, replay/race edges, respawn flush, a step-5 ordering statement) — none recur inside the `DeathCostReconciliation` record abstraction. **Governance: next-ring UPHELD, fifth-flag bar PASSED, NO re-architecture.** The arm-3 latch recurrences live in PredatorService/heal-path territory outside the record's enclosed surface = next ring, cured with one ruling, not a treadmill. SD-B4 is the closest to an internal inconsistency but is a prose/ordering defect (fix the order, the abstraction is coherent), not a structural flaw.
+
+### CD Design Rulings Locked (R11-D1..D5 — user may override)
+
+- **R11-D1** — Re-point T8 from `OnEscapeBeaconActivated()` to Crafting's window-survived emit `OnBeaconWindowSurvived` (BCT4). VERIFIED against `crafting-and-items.md` C.9. PC owns conforming to Crafting's caller contract; no prereq review on Crafting.
+- **R11-D2** — Close N-2 + SD-B4 **together**: **retain the Committed row** until T6/PlayerRemoving (rather than a `lastCommittedDeathEventId` guard) — it gives a replayed `Died` a Committed row to short-circuit against AND gives the error guard something to roll back to. Reorder step-5 so side-effects run before row removal, OR explicitly scope the guard to the pre-removal span; the guarantee prose MUST match the order.
+- **R11-D3 (USER-OWNED — still open)** — Stationary-sprint vs Pillar 1 (R10-6). The fork: (a) floor-and-feel (stationary sprint produces a real disturbance pulse) vs (b) min-magnitude floor (clamp to tiny non-zero, effectively free). CD recommends (a) — Pillar-1 honesty — but this is the user's vision call.
+- **R11-D4** — audio-director authors the multi-death caption queue (order = death-event timestamp; explicit hold-time; dedup by `deathEventId`; polyphony cap with overflow->caption-only). Authoring task, not a fork.
+- **R11-D5** — STATE the reconciliation-recovery silence as intentional AND require caption parity: "[Name] is down" caption fires regardless of the nil-position SFX suppression. No fork.
+
+### Round-11 Prescription (UNCHANGED in shape; gate scope widened)
+
+CD ruling session (lock R11-D1..D5 + R10-1..R10-5) -> **ONE authoring pass**: Phase 1 trivial sweep first (Tier-0 `lastTickTime` init; schema-field declarations; H.8 comparator flip; missing-AC stubs), Phase 2 heavy seams **separate/NON-co-resident** (Tier-1 cost-attribution N-2/SD-B4 ordering + arm-3 gated watcher/deploy-gate/recency; Tier-3 RunController contract + GD-02 re-point; Tier-4 audio) -> **TWO narrow gates**: (1) build-from-artifact re-scoped (lastTickTime init, schema fields, enum/arity) + (2) **network re-confirm** (verify the retain-row fix closes N-2, arm-3 recency holds, authority chain still SOUND post-edit). Full 7-lens panel reserved for **round-12 as the closure gate**. **DO NOT predict APPROVED for round-12.**
+
+### Round-11 BLOCKING — ranked authoring queue
+
+- **Tier 0:** (1) `lastTickTime` bootstrap omission [build-F1 / SD-B1 / N-4].
+- **Tier 1:** (2) N-2 double-deduct + (3) SD-B4 error-guard ordering [R11-D2, one fix]; (4) arm-3 watcher deploy-gate + threshold guard + recency [N-1 / AI-2 / N-3 / qa].
+- **Tier 2:** (5) `:ReleasePredatorLock` into C.5.3 step-5 enum [SD-B2 / AI-1]; (6) staleness-sweep schema field [build-F2]; (7) `lastServerTrackedPosition` into T6 clearance [AI-3].
+- **Tier 3:** (8) GD-02 T8 re-point [R11-D1]; (9) RunController provisional contract + N-6 defeat-hold window + T7/T8 ACs [GD-01 / qa / network]; (10) H.8 comparator + 4 missing-AC gaps + QA-NEW-1/2/4/5 [systems / qa].
+- **Tier 4:** (11) multi-death caption queue + polyphony [AD-1 / R11-D4]; (12) reconciliation-recovery silence + caption parity [AD-2 / R11-D5].
+
+### Specialist Disagreements
+
+None substantive. All 7 lenses converged on NEEDS REVISION. Build returned BUILDABLE-WITH-FIXES (both BLOCKINGs are the `now-nil` arithmetic class — mechanical); network re-confirmed authority SOUND (PROTECT) — scoped soundness confirmations, not disagreements with the verdict.
+
+### Files Referenced (round-11 review)
+
+- Target: `design/gdd/player-controller.md` (1157 lines; unchanged round-9 artifact).
+- Cross-verified: `design/gdd/crafting-and-items.md` (C.9 `OnBeaconWindowSurvived` vs `OnEscapeBeaconActivated` — GD-02 confirmed).
+- Cross-cited: `design/gdd/game-concept.md`, `design/gdd/systems-index.md`, `docs/engine-reference/roblox/VERSION.md`.
+
+### Files Modified This Session
+
+- `design/gdd/reviews/player-controller-review-log.md` — this round-11 entry appended.
+- `design/gdd/systems-index.md` — PC row updated with the round-11 verdict + R11-D1..D5 rulings (Status stays MAJOR REVISION NEEDED).
+- `design/gdd/player-controller.md` — NOT modified (read-only review).
+- `production/session-state/active.md` — refreshed to round-11-complete / round-11-authoring-pending state.
+
+---
+
+## Authoring Pass — 2026-06-09 — Round-11 (applies the round-11 panel findings; a PATCH, not a verdict)
+
+**This is the CD-prescribed round-11 authoring pass** that closes the round-11 full-panel NEEDS REVISION (above). It is NOT a verdict — the round-12 full 7-lens `/design-review` is the binding gate. **DO NOT predict APPROVED for round-12.** GDD modified; review-log + systems-index + active.md updated. NOT committed (branch `crafting-round2-patch`).
+
+### Two user-owned forks resolved (2026-06-09, both CD-recommended option)
+- **R10-6 / R11-D3 — stationary-sprint** → **floor-and-feel**: `magnitude = max(SPRINT_HOLD_FLOOR, computed)`, Sprint axis only, `SPRINT_HOLD_FLOOR = 0.06` (60% of full; stationary sprint 0.03→0.06; kills the near-free stealth-sprint read, preserves moving>holding gradient). **ED-registry-owned** (emission magnitude per G.7) → F.4 forward obligation to ED + provisional reference in PC.
+- **R10-1 — arm-3 latch lifetime** → **outer staleness ceiling** `LATCH_MAX_AGE = 120 s` (range 60–180; renewed on each qualifying predator hit; bounds the weak-attribution over-charge tail without re-opening Scenario C, which needs >30 s).
+
+### Tier 0–4 BLOCKING queue — all applied
+- **Tier 0** — `lastTickTime` bootstrap seeded to `getServerTime()` + set each scan (C.5.3 Bootstrap; H.40 strengthened). **Show-stopper closed.**
+- **Tier 1a** — N-2 + SD-B4 [R11-D2]: success path → `Committed` → broadcast + side-effects → **retain row + `currentDeathRecord` pointer until T6/PlayerRemoving** (replayed-`Died` resolves the retained record, no-ops; closes the double-deduct). Error guard **scoped to the InFlight window** (post-`Committed` errors logged, never rolled back; closes the re-deduct hazard). Orphaned-row exception for a reconciliation-tick commit with no live pointer. Termination/T6/teardown/E.E + H.22e/H.37/H.39/H.41 reconciled to the retain-then-remove model.
+- **Tier 1b** — arm-3 [R10-1/N-1/AI-2/N-3]: `LATCH_MAX_AGE` ceiling conjunct on a new `predatorCausedImminentSetTimestamp` (`~= nil`-guarded); F.4 HP-recovery watcher made **deploy-gated** (dormant until a heal path exists; named obligation) + **threshold-guarded** (clears only on crossing back `≥ HP_IMMINENT_THRESHOLD`, never on intra-band `HealthChanged`); H.44 annotated with the Race-2 production caveat + ceiling paired-negative; G.6 knob registered; E.E ceiling note.
+- **Tier 2** — `:ReleasePredatorLock` added to the C.5.3 step-5 side-effect enum (g), both paths + reconciliation-success subset [SD-B2/AI-1]; `inFlightSince` declared in the record schema, set at `Pending→InFlight`, cleared on rollback, read by the staleness sweep [build-F2]; `lastServerTrackedPosition` reset to the respawn anchor on T6 [AI-3]; **H.8** boundary aligned with D.2 strict `>` (advance past 1.5 s).
+- **Tier 3** — **GD-02 T8 re-point** `OnEscapeBeaconActivated → OnBeaconWindowSurvived` (BCT4) across C.6/C.5(rule 8)/C.10/F.2/F.4 [R11-D1]; `RunController:RunEndConditionRaised(conditionType, squadState)` caller-side provisional contract + victory-over-wipe precedence + **`RUN_END_DEFEAT_HOLD` defeat-hold window** (N-6) [R10-5]; new T7/T8 ACs **H.47–H.51** (+ `:ReleasePredatorLock` AC).
+- **Tier 4** — multi-death **caption queue V/A.4a** (order by death-event timestamp; 3 s hold; **dedup by `deathEventId`**; overflow→caption-only) + **Death-SFX polyphony cap** `DEATH_SFX_MAX_VOICES` (V/A.3) [R11-D4]; **nil-position caption parity** ("[Name] is down" fires even when positional SFX suppressed) + reconciliation-recovery silence stated intentional (Pillar 3) [R11-D5]; ACs **H.52/H.53**.
+
+### Two narrow gates (CD-prescribed) — BOTH GREEN
+- **Build-from-artifact (re-scoped, general-purpose agent): BUILDABLE.** All 7 edit-clusters CONFIRMED wired/declared/arity-consistent; Tier-0 show-stopper confirmed closed; retain-row lifecycle traced with no stranded-row path; no stray `OnEscapeBeaconActivated`-as-victory, no leftover Sprint-stationary `0.03` emitted value, no undeclared-field read, single `isImminentDeath_cached` call site (5-arg) — no arity mismatch. 2 non-blocking doc-anchor nits (C.5-rule-8 method-name echo — **fixed**; "C.5.8" dotted-ref — left, it is the doc's established `C.5.N`=rule-N convention, identical to the 30+ `C.5.3` uses).
+- **Network re-confirm (network-programmer): AUTHORITY CHAIN SOUND.** All 3 seams CONFIRMED — retain-row closes N-2 (exactly one deduction per death event; error guard correctly InFlight-scoped); arm-3 ceiling is a conjunct that strictly narrows toward under-charge (no new over-charge/forge path; Race-2 accepted-under-charge honestly annotated); GD-02 re-point preserves the single-broadcaster invariant and removes the "victory on beacon-light" bug. **PROTECT re-confirmed SOUND (~12th round): no client forge path on `deathEventId` / record state / `RequestSquadOxygenSpend`.**
+
+### Counts / deltas
+ACs added: H.47–H.53 (run-end T7/T8, `:ReleasePredatorLock`, caption dedup, nil-position parity). New knobs: `LATCH_MAX_AGE` (G.6), `SPRINT_HOLD_FLOOR` (G.7, ED-owned), `RUN_END_DEFEAT_HOLD` + `DEATH_SFX_MAX_VOICES` (provisional, owner-flagged). New record field: `inFlightSince`. New PredatorService obligation: `predatorCausedImminentSetTimestamp` + deploy-gated/threshold-guarded HP-recovery watcher. New caller-side contract: `RunController:RunEndConditionRaised`.
+
+### NEXT
+Round-12 full 7-lens `/design-review` (closure gate) in a fresh `/clear` session. **DO NOT predict APPROVED for round-12.** Open forward obligations created: ED owes `SPRINT_HOLD_FLOOR` registry add; RunController (unauthored) owes the `RunEndConditionRaised` arbiter + `RUN_END_DEFEAT_HOLD`; HUD owes the reconciliation-recovery / `OnPlayerStatusUnknown` / multi-death-caption UX; heal-feature author owes the deploy-gated latch-clear watcher.
+
+### Files Modified This Session
+- `design/gdd/player-controller.md` — round-11 authoring pass applied (header status + Tier 0–4 + R10-1/R10-6/R11-D1..D5).
+- `design/gdd/reviews/player-controller-review-log.md` — this round-11 authoring-pass entry.
+- `design/gdd/systems-index.md` — PC row updated (round-11 authoring applied; status stays MAJOR REVISION NEEDED until the round-12 gate).
+- `production/session-state/active.md` — refreshed to round-11-authoring-complete / round-12-pending.
+
+---
