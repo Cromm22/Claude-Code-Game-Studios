@@ -427,7 +427,7 @@ constants:
     unit: seconds
     source: design/gdd/player-controller.md (C.5.3, C.11, G.6)
     referenced_by: []
-    notes: "Death-cost reconciliation tick period on RunService.Heartbeat (R5-B2 retry surface). Governs the Pillar-2 SLA: a failed death-cost deduction is recovered within at most 2x this value (10.0 s worst case) of the original death event. Read of server-time for the tick interval gate MUST route through the C.11 getServerTime() seam. Range: 2-10s. Too Low: tick overhead grows + reconciliation thrash; Too High: the 2x-interval recovery bound exceeds RESPAWN_DELAY=30s, so a Path-A player could respawn before the squad cost is reconciled (Pillar 2 silent gap). Keep 2x value < RESPAWN_DELAY."
+    notes: "Death-cost reconciliation tick period on RunService.Heartbeat (R5-B2 retry surface). Governs the Pillar-2 SLA: a failed death-cost deduction is recovered within at most 2x this value (10.0 s worst case) of the original death event. Read of server-time for the tick interval gate MUST route through the C.11 getServerTime() seam. Range: 2-10s. Too Low: tick overhead grows + reconciliation thrash; Too High: the 2x-interval recovery bound exceeds RESPAWN_DELAY=30s, so a Path-A player could respawn before the squad cost is reconciled — a delayed-notification UX gap only, NOT a correctness gap (the Pending row is deathEventId-keyed and survives T6 per the round-9 record refactor; reconciliation-before-respawn is advisory per G.6). ADVISORY: keep 2x value < RESPAWN_DELAY for notification UX."
 
   - name: SPRINT_CLIENT_TIMEOUT
     category: constant
@@ -436,6 +436,14 @@ constants:
     source: design/gdd/player-controller.md (E.D, G.6, H.33a)
     referenced_by: []
     notes: "Server-side ghost-sprint safeguard: any S2 state with (now - _lastHeartbeatTime[player]) > this value reverts to S1 via T2. Heartbeat signal is the dedicated zero-payload PlayerHeartbeat RemoteEvent at HEARTBEAT_SEND_RATE = 1 Hz; PlayerHeartbeat is NOT a sprint-authorization signal (sprint terminates at stamina=0 regardless). Round-2 Theme 1 N2 made this enforceable (round-1 left the heartbeat signal undefined). Range: 1-10s."
+
+  - name: DEATH_SFX_MAX_VOICES
+    category: constant
+    value: 2
+    unit: count
+    source: design/gdd/player-controller.md (V/A.3, V/A.4a, G.6)
+    referenced_by: []
+    notes: "Death SFX polyphony cap (R11-D4 / R12-AD-B2): maximum concurrent positional Death SFX emitters in a death burst. Deaths beyond the cap drop their positional voice and coalesce into a single non-positional UI-channel squad-wide overflow cue (one per overflow batch — accessibility parity with the V/A.4a caption queue, which still lists every death individually, deduped by deathEventId). Range: 1-4 (squad is at most 4, so >4 is meaningless). Registered round-13 per R12-AD-B2; value 2 carried from the round-11 V/A.3 provisional."
 
   - name: TAP_HOLD_COMMIT_DURATION
     category: constant

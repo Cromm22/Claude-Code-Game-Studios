@@ -1187,3 +1187,78 @@ Round-12 full 7-lens `/design-review` (closure gate) in a fresh `/clear` session
 - `production/session-state/active.md` — refreshed to round-11-authoring-complete / round-12-pending.
 
 ---
+
+
+---
+
+## Review — 2026-06-09 — Verdict: NEEDS REVISION (round-12 full 7-lens closure gate)
+
+Scope signal: L (multi-system integration; 8 declared dependencies — 6 provisional; 6+ formulas; multiple ADRs already flagged)
+Specialists: game-designer, systems-designer, network-programmer, ai-programmer, audio-director, qa-lead, build-from-artifact (general-purpose), creative-director (senior synthesis). All 8 delivered NATIVELY — zero re-spawns.
+Blocking items: 8 BLOCKING convergence clusters (~24 raw findings across 7 lenses) | Recommended (IMPORTANT): ~20
+Prior verdict resolved: No — round-11 was an authoring patch; this is the binding closure gate. Status stays MAJOR REVISION NEEDED until an APPROVED verdict. **17th-equivalent non-APPROVED is not the frame here — this is the round-12 panel after the round-11 patch; the spine has demonstrably narrowed.**
+
+### The 5 cross-lens convergences (the strongest signals)
+
+1. **CONVERGENCE 2 — staleness-sweep double-charge (the load-bearing NEW logic defect) [network B2 + systems SD-4 + qa missing-H.54].** The optional/"recommended" `inFlightSince` staleness sweep (re-arms an `InFlight` row → `Pending` after `> 2× RECONCILIATION_TICK_INTERVAL`) can race a slow-but-legitimate in-flight `task.spawn` coroutine: sweep resets the row → `Pending`, the next tick dispatches a SECOND coroutine, both call `RequestSquadOxygenSpend` and both succeed → **double squad-oxygen charge.** Root cause: the C.5.3 step-5 success path sets `state="Committed"` **unconditionally** (verified at line 253) — it never re-checks `state=="InFlight"` after the yield. Systems independently found the same `Pending → Committed` transition missing from the 4-state table. **Fix = one `if row.state == "InFlight"` guard before charging+committing; add AC H.54 (post-Committed error must not re-deduct).**
+
+2. **CONVERGENCE 5 — build NOT BUILDABLE [build B1+B2].** (a) C.8.4 AND the D.4 variable table MANDATE inline `workspace:GetServerTimeNow()` — the exact call C.11 forbids and grep-gates (line 447); an implementer building emissions from C.8 trips the GDD's own gate. (b) The D.4 example magnitude table cannot distinguish its own rows (a) vs (e) — identical stated inputs (`t−t0=0.3s, d_xz=0.4`), different outputs (0.10 vs 0.06) — because it lacks a `grace_eligible`/`t_lastGracePulse` column; a unit test can't reproduce row (e) deterministically. (The recurring reconciliation-miss class, now at the C.8↔C.11 and D.4-prose↔D.4-table seams.) Build CONFIRMED the SPINE buildable/clean: 4-state machine, 5-arg cached predicate arity, T8 re-point (no stray `OnEscapeBeaconActivated`-as-victory), `lastTickTime` bootstrap, `SPRINT_HOLD_FLOOR` literal consistency.
+
+3. **CONVERGENCE 1 — `SPRINT_HOLD_FLOOR=0.06` (round-11 R10-6 floor) [game B1/B2 + systems SD-1 + audio AD-B1/AD-I2].** (a) 0.06 < lantern 0.08 → the Pillar-1 emission hierarchy (Walk<Lantern<Sprint) is INVERTED; stationary-sprint becomes the squad's quietest "loud" option. (b) The moving(0.10)>holding(0.06) gradient has NO player-perceivable feedback channel (stamina drains identically, footstep cadence identical, HUD shows aggregate only); the "you feel it leave you" fantasy has no pulse-coincident audio. (c) At the G.7 range max (0.10) `max(0.10, 0.10×0.30)=0.10` collapses the gradient; no invariant `SPRINT_HOLD_FLOOR < MAGNITUDE_SPRINT_PULSE` stated. **USER-FORK knob; CD recommends raising the floor to ~0.09 with the invariant `MAGNITUDE_LIGHT(0.08) < SPRINT_HOLD_FLOOR < MAGNITUDE_SPRINT_PULSE(0.10)` — user decides.**
+
+4. **CONVERGENCE 3 — `RUN_END_DEFEAT_HOLD` underspecified [systems SD-5 + game B3].** No G.6 entry, no range, no too-low/too-high; at `=0` the defeat-hold protection collapses (defeat broadcasts before BCT4 victory can arrive). RunController-owned/provisional but PC introduced it. Network confirmed the arbiter LOGIC itself is SOUND (0.5s = 30× a Heartbeat; no dropped victory). Gap = missing positive-min range + the player-experience prose for the 0.5s freeze.
+
+5. **CONVERGENCE 4 — `LATCH_MAX_AGE × HP_ARM_RECENT_WINDOW` coupling [systems SD-7 + ai AI-8].** At both range extremes (60/60) the margin is ZERO and Scenario C reopens; "must stay > with margin" is prose-only, not a machine-checkable coupled-knob invariant. (Plus game B4: 120s covers ~40% of a 5-min session — a fantasy/attribution concern; USER-FORK knob, CD recommends keeping 120s + adding the coupled invariant.)
+
+### Other BLOCKING (single-lens)
+- [ai AI-1] "renew timestamp on each qualifying application" lives only in C.5.3 prose, not the F.4 normative block — F.4-only reader builds set-once, defeating the ceiling-refresh (same split-spec class round-3 B3 fixed for `lastPredatorDamageTimestamp`). [ai AI-3] the FORMAL arm-3 predicate reads live `predatorCausedImminent[player]==true` while the skeleton passes a CACHED local — conforming to the formal spec is Race-2-vulnerable. [ai AI-2] HP-recovery-watcher deploy-gate has no named owner/reverse-cite → silently skippable. [ai AI-4] nothing gates predator re-acquisition of a dead player's lingering HRP during S4.
+- [audio AD-B2] polyphony-cap overflow deaths are SILENT to hearing players (caption-mode gets MORE info — accessibility-parity inversion); [audio AD-B3] the ≤10s reconciliation-recovery silence window has no specified audio treatment.
+- [qa] H.8 hardcodes `1.51s` tied to tickrate (use ε via injected clock); H.40 doesn't assert `lastTickTime` updated-to-scan-time; H.44 missing exact-boundary `T-120.0`/`T-119.99`; H.47 no mock-strategy for cross-GDD `OnBeaconWindowSurvived`; H.50 tests the unauthored RunController arbiter, not PC.
+
+### IMPORTANT (recommended)
+- [systems] 7-round-DEFERRED guards — force-resolve, don't defer an 8th time: SD-3 (`STAMINA_DRAIN_RATE>0` divide-by-zero in D.3), SD-6 (`math.max(0,dt)` in D.1/D.2).
+- [ai] `:ReleasePredatorLock` idempotency must be CONTRACTED in F.4 (only asserted in C.5.3); F.2 perception contract should be marked provisional/position-only; two position surfaces (`HumanoidRootPart.Position` vs `lastServerTrackedPosition`) need an explicit "don't read the cache for tracking" prohibition.
+- [network] narrate the InFlight-at-`PlayerRemoving` lifecycle (one sentence); state the `predatorCausedImminentSetTimestamp` no-RemoteEvent trust boundary.
+- [audio] specify the audio contract for polyphony-overflow + reconciliation-silence; register `DEATH_SFX_MAX_VOICES` in G.x + entities.yaml.
+- [build] I1 `isImminentDeath_cached` param→predicate-term mapping; I2 `invokeT5`/`deathContext`-vs-record relationship (double-mint ambiguity); I3 `lastServerTrackedPosition` bootstrap-init + S4 nil-guard; I4 H.32 displacement precondition.
+- [qa] Lemur-caveat labels on H.22b/c/d/f; split H.37; add `inFlightSince` schema AC (H.56); `SPRINT_HOLD_FLOOR` isolated boundary AC (H.12a).
+
+### CONFIRMED SOUND (defend these)
+- **Network: authority + cost-attribution chain SOUND, ~13th round, PROTECT.** N-2 retain-Committed-row closes the replayed-`Died` double-deduct; arm-3 `LATCH_MAX_AGE` strictly narrows toward under-charge (no forge); T8 re-point + `RunEndConditionRaised` preserve server authority; `PlayerHeartbeat`/rate-limits exploit-resistant.
+- **Build: the round-11 spine clusters all confirmed buildable/clean.**
+
+### Senior verdict (creative-director)
+> **NEEDS REVISION (not MAJOR).** The standing "do not predict APPROVED" held. **Governance: fifth-flag bar PASSED — do NOT re-architect.** The double-charge (Convergence 2) lives at a SEAM (an optional age-triggered backstop) OUTSIDE the `DeathCostReconciliation` record's failure-exit discipline, not inside the abstraction's enclosed surface — one `if state=="InFlight"` guard fixes it. This round is a **narrowing, not a treadmill** (spine buildable; authority SOUND 13th round; every blocker is a one-fix seam item). But it is the **self-inflicted-by-own-edits** pattern — round-11's new `SPRINT_HOLD_FLOOR` / staleness sweep / `RUN_END_DEFEAT_HOLD` / C.8↔C.11 edits generated the strongest blockers, exactly as Crafting rounds 21/22 — which sets the severity floor at NEEDS REVISION and mandates a closing fan-out reconciliation sweep next round.
+
+### CD prescription for round-13 (binding shape; user may override)
+Round-13 = CD/user ruling session FIRST (resolve the two USER-FORK knobs: `SPRINT_HOLD_FLOOR` value+invariant, `LATCH_MAX_AGE` coupling) → **ONE authoring pass** (the enumerable blocker set + a MANDATORY fan-out reconciliation sweep across all sibling sections + D.4 arithmetic validation + force-resolve the 7-round-deferred SD-3/SD-6 guards) → **TWO narrow gates** (network re-confirm + re-scoped build-from-artifact). Reserve the full 7-lens panel for round-14. **DO NOT predict APPROVED for round-13 OR round-14.**
+
+## Authoring — 2026-06-10 — Round-13 (ruling session + authoring pass + BOTH narrow gates — a PATCH, not a verdict)
+
+Scope signal: n/a (authoring pass, not a review). Status stays MAJOR REVISION NEEDED until an APPROVED verdict.
+Executed exactly per the round-12 CD prescription: user rulings FIRST → one authoring pass (full blocker set + IMPORTANT sweep + mandatory fan-out reconciliation sweep + D.4 arithmetic validation + force-resolve SD-3/SD-6) → TWO narrow gates, findings closed in-session.
+
+### User rulings (locked 2026-06-10 — both CD recommendations accepted)
+- **[R13-F1]** `SPRINT_HOLD_FLOOR` raised **0.06 → 0.09** + machine-checkable invariant `MAGNITUDE_LIGHT_PULSE (0.08) < SPRINT_HOLD_FLOOR < MAGNITUDE_SPRINT_PULSE (0.10)` (G.7; range now (0.08, 0.10) exclusive; ED-registry-owned — ED owes the registry row at 0.09). Pillar-1 hierarchy restored; gradient feedback channel authored (pulse-coincident sprint exertion audio layer, V/A.3).
+- **[R13-F2]** `LATCH_MAX_AGE` stays **120 s** + coupled invariant `LATCH_MAX_AGE > HP_ARM_RECENT_WINDOW + 30 s` (G.6; closes the degenerate 60/60 corner where Scenario C reopens).
+
+### Authoring pass (all 8 round-12 BLOCKING clusters + force-resolves + IMPORTANTs)
+1. Staleness-sweep double-charge CLOSED: step-5 commit gated on post-yield `row.state == "InFlight"` re-check; late coroutine logs-and-exits; 4-state table reconciled; AC **H.54**.
+2. Build buildability: C.8.4 + D.4 re-pointed to the C.11 `getServerTime()` seam (zero inline mandates remain); D.4 example table gained `t_lastGracePulse[axis]` + `grace_eligible` columns, all 6 rows recomputed at the 0.09 floor (rows (a)/(e) now deterministically distinguishable).
+3. Arm-3 split-spec: renew rule made normative in F.4; cached-predicate alignment + 5-param mapping (AI-3/build-I1); PredatorService named watcher+deploy-gate owner (AI-2); S4 no-re-acquire gate (AI-4).
+4. `RUN_END_DEFEAT_HOLD` registered (G.6: 0.5 s, range 0.25–1.0 s, degenerate-at-0 stated) + defeat-hold player-experience prose.
+5. Audio contracts: polyphony-overflow → single squad-wide non-positional UI cue (parity with caption queue, AD-B2); reconciliation-recovery → non-positional UI chime (AD-B3); `DEATH_SFX_MAX_VOICES` registered in G.6 + entities.yaml (2, range 1–4 — range is an authoring choice, flag for audio-director confirm).
+6. AC defects fixed: H.8 (ε via injected clock), H.40 (lastTickTime=scan-time assert), H.44 (exact-boundary 120.0/119.99 pair), H.47 (stub-emitter mock), H.50 (re-scoped to PC side); H.37 split → H.37a/H.37b; new **H.56** (`inFlightSince` schema) + **H.12a** (floor boundary/config-gate); Lemur-caveat labels on H.22b/c/d/f. H.55 unused.
+7. Force-resolved (7-round-deferred): SD-3 (`STAMINA_DRAIN_RATE > 0` invariant in G.2 + D.3 divide-by-zero guard), SD-6 (`dt = math.max(0, dt)` normative in D.1 + D.2).
+8. All round-12 IMPORTANTs applied (ai/network/build/qa lists). entities.yaml `RECONCILIATION_TICK_INTERVAL` note aligned to the round-9 advisory (not correctness) framing.
+Fan-out sweep: clean (14 token families swept; remaining `0.06` hits are historical-contrast only).
+
+### Gate 1 — network re-confirm: **AUTHORITY + ATTRIBUTION CHAIN SOUND** (~14th consecutive round — PROTECT)
+0 BLOCKING. Findings fixed in-session: **R13-net-I1** — the sweep-residual's "RM is the single charge point" claim was an ungrounded cross-GDD assumption; `deathEventId` added as the idempotency key to `RequestSquadOxygenSpend(amount=1, reason="death", deathEventId)` at every call-site + F.2 RM contract row now obliges RM dedup per `(userId, deathEventId)` (`{success=true, duplicate=true}` no-op) + H.54 asserts same-key on both attempts. **R13-net-I2** — orphaned-row commit now restates the (a)/(b)/(g) safe-subset + snapshots-only access at the exception site. IMPORTANT-3 (PredatorService deferred-clear Race-2 under-charge) confirmed still-open as the documented Studio-verify acceptance — no edit.
+
+### Gate 2 — build-from-artifact (general-purpose agent): **BUILDABLE**
+0 BLOCKING. D.4 independently recomputed — all 6 rows exact. Clock-seam grep clean. All 5 invariants corner-consistent. All in-scope ACs bind to existing symbols. 4 IMPORTANTs fixed in-session (**R13-build-G2**): InFlight error-guard exit + Pending/InFlight→Abandoned exits added to the "complete" 4-state table; Committed exit cell now carries the N-2 retain-timing condition; tick-dispatch side-effect carve-out added at step 5 (R6-B8 (a)/(b)/(g) subset wins over the "full set" sentence for every tick dispatch); the four dangling "F.4 RM obligation" pointers re-pointed to F.2 (two of the four were self-inflicted by this round's own net-I1 edit — caught and closed same-session, the first round where the self-inflicted class did NOT survive to the next panel). Bonus from arity check (**R13-build-N1**): `deathEventId` added to the `OnPlayerDied` C.9 payload — V/A.4a + H.52 dedupe captions by that key but the payload didn't carry it (pre-round-13 seam, mechanical fix).
+NOTEs recorded for round-14 (deliberately untouched): D.4 rows (a)/(e) `platform=any` vs touch drift-floor nuance (test authors pin `platform="pc"`); H.22e abbreviated spend arity; D.1/D.2/D.3 "(locked)" vs G.2 tunable-range tension (pre-existing).
+
+### NEXT — round-14 full 7-lens `/design-review` in a FRESH `/clear` session (the binding closure gate)
+**DO NOT predict APPROVED for round-14.** ED owes the `SPRINT_HOLD_FLOOR=0.09` registry row + the `BEACON_HALF_LIFE`→[64,128] s edit. RunController (unauthored) owes the `RunEnded` arbiter + `RUN_END_DEFEAT_HOLD` ownership. RM (unauthored) owes the `(userId, deathEventId)` spend-dedup contract (NEW this round). HUD owes reconciliation-recovery/roster-confirm UX. Audio-director to confirm the `DEATH_SFX_MAX_VOICES` 1–4 range.
