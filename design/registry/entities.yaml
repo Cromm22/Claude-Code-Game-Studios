@@ -299,7 +299,7 @@ constants:
     unit: dimensionless (units)
     source: design/gdd/player-controller.md (C.2, G.2)
     referenced_by: []
-    notes: "Maximum stamina. Abstract units, not seconds, preserve drain/regen tuning independence. Range: 60-200."
+    notes: "Maximum stamina. Abstract units, not seconds, preserve drain/regen tuning independence. Range: 60-200. Config-validation gate (round-28 T-4, systems NEW-1, H.12a clause (v)): rejected at <= 0 (and below the 60 range floor). A negative STAMINA_MAX makes the D.1/D.2 math.clamp(x, 0, STAMINA_MAX) evaluate min > max and THROW on every Heartbeat tick — a hard per-frame crash; STAMINA_MAX = 0 is a permanent forced-walk degenerate. Previously only STAMINA_DRAIN_RATE was sign-gated."
 
   - name: STAMINA_DRAIN_RATE
     category: constant
@@ -315,7 +315,7 @@ constants:
     unit: units/s
     source: design/gdd/player-controller.md (C.2, D.2, G.2)
     referenced_by: []
-    notes: "Regen rate while not sprinting and past STAMINA_REGEN_DELAY. Intentionally slower than drain (ratio 0.8). Range: 5-18."
+    notes: "Regen rate while not sprinting and past STAMINA_REGEN_DELAY. Intentionally slower than drain (ratio 0.8). Range: 5-18. Config-validation gate (round-28 T-4, H.12a clause (v); threshold reconciled round-28 systems-B1): rejected below the G.2 range floor (< 5) — a < 0 value silently DRAINS stamina during rest, a 0-4 value is below-range degraded/never-recovering. (Prior note said 'rejected at < 0', which disagreed with the H.12a >= 5 floor.)"
 
   - name: STAMINA_REGEN_DELAY
     category: constant
@@ -323,7 +323,7 @@ constants:
     unit: seconds
     source: design/gdd/player-controller.md (C.2, D.2, G.2)
     referenced_by: []
-    notes: "Wait window after sprint stops, before regen begins. Prevents bar-twitch on tap-sprint micro-inputs. Range: 0.5-4.0s. Resets on each sprint-end event (no banking of partial delay progress). Boundary comparator (R6-I1): regen begins when (t - t_sprint_end) is STRICTLY GREATER THAN this value, i.e. the D.2 gate is `> STAMINA_REGEN_DELAY`, not `>=` — at exactly t_sprint_end + 1.5s the player is still in the delay window (regen begins on the first tick strictly past the boundary). Biases toward the player having paid the full delay before recovery starts."
+    notes: "Wait window after sprint stops, before regen begins. Prevents bar-twitch on tap-sprint micro-inputs. Range: 0.5-4.0s. Resets on each sprint-end event (no banking of partial delay progress). Boundary comparator (R6-I1): regen begins when (t - t_sprint_end) is STRICTLY GREATER THAN this value, i.e. the D.2 gate is `> STAMINA_REGEN_DELAY`, not `>=` — at exactly t_sprint_end + 1.5s the player is still in the delay window (regen begins on the first tick strictly past the boundary). Biases toward the player having paid the full delay before recovery starts. Config-validation gate (round-28 T-4, H.12a clause (v); threshold reconciled round-28 systems-B2): rejected below the G.2 range floor (< 0.5) — a < 0 value is a nonsensical pre-emptive regen, a 0-0.49 value is the below-range bar-twitch degenerate. (Prior note said 'rejected at < 0', which disagreed with the H.12a >= 0.5 floor.)"
 
   - name: LANTERN_VISIBILITY_RADIUS
     category: constant
@@ -603,7 +603,41 @@ constants:
     unit: dB above the Hunt-tier ambient bed
     source: design/gdd/player-controller.md (V/A.3, V/A.6, G.9, H.78a)
     referenced_by: []
-    notes: "Round-22 R21-3 (user-ruled 2026-06-14, +4.0 dB above ambient) — audibility floor for the R17-1 world-response cue (the in-run loop-closer: a non-positional ambient swell played to living squad on an UPWARD Ecological-Disturbance band-crossing, V/A.3). Defined as dB-ABOVE-AMBIENT (parity with SPRINT_PULSE_EXERTION_MIN_DELTA_DB), NOT a 0-1 Sound.Volume scalar: the cue is a rarer event (~2-4/run) that plays over ESCALATED (louder) disturbance-tier ambient, so a fixed scalar would be masked at high ambient tiers — the floor must track the ambient it plays over. Baseline is the same named Hunt-tier ambient bed H.57a Part 2 uses. The cue carries NO direction/distance/predator-position (V/A.3 anti-pillar) — it says 'your noise raised the heat', never 'the predator is there'. Config-validation asserts > 0 (H.78a Part 1); mix-review isolate-test confirms perceptible against the Hunt-tier baseline on iPhone SE-class hardware (H.78a Part 2). First-pass design-intent, art-bible-calibrated, NOT playtest-validated (G.8.1). Range: 3.0-6.0 dB."
+    notes: "Round-22 R21-3 (user-ruled 2026-06-14, +4.0 dB above ambient) — audibility floor for the R17-1 world-response cue (the in-run loop-closer: a non-positional ambient swell played to living squad on an UPWARD Ecological-Disturbance band-crossing, V/A.3). Defined as dB-ABOVE-AMBIENT (parity with SPRINT_PULSE_EXERTION_MIN_DELTA_DB), NOT a 0-1 Sound.Volume scalar: the cue is a rarer event (~2-4/run) that plays over ESCALATED (louder) disturbance-tier ambient, so a fixed scalar would be masked at high ambient tiers — the floor must track the ambient it plays over. Baseline is the same named Hunt-tier ambient bed H.57a Part 2 uses. The cue carries NO direction/distance/predator-position (V/A.3 anti-pillar) — it says 'your noise raised the heat', never 'the predator is there'. Config-validation asserts the floor constant is in its registered range >= 3.0 (round-28 T-4 fix — the stale '> 0' was the wrong domain: this is a dB-above-ambient value with range 3.0-6.0 dB, so any value < 3.0 is itself a misconfiguration, not merely a non-positive one; matches H.78a Part 1's round-24 correction) AND rejects a config whose authored worldResponseCueGainDb (the per-mix swell level, G.9.1) is below the floor (H.78a Part 1); mix-review isolate-test confirms perceptible against the Hunt-tier baseline on iPhone SE-class hardware (H.78a Part 2). First-pass design-intent, art-bible-calibrated, NOT playtest-validated (G.8.1). Range: 3.0-6.0 dB."
+
+  # Player Controller round-28 additions (encoded 2026-06-16 from the round-28 template authoring pass — T-4 systems NEW-3: declaration sites for the authored mix fields the G.9 floors gate against, closing the consumed-never-produced gap; see PC G.9.1).
+
+  - name: sprintPulseExertionHoldVolume
+    category: config_field
+    value: null
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (G.9.1, V/A.3, H.57a)
+    referenced_by: []
+    notes: "Round-28 T-4 (systems NEW-3). Authored per-mix playback volume of the HOLD sprint-pulse exertion variant (stationary hold-floor pulse, 0.09). The field H.57a Part 1 compares against SPRINT_PULSE_EXERTION_VOLUME_FLOOR (0.25) — config-validation rejects a value below the floor. Declared here so the gate has a real field to read (previously consumed-by-the-gate, produced-nowhere). Authored value set at mix time (art-bible-calibrated); value: null = not yet authored. NOT client-exposed (G.8.4)."
+
+  - name: sprintPulseExertionFullVolume
+    category: config_field
+    value: null
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (G.9.1, V/A.3, H.57a)
+    referenced_by: []
+    notes: "Round-28 T-4 (systems NEW-3). Authored per-mix playback volume of the FULL sprint-pulse exertion variant (moving/grace pulse, 0.10). H.57a Part 1 gates: >= SPRINT_PULSE_EXERTION_VOLUME_FLOOR (0.25) AND the (full - hold) dB delta >= SPRINT_PULSE_EXERTION_MIN_DELTA_DB (4.0). Declared here to close the consumed-never-produced gap. value: null = not yet authored. NOT client-exposed."
+
+  - name: walkFootstepVolume
+    category: config_field
+    value: null
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (G.9.1, V/A.3, H.57a)
+    referenced_by: []
+    notes: "Round-28 T-4 (systems NEW-3). Authored per-mix walk-footstep playback volume — the squad-proximity-awareness cue a cosmetic timbre swap must not drive inaudible. H.57a Part 1 gates >= WALK_FOOTSTEP_VOLUME_FLOOR (0.20). Declared here to close the consumed-never-produced gap. value: null = not yet authored. NOT client-exposed."
+
+  - name: worldResponseCueGainDb
+    category: config_field
+    value: null
+    unit: dB above the Hunt-tier ambient bed
+    source: design/gdd/player-controller.md (G.9.1, V/A.3, H.78a)
+    referenced_by: []
+    notes: "Round-28 T-4 (round-26 flagged it for this field; systems NEW-3 found the class is 4 fields). Authored per-mix swell level of the R17-1 world-response cue (the in-run loop-closer), expressed dB-above-the-named-Hunt-tier-ambient-bed (domain-consistent with the floor, NOT a 0-1 scalar). H.78a Part 1 gates >= WORLD_RESPONSE_CUE_VOLUME_FLOOR (4.0 dB); governs the SUSTAINED portion of the swell (V/A.3 R23-1(b)). Declared here to close the consumed-never-produced gap. value: null = not yet authored. NOT client-exposed."
 
   # Crafting & Items additions (encoded 2026-04-30 from /design-system crafting-and-items).
 
