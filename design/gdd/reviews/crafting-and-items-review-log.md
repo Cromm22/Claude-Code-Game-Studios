@@ -1280,3 +1280,46 @@ ACs unchanged (**122**, H.130 the highest). Edge cases unchanged (**32**, throug
 - Cross-GDD obligations still owed by siblings (unchanged): **PC** (MAJOR REVISION — T8 / `OnBeaconWindowSurvived` / `OnBeaconWindowFailed{scatter,wipe}` / all-dead suppression / `OnSquadMemberAliveChanged` / `MoveSpeed`); **ED** (`BEACON_HALF_LIFE` → `[64,128]s`, backstopped by H.105); **RM** (Not Started, load-bearing — `OXYGEN_DRAIN_BC4_FLOOR`, `canister_restore_oxygen`); **PA** (Not Started, load-bearing — `PREDATOR_BC4_MIN_COMMIT` / `PREDATOR_BC4_MAX_KNOCKBACK` / RESONANT-Coil consumer AC / Anchor readable-approach); **HUD** (Not Started — C.14 signals incl. the surface-13 denominator-change cue).
 
 **User chose to apply the 3 BLOCKING fixes in-session and keep the system APPROVED (residue sweep, not a verdict change). Branch `crafting-round2-patch`; rounds 3–23 work all still NOT committed (awaiting user instruction per CLAUDE.md).**
+
+---
+
+## Review — 2026-06-16 — Verdict: NEEDS REVISION (round-24 FOCUSED arbiter review) → uncommitted RunController-arbiter migration BACKED OUT; round-20 APPROVED-by-acceptance UNCHANGED
+
+**Scope signal:** Focused (NOT a full panel) — the user elected a scoped 3-lens review of one uncommitted change rather than the 8-lens closure panel, after the working tree was found to contain unlogged, half-applied cross-GDD architecture. Resolution work = **S** (a `git restore` + one F.4 forward-obligation note). GDD overall remains **XL**.
+**Specialists:** network-programmer (native) + systems-designer + build-from-artifact (both general-purpose). No creative-director synthesis — the three lenses converged unanimously, so the orchestrator synthesized directly (scope was deliberately 3-lens, not the full panel).
+**Review depth:** focused / scoped (`--depth full` was requested for Crafting, but re-scoped by user decision to the arbiter change after triage).
+**Prior verdict resolved:** N/A — this round did NOT review the round-23 doc. It reviewed an **uncommitted, unlogged working-tree change** sitting on top of the committed round-23 baseline (`620e67a`).
+
+### Why this round exists (triage finding)
+
+`/design-review` was invoked with no target; the user chose Crafting & Items + full depth. On loading, the working tree (not `git status`-clean since `620e67a`) was found to hold **two bodies of uncommitted, unlogged work**: (1) a ~36-line propagation into the Crafting GDD introducing a **`RunController` arbiter** as the sole `RunEnded` broadcaster (Crafting raises `RunEndConditionRaised`; PC consumes the arbiter broadcast; `OnBeaconWindowFailed` demoted to a HUD cue) — cited as PC ruling `[R16-1]`; and (2) a ~106-line batch of **Player Controller** registry additions in `entities.yaml` (R16/18/20/22 PC constants + stamina-range corrections — PC-session spillover, not Crafting). Because (1) modifies the run-end **authority chain** network has affirmed SOUND for 15 rounds, the user re-scoped to a focused arbiter review rather than fire a full panel against half-applied work.
+
+### Findings — the arbiter migration is real, half-applied, and NOT buildable (3-lens, unanimous)
+
+- **B1 [TRIPLE-lens: network + systems + build — BLOCKING] — Victory/defeat broadcaster asymmetry.** The defeat path was rerouted through the arbiter ("the SOLE `RunEnded` broadcaster — neither PC nor Crafting broadcasts it", C.12.1 defeat bullet), but the **victory** path still has **PC broadcast `RunEnded(victory)` directly** (C.12.1 victory bullet; C.9 BCT4 `To`=BC5; C.14 "PC's T8 victory subscription"; C.5.6a victory bullet; E.25). "Sole broadcaster" is therefore **false as written**, and the arbiter's own `RUN_END_DEFEAT_HOLD ≈ 0.5 s` victory-precedence rule is **unbuildable** — victory never reaches the arbiter for it to pre-empt the held wipe. Five stale victory surfaces vs five migrated defeat surfaces.
+- **B2 [network + build — BLOCKING] — `RunController` / `RunEndConditionRaised` defined NOWHERE.** Referenced ~10× across C.9/C.12.1/C.14/E.24/F.4/H.89/H.113 but with no payload, arity, `reason` enum, direction, or trust-boundary; not in the C.15 RemoteEvent surface; not in `entities.yaml` (the only crumb is `RUN_END_DEFEAT_HOLD`, a PC-owned *provisional* constant). The arbiter's server-only authority is implied, not specified — the chain can't be re-certified SOUND against an unspecified intermediary.
+- **B3 [systems + build — BLOCKING] — RunController declared as a dependency NOWHERE.** F.1 (hard), F.2 (soft), F.5 (engine) all omit it, yet Crafting now structurally cannot end a defeat run without it. Violates the bidirectional-dependency rule — the document's signature 23-round failure class (a fix lands on normative surfaces but misses the dependency table).
+- **B4 [network — BLOCKING] — `RUN_END_DEFEAT_HOLD` split-brain window.** During the 0.5 s hold, Crafting's `runOutcomeResolved` latch is set (terminal) while the arbiter has not yet broadcast `RunEnded` — a new "resolved-but-not-ended" interval; H.89's exactly-once mutual-exclusion guarantee becomes untestable across the arbiter boundary; the victory-precedence resolution rule is unspecified and "provisional."
+- **B5 [systems + build — IMPORTANT] — `[R16-1]` citation collision.** The bracketed `[R16-1]` (PC's arbiter ruling) collides with Crafting's own unbracketed "round-16 R16-1" = the holder-threshold **freeze** ruling (E.33, H.118, H.124, G.6, C.9 — often in the same line-region). Disambiguate (e.g. `PC-R16-1` vs `CR-R16-1`).
+- **I1 [systems — IMPORTANT] — H.89 not verified.** Cited as a reconciled sibling (E.24/C.12.1) but absent from the change; likely still carries the old "PC maps `OnBeaconWindowFailed`→`RunEnded`" model. Open and check during any future re-apply.
+
+### Network position (PROTECT)
+
+network-programmer: the chain is **AT-RISK, not BROKEN** — attribution (`beaconPlacerId`) untouched, no forge path *if* the arbiter raisers are server-side, but the win-condition authority chain CANNOT be re-certified SOUND against an arbiter whose trust boundary the GDD never specifies. The 15-round "MUST NOT touch the server-authoritative completion/attribution path" standing instruction is exactly what this change touches.
+
+### Resolution (user decision: BACK IT OUT)
+
+`git restore design/gdd/crafting-and-items.md` → GDD returned to the committed round-23 APPROVED baseline (all 8 uncommitted GDD hunks were arbiter-related; verified post-restore that zero arbiter content remains on any normative surface — C.9 / C.12.1 / schema / C.15 / E.24 / E.27 all clean; the arbiter tokens now appear on exactly 3 lines: the Status header, the Last-Updated header, and one F.4 note). Added a **DEFERRED forward-obligation note** to the F.4 Player Controller row capturing the full re-apply checklist (migrate the victory half too; declare RunController in F.1/F.2; register `RunEndConditionRaised` + its trust boundary + the `RUN_END_DEFEAT_HOLD` resolution rule; reconcile the `runOutcomeResolved` latch; disambiguate the citation; demote `OnBeaconWindowFailed` to HUD-only) — gated on the RunController GDD being authored + the signal registered. The round-23 model stands unchanged until then.
+
+### Not done (intentional)
+
+- **The 106-line PC registry batch in `entities.yaml` was NOT touched** — it is PC-session spillover (R16/18/20/22 PC constants), a separate decision the user elected to investigate next.
+- **No git commit** (per CLAUDE.md — awaiting user instruction). Branch `crafting-round2-patch`; rounds 3–23 + this round-24 back-out all still uncommitted.
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (restored to round-23 baseline + Status/Last-Updated round-24 notes + F.4 deferred forward-obligation note; 122 ACs / 32 edge cases unchanged; NOT committed).
+- Systems index: `design/gdd/systems-index.md` (Crafting row 6 — round-24 note prepended; status unchanged at APPROVED-by-acceptance).
+- Untouched: `design/registry/entities.yaml` (106-line PC registry batch left uncommitted for a separate decision).
+
+**User chose to BACK OUT the arbiter migration and record the focused review. The arbiter is tracked as an F.4 deferred forward-obligation, to be applied deliberately once the RunController GDD exists + the signal is registered. Branch `crafting-round2-patch`; NOT committed.**
