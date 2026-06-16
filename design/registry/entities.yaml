@@ -443,7 +443,7 @@ constants:
     unit: count
     source: design/gdd/player-controller.md (V/A.3, V/A.4a, G.6)
     referenced_by: []
-    notes: "Death SFX polyphony cap (R11-D4 / R12-AD-B2): maximum concurrent positional Death SFX emitters in a death burst. Deaths beyond the cap drop their positional voice and coalesce into a single non-positional UI-channel squad-wide overflow cue (one per overflow batch — accessibility parity with the V/A.4a caption queue, which still lists every death individually, deduped by deathEventId). Range: 1-4 (squad is at most 4, so >4 is meaningless). Registered round-13 per R12-AD-B2; value 2 carried from the round-11 V/A.3 provisional."
+    notes: "Death SFX polyphony cap (R11-D4 / R12-AD-B2): maximum concurrent positional Death SFX emitters in a death burst. Deaths beyond the cap drop their positional voice and coalesce into a single non-positional UI-channel squad-wide overflow cue (one per overflow batch of DEATH_SFX_BATCH_WINDOW — accessibility parity with the V/A.4a caption queue, which still lists every death individually, deduped by deathEventId). Range: 2-4 (floor raised 1->2 per the round-14 audio ruling, applied round-16 at all 3 sites [G.6, V/A.3, here]: at 1 voice a 2-player near-simultaneous wipe sheds the second death's positional voice — the spatial-identity regression the floor forbids; squad is at most 4, so >4 is meaningless). Registered round-13 per R12-AD-B2; value 2 carried from the round-11 V/A.3 provisional."
 
   - name: TAP_HOLD_COMMIT_DURATION
     category: constant
@@ -518,6 +518,92 @@ constants:
     source: design/gdd/player-controller.md (E.D, C.9, G.6, H.33a/b/c)
     referenced_by: []
     notes: "PlayerHeartbeat RemoteEvent send rate. Client fires while in S2 (sprinting) only; server drops while in S1/S4/S5. Defines the SPRINT_CLIENT_TIMEOUT enforcement floor — 3 heartbeats fit in the 3s window. Bandwidth: ~160 B/s worst case at 4 sprinting players. Round-2 Theme 1 N2 closure (closes round-1 ghost-sprint exploit; heartbeat is NOT a sprint-authorization signal — sprint terminates at stamina=0 regardless). Range: 0.5-2 Hz."
+
+  # Player Controller round-16 additions (encoded 2026-06-11 from the round-16 authoring pass — R16-1/R16-2 + registry-staleness B6 closure).
+
+  - name: SPRINT_HOLD_FLOOR
+    category: constant
+    value: 0.09
+    unit: dimensionless (t)
+    source: design/gdd/ecological-disturbance.md (G.5) + design/gdd/player-controller.md (C.8.1, D.4 Step 2, G.7)
+    referenced_by: []
+    notes: "Sprint-axis-ONLY stationary hold-floor (R10-6 floor-and-feel; value raised 0.06 -> 0.09 per [R13-F1], user-ruled 2026-06-10): applied as max(SPRINT_HOLD_FLOOR, computed) AFTER the stationary attenuation, so holding sprint stationary publishes 0.09 instead of the near-free 0.03. NOT applied to the Light axis (Light stationary stays 0.024). ED-REGISTRY-OWNED per the G.7 magnitude-ownership rule — LANDED in ED G.5 round-20 (user-ruled 2026-06-14, CD 'fix this pass'); PC no longer carries it as a bare provisional. OPEN (routed to ED Session B/C review): ED's D.7 stationary-sprint stress-test still derives off the stale 0.030 — a binding correction flag at ED D.7 routes the asymptote (~0.664 -> ~1.99/Retreat) + cascading source-count/perf-budget re-derivation + the design-intent conflict (ED 'recoverable barely-Hunt' vs PC 'holding sprint is loud') to ED + creative-director. Range: (0.08, 0.10) EXCLUSIVE. MACHINE-CHECKABLE INVARIANT (config-validation gate, H.12a): 0.08 < SPRINT_HOLD_FLOOR < 0.10 — i.e. MAGNITUDE_LIGHT_PULSE (0.08) < SPRINT_HOLD_FLOOR < MAGNITUDE_SPRINT_PULSE (0.10), both comparisons strict (preserves the Pillar-1 emission hierarchy AND the moving-vs-holding gradient). Registered round-16 (was a B6 registry-staleness item — the GDD carried it since round-11/13 with no registry row)."
+
+  - name: LATCH_MAX_AGE
+    category: constant
+    value: 120.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.5.3, F.4, E.E, G.6)
+    referenced_by: []
+    notes: "Arm-3 outer staleness ceiling on the predatorCausedImminent latch (R10-1, user-ruled; [R13-F2] user-ruled 2026-06-10: stays 120 s). Arm 3 of the imminent-death predicate fires only while (now - predatorCausedImminentSetTimestamp[player]) < LATCH_MAX_AGE — strict '<', elapsed exactly 120.0 s does NOT fire (H.44 exact-boundary pair). Timestamp renewed on each qualifying predator damage application (damage > 0, round-16 ai qualifier) while sub-threshold. Range: 60-180 s, SUBJECT TO the coupled invariant below. MACHINE-CHECKABLE INVARIANT (config-validation gate, [R13-F2], closes the degenerate 60/60 corner): LATCH_MAX_AGE > HP_ARM_RECENT_WINDOW + 30.0 (margin >= 30 s, strict — at HP_ARM_RECENT_WINDOW's 60 s range max, any LATCH_MAX_AGE <= 90 s is rejected). Registered round-16 (B6 registry-staleness item)."
+
+  - name: RUN_END_DEFEAT_HOLD
+    category: constant
+    value: 0.5
+    unit: seconds
+    source: design/gdd/player-controller.md (C.6 T7, C.5.8, F.4, G.6)
+    referenced_by: []
+    notes: "Arbiter defeat-hold window (R10-5/N-6, registered in G.6 round-13 per R12-SD-5): the RunController arbiter holds a raised 'wipe' for this window before broadcasting defeat; a 'victory' arriving during the hold discards the wipe (victory precedence). PROVISIONAL / RunController-OWNED — PC introduced it; this row is the registration of record until the RunController GDD is authored. Degenerate at 0 (defeat pre-empts an adjacent-tick BCT4 victory); the 0.25 s floor spans ~15 Heartbeats at 60 Hz. Range: 0.25-1.0 s (above 1.0 s the post-wipe beat-of-silence reads as a freeze). NOTE (round-16 [R16-1]/H.61): this hold covers adjacent-tick skew ONLY — the post-activation all-dead case is handled by PC's whole-lifecycle suppression keyed on beaconActivated == true, not by this window. Registered in yaml round-16 (B6 registry-staleness item)."
+
+  - name: DEATH_SFX_BATCH_WINDOW
+    category: constant
+    value: 0.25
+    unit: seconds
+    source: design/gdd/player-controller.md (V/A.3, G.6)
+    referenced_by: []
+    notes: "Round-16 audio — overflow 'batch' boundary for the squad-wide death overflow cue (previously undefined): overflow deaths whose deathTimestamps fall within this window of the batch's first overflow death coalesce into ONE non-positional UI cue; a later overflow death starts a new batch (and a new single cue). Range: 0.1-0.5 s."
+
+  - name: EMOTE_WHEEL_IDLE_TIMEOUT
+    category: constant
+    value: 4.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.4.2, G.4)
+    referenced_by: []
+    notes: "Round-16 game/UX — accidental-open lockout: an open emote wheel with no slot selection auto-closes after this timeout (no emote fired, no cooldown charged, T9 touch gather lock released). Bounds how long an accidental open can hold the T9 gather lockout. Range: 2-8 s."
+
+  # Player Controller round-18 additions (encoded 2026-06-13 from the round-18 authoring pass — R17-2 audio-feedback floors + WALK_FOOTSTEP_VOLUME_FLOOR registration).
+
+  - name: WALK_FOOTSTEP_VOLUME_FLOOR
+    category: constant
+    value: 0.20
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (V/A.3, V/A.6, G.9, H.57a)
+    referenced_by: []
+    notes: "Round-18 — non-zero audible minimum for walk-footstep playback volume; a cosmetic timbre swap MUST NOT drive walk audio below this (an inaudible walk silently removes the squad's 'where is my teammate' proximity-awareness cue — a player-information regression). NOT a predator-perception input (OQ.1 closed; walk audio is player-feedback only). First-pass design-intent, art-bible-calibrated, NOT playtest-validated (G.8.1). Referenced in V/A.3 since round-15 but UNREGISTERED until round-18 (round-17 audio IMPORTANT). Config-validation asserts > 0 (H.57a Part 1). Range: 0.10-0.40."
+
+  - name: SPRINT_PULSE_EXERTION_VOLUME_FLOOR
+    category: constant
+    value: 0.25
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (V/A.3, V/A.6, G.9, H.57a)
+    referenced_by: []
+    notes: "Round-18 R17-2 (user-ruled) — non-zero audible minimum for BOTH variants of the sprint-pulse exertion UI cue (full/hold). A mix can never render the exertion cue inaudible, which would silently delete the moving(0.10)-vs-holding(0.09) gradient's only audio channel. UI/non-positional channel only — never crosses the audio-perception boundary (V/A.3 boundary note). First-pass design-intent, art-bible-calibrated, NOT playtest-validated. Config-validation asserts > 0 and rejects a config whose authored hold-variant volume is below this (H.57a Part 1); mix-review evidence (H.57a Part 2) confirms audible on iPhone SE-class hardware. Range: 0.10-0.50."
+
+  - name: SPRINT_PULSE_EXERTION_MIN_DELTA_DB
+    category: constant
+    value: 4.0
+    unit: dB
+    source: design/gdd/player-controller.md (V/A.3, V/A.6, G.9, H.57a)
+    referenced_by: []
+    notes: "Round-20 R17-2 (user-ruled 2026-06-14 — RAISED from 2.0; the 2.0 default sat below JND under iPhone-SE ambient/speaker masking (3-4 dB masked / 4-6 dB same-timbre), so the moving-vs-holding gradient was imperceptible on the baseline device — round-19 audio-AD-B2). Minimum dB by which the FULL exertion variant (moving/grace pulse, 0.10) exceeds the HOLD variant (stationary hold-floor pulse, 0.09), so the gradient stays perceivable rather than collapsing into one indistinguishable cue. Paired with a non-loudness timbre/rhythm differentiator (V/A.3) that carries the gradient when masking eats the dB step — which is why the dB delta need not be pushed into alarm territory. An EXERTION difference between own-player UI cues, NOT a danger-radius escalation (does not cross the audio-perception boundary). First-pass design-intent, art-bible-calibrated, NOT playtest-validated. Config-validation asserts > 0 and rejects a config whose authored full-hold delta is below this (H.57a Part 1). Range: 3.0-6.0 dB (below 3.0 risks collapse under same-timbre mobile masking; above ~6 dB reads as alarm/escalation even with the timbre hook — Pillar-1 mental-model risk). Round-22: yaml synced to the round-20-applied R17-2 value (was stale 2.0 / 1.0-4.0)."
+
+  # Player Controller round-20 + round-22 additions (encoded 2026-06-14 — R17-4 BEACON_LATCH_TIMEOUT registration + R17-1/R21-1 world-response cue floor).
+
+  - name: BEACON_LATCH_TIMEOUT
+    category: constant
+    value: 300.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.6 latch table, C.9 inbound RunEnded, G.6, F.4)
+    referenced_by: []
+    notes: "Round-20 R17-4 (user-ruled 2026-06-14) — bounded-timeout self-heal for PC's _beaconActivated run-lifecycle latch. The latch's intended clear-path is the arbiter's inbound RunEnded broadcast, but the RunController is unauthored (F.4) and a dropped/never-sent broadcast would wedge the run (T7 wipe terminal permanently suppressed — a Pillar-4 'the run can always end' violation). A single server-internal guard folded into the reconciliation-tick Heartbeat (C.5.3, no new connection) force-clears the latch when _beaconActivated AND (getServerTime() - _beaconActivatedAt) > BEACON_LATCH_TIMEOUT, logs a beacon-latch-timeout warning, and re-enables T7. SAFETY BACKSTOP ONLY — never the normal terminal. Floor (180 s) MUST stay above the longest legitimate activation->RunEnded span (BEACON_HALF_LIFE 128 s window-max per Crafting H.105 band [35.0,70.1] s + RUN_END_DEFEAT_HOLD + arbiter latency, well under 120 s); default 300 s is the ~2.5x margin; above ~600 s a genuinely lost broadcast leaves the run wedged too long. PROVISIONAL / RunController-coupled (the arbiter is unauthored). Reads route through the C.11 clock seam (H.61c determinism). Verified by H.61c (timeout release + paired no-premature-self-heal + straggler-RunEnded no-op). Range: 180-600 s. Round-22: registered (round-21 found it unregistered)."
+
+  - name: WORLD_RESPONSE_CUE_VOLUME_FLOOR
+    category: constant
+    value: 4.0
+    unit: dB above the Hunt-tier ambient bed
+    source: design/gdd/player-controller.md (V/A.3, V/A.6, G.9, H.78a)
+    referenced_by: []
+    notes: "Round-22 R21-3 (user-ruled 2026-06-14, +4.0 dB above ambient) — audibility floor for the R17-1 world-response cue (the in-run loop-closer: a non-positional ambient swell played to living squad on an UPWARD Ecological-Disturbance band-crossing, V/A.3). Defined as dB-ABOVE-AMBIENT (parity with SPRINT_PULSE_EXERTION_MIN_DELTA_DB), NOT a 0-1 Sound.Volume scalar: the cue is a rarer event (~2-4/run) that plays over ESCALATED (louder) disturbance-tier ambient, so a fixed scalar would be masked at high ambient tiers — the floor must track the ambient it plays over. Baseline is the same named Hunt-tier ambient bed H.57a Part 2 uses. The cue carries NO direction/distance/predator-position (V/A.3 anti-pillar) — it says 'your noise raised the heat', never 'the predator is there'. Config-validation asserts > 0 (H.78a Part 1); mix-review isolate-test confirms perceptible against the Hunt-tier baseline on iPhone SE-class hardware (H.78a Part 2). First-pass design-intent, art-bible-calibrated, NOT playtest-validated (G.8.1). Range: 3.0-6.0 dB."
 
   # Crafting & Items additions (encoded 2026-04-30 from /design-system crafting-and-items).
 
@@ -794,37 +880,37 @@ formulas:
     category: formula
     expression: "stamina_new = clamp(stamina - STAMINA_DRAIN_RATE * dt, 0, STAMINA_MAX)"
     variables: [stamina, STAMINA_DRAIN_RATE, dt, STAMINA_MAX]
-    output_range: [0, 100]
+    output_range: [0, 200]
     source: design/gdd/player-controller.md (D.1)
     referenced_by: []
-    notes: "Per-Heartbeat stamina deduction while in S2 (Alive-Sprinting). dt sourced from RunService.Heartbeat event arg (typical 1/60s server, up to 1/30s on slow servers). Clamp to 0 prevents negative on lag spike."
+    notes: "Per-Heartbeat stamina deduction while in S2 (Alive-Sprinting). dt sourced from RunService.Heartbeat event arg (typical 1/60s server, up to 1/30s on slow servers; dt = math.max(0, dt) negative-dt guard per R12-SD-6). Clamp to 0 prevents negative on lag spike. output_range upper bound = STAMINA_MAX across the G.2 product space (range 60-200; 0-100 at the default STAMINA_MAX = 100) — round-16 B6d un-pinned it from the default."
 
   - name: staminaRegen
     category: formula
     expression: "stamina_new = clamp(stamina + STAMINA_REGEN_RATE * dt, 0, STAMINA_MAX)"
     variables: [stamina, STAMINA_REGEN_RATE, dt, STAMINA_MAX]
-    output_range: [0, 100]
+    output_range: [0, 200]
     source: design/gdd/player-controller.md (D.2)
     referenced_by: []
-    notes: "Per-Heartbeat stamina recovery while NOT in S2 AND past STAMINA_REGEN_DELAY. Delay is gated by caller, not by this formula."
+    notes: "Per-Heartbeat stamina recovery while NOT in S2 AND past STAMINA_REGEN_DELAY (strict '>' gate, R6-I1). Delay is gated by caller, not by this formula. dt = math.max(0, dt) negative-dt guard per R12-SD-6. output_range upper bound = STAMINA_MAX across the G.2 product space (range 60-200; 0-100 at the default STAMINA_MAX = 100) — round-16 B6d un-pinned it from the default."
 
   - name: effectiveSprintDuration
     category: formula
     expression: "T_sprint(s_0) = s_0 / STAMINA_DRAIN_RATE"
     variables: [s_0, STAMINA_DRAIN_RATE]
-    output_range: [0.0, 8.0]
+    output_range: [0.0, 25.0]
     source: design/gdd/player-controller.md (D.3)
     referenced_by: []
-    notes: "Seconds of uninterrupted sprint until forced-walk, given starting stamina. Maximum 8.0s at s_0 = STAMINA_MAX = 100."
+    notes: "Seconds of uninterrupted sprint until forced-walk, given starting stamina. 8.0 s at default config (s_0 = STAMINA_MAX = 100, drain 12.5); TRUE MAXIMUM across the combined G.2 product space is 25.0 s (STAMINA_MAX = 200 / STAMINA_DRAIN_RATE = 8) — round-16 B6b corrected the default-pinned 8.0 upper bound. STAMINA_DRAIN_RATE > 0 is a load-bearing config-validation floor (R12-SD-3 — division by zero at 0)."
 
   - name: pulseEmissionMagnitude
     category: formula
-    expression: "axis = emissionType; grace_eligible = (t_lastGracePulse[axis] == nil) OR ((t_0 - t_lastGracePulse[axis]) >= GRACE_REENTRY_COOLDOWN); if grace_eligible: record t_lastGracePulse[axis] = t_0 (Step 0a anchor-on-eligibility, B9 -- recorded at eligibility resolution regardless of whether the first pulse fires within FIRST_PULSE_GRACE_WINDOW); effective_d = (d_xz < MOBILE_ANALOG_DRIFT_THRESHOLD AND platform == 'touch') ? 0 : d_xz; if grace_eligible AND (t - t_0) <= FIRST_PULSE_GRACE_WINDOW: magnitude_base; elif effective_d < EMITTER_MOVEMENT_DELTA_FLOOR: magnitude_base * STATIONARY_EMISSION_FACTOR; else: magnitude_base"
-    variables: [t, t_0, d_xz, effective_d, axis, t_lastGracePulse, MOBILE_ANALOG_DRIFT_THRESHOLD, EMITTER_MOVEMENT_DELTA_FLOOR, FIRST_PULSE_GRACE_WINDOW, GRACE_REENTRY_COOLDOWN, magnitude_base, STATIONARY_EMISSION_FACTOR, platform]
+    expression: "axis = emissionType; grace_eligible = (t_lastGracePulse[axis] == nil) OR ((t_0 - t_lastGracePulse[axis]) >= GRACE_REENTRY_COOLDOWN); if grace_eligible: record t_lastGracePulse[axis] = t_0 (Step 0a anchor-on-eligibility, B9 -- recorded at eligibility resolution regardless of whether the first pulse fires within FIRST_PULSE_GRACE_WINDOW); effective_d = (d_xz < MOBILE_ANALOG_DRIFT_THRESHOLD AND platform == 'touch') ? 0 : d_xz; if grace_eligible AND (t - t_0) <= FIRST_PULSE_GRACE_WINDOW: magnitude_out = magnitude_base; elif effective_d < EMITTER_MOVEMENT_DELTA_FLOOR: magnitude_out = magnitude_base * STATIONARY_EMISSION_FACTOR; else: magnitude_out = magnitude_base; if axis == 'Sprint': magnitude_out = max(SPRINT_HOLD_FLOOR, magnitude_out) (Step 2 Sprint hold-floor, R10-6/[R13-F1])"
+    variables: [t, t_0, d_xz, effective_d, axis, t_lastGracePulse, MOBILE_ANALOG_DRIFT_THRESHOLD, EMITTER_MOVEMENT_DELTA_FLOOR, FIRST_PULSE_GRACE_WINDOW, GRACE_REENTRY_COOLDOWN, magnitude_base, STATIONARY_EMISSION_FACTOR, SPRINT_HOLD_FLOOR, platform]
     output_range: [0.024, 0.10]
     source: design/gdd/player-controller.md (D.4)
     referenced_by: []
-    notes: "Pulse magnitude sent to DisturbanceService:Emit for Sprint or Light pulses. Discrete output set: {0.024, 0.03, 0.08, 0.10}. Drift floor applies on touch only (PC/gamepad bypass to avoid false-stationary classification). Round-2 Theme 1 G1 closure: grace_eligible preflight gates the grace-window branch via per-axis cooldown (t_lastGracePulse[axis], GRACE_REENTRY_COOLDOWN = 6.0s default). Without preflight, round-1 micro-cadence exploits cycled at 31% cost-per-pulse for Sprint, 10x for Light."
+    notes: "Pulse magnitude sent to DisturbanceService:Emit for Sprint or Light pulses. Discrete output set: {0.024, 0.08, 0.09, 0.10} — Sprint stationary = 0.09 via the Step-2 hold-floor max(SPRINT_HOLD_FLOOR, 0.10 x 0.30 = 0.03) per R10-6 at the [R13-F1] value; the pre-R10-6 0.03 output is UNREACHABLE (round-16 B6a removed the dead 0.03 from this set and added the missing Step-2 max() to the expression). Light stationary stays 0.024 (no floor — Light axis). Drift floor applies on touch only (PC/gamepad bypass to avoid false-stationary classification). Round-2 Theme 1 G1 closure: grace_eligible preflight gates the grace-window branch via per-axis cooldown (t_lastGracePulse[axis], GRACE_REENTRY_COOLDOWN = 6.0s default). Without preflight, round-1 micro-cadence exploits cycled at 31% cost-per-pulse for Sprint, 10x for Light. The OnSprintPulse {variant} transport (PC C.9, round-16 B1) reports which branch fired to the emitting client."
 
   - name: xzDisplacement
     category: formula
