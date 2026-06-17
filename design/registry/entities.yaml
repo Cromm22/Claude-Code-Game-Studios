@@ -418,8 +418,8 @@ constants:
     value: 30
     unit: seconds
     source: design/gdd/player-controller.md (C.5, G.6)
-    referenced_by: []
-    notes: "Server-authoritative respawn timer. Locked at game-concept level. Range: 10-60s. Validate by playtest (OQ.6)."
+    referenced_by: [design/gdd/resource-management.md]
+    notes: "Server-authoritative respawn timer. Locked at game-concept level. Range: 10-60s. Validate by playtest (PC OQ.6). RM CR.5 cites it: respawn after this delay is free (no separate oxygen cost beyond DEATH_OXYGEN_COST)."
 
   - name: RECONCILIATION_TICK_INTERVAL
     category: constant
@@ -1074,3 +1074,85 @@ enums:
     source: design/gdd/crafting-and-items.md (C.5.5, C.15, E.22, E.28, H.49, H.83)
     referenced_by: []
     notes: "RequestBeaconActivate + RequestBeaconPlace validation rejection reasons. `beacon-not-placed` = E.22 false-victory attempt. `already-activated` = once-per-run guard. `not-alive` = activator must be alive at handler entry (E.9 alive guard). `invalid-placement` = clamped candidate failed raycast-to-floor / overlap (C.5.5). `unreachable-placement` = round-3 B4: LOS reachability raycast player->candidate obstructed by a wall (E.28 / H.83 cross-wall exploit closure)."
+
+  # Resource Management constants (encoded 2026-06-17). Candidate values — all tunable per RM Section G.
+
+  - name: OXYGEN_POOL_START
+    category: constant
+    value: 600
+    unit: oxygen units (1 unit = 1 s of BC1 drain)
+    source: design/gdd/resource-management.md (CR.1, D.1, G)
+    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md]
+    notes: "Single squad-shared oxygen pool ceiling = run-start value. PC reads it for the DP-2 config gate (DEATH_OXYGEN_COST/pool in [0.10,0.15]); Crafting H.106 economy references the pool. ~10 min at BC1 baseline; primary run-length knob. Range: 300-900 (G)."
+
+  - name: OXYGEN_DRAIN_BC1
+    category: constant
+    value: 1.0
+    unit: oxygen units/second
+    source: design/gdd/resource-management.md (CR.2, D.1, G)
+    referenced_by: []
+    notes: "Baseline (Beacon Charge Tier 1) drain rate. UNIT ANCHOR — 1 oxygen unit is defined as 1 second of BC1 drain, so this is 1.0 by definition. Do not retune freely (rescales every oxygen value). Flat within band, flat headcount."
+
+  - name: OXYGEN_DRAIN_BC2
+    category: constant
+    value: 1.5
+    unit: oxygen units/second
+    source: design/gdd/resource-management.md (CR.2, D.1, G)
+    referenced_by: []
+    notes: "BC2 drain rate. Must keep BC1 < BC2 < BC3 < BC4. Range: 1.1-1.8 (G)."
+
+  - name: OXYGEN_DRAIN_BC3
+    category: constant
+    value: 2.2
+    unit: oxygen units/second
+    source: design/gdd/resource-management.md (CR.2, D.1, G)
+    referenced_by: []
+    notes: "BC3 drain rate. Monotonic band order. Range: 1.8-2.8 (G)."
+
+  - name: OXYGEN_DRAIN_BC4_FLOOR
+    category: constant
+    value: 3.5
+    unit: oxygen units/second
+    source: design/gdd/resource-management.md (CR.2, D.1, D.5, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "BC4 (Beacon survival window) drain — the fastest, a FLOOR. Crafting H.106 references it: 10 x CANISTER_RESTORE_OXYGEN < 35 x this (100 < 122.5). Range: 3.0-5.0 (G)."
+
+  - name: DEATH_OXYGEN_COST
+    category: constant
+    value: 72
+    unit: oxygen units
+    source: design/gdd/resource-management.md (CR.4, D.3, D.4, G)
+    referenced_by: [design/gdd/player-controller.md]
+    notes: "Shared-pool units deducted per validated death (RM-owned; PC H.87 only constrains the ratio + 'terminal = RM-owned'). DP-2: 72/600 = 0.12 in [0.10,0.15]; MUST stay > CANISTER_RESTORE_OXYGEN. Range: [0.10,0.15] x pool = 60-90 (G)."
+
+  - name: CANISTER_RESTORE_OXYGEN
+    category: constant
+    value: 10
+    unit: oxygen units
+    source: design/gdd/resource-management.md (CR.6, D.2, D.5, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Oxygen restored per Oxygen Canister use (the single faucet). RM owns the restore math (ignores the event amount param). Constraints: < DEATH_OXYGEN_COST (72) AND 10 x this < 35 x OXYGEN_DRAIN_BC4_FLOOR (H.106). ~3 s-at-BC4-equiv. Range: 4-12 (G); re-tune vs RN BIOMASS_GATHER_TIME (OQ.6)."
+
+  - name: OXYGEN_CRITICAL_THRESHOLD
+    category: constant
+    value: 35
+    unit: oxygen units
+    source: design/gdd/resource-management.md (States, G)
+    referenced_by: []
+    notes: "Pool value at/below which the squad-wide state is Critical (HUD red-warning). Healthy requires strict P > 35; recovery to Healthy requires P > 37 (+2 hysteresis). Range: 20-60 (G)."
+
+  - name: OXYGEN_SYNC_HZ
+    category: constant
+    value: 2
+    unit: Hz
+    source: design/gdd/resource-management.md (CR.1, G)
+    referenced_by: []
+    notes: "Minimum client sync cadence for the read-only pool projection (delta-suppressed; immediate on state transitions). Client display tolerance +/-0.5 units. Range: 1-5 (G)."
+
+  - name: OXYGEN_BC4_ENTRY_CAP
+    category: constant
+    value: 15
+    unit: oxygen units
+    source: design/gdd/resource-management.md (CR.9, D.5, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Shared-pool BC4 anti-bunker fence: on the rising edge into BC4 (Beacon survival window opens), P is clamped once to min(P, this). Shared-pool restatement of Crafting F.2/H.106's per-member anti-bunker contract. Both D.5 fences must hold at the 35 s window: 15 + 10 x CANISTER_RESTORE_OXYGEN (100) = 115 < 35 x OXYGEN_DRAIN_BC4_FLOOR (122.5), and 15 < 122.5. Margin only 7.5 (fragile — see OQ.9). Range: 5-25 (G)."
