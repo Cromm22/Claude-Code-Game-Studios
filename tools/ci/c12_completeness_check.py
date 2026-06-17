@@ -18,8 +18,9 @@ It asserts the three C.12 invariants the GDD declares (player-controller.md C.12
   #2  Floor-field declaration sites — every authored mix field a G.9 floor gates
       against is declared in BOTH the G.9.1 table AND entities.yaml.
 
-  #3  Sign-knob domain gates — the sign/domain-sensitive stamina-curve knobs are
-      each asserted in the H.12a config-validation gate, whose clauses (i)-(v) all exist.
+  #3  Sign-knob domain gates — the sign/domain-sensitive stamina-curve knobs AND the
+      emission-attenuation factor STATIONARY_EMISSION_FACTOR (round-30 clause (vi)) are
+      each asserted in the H.12a config-validation gate, whose clauses (i)-(vi) all exist.
 
 DESIGN NOTE (why this lives in tools/ci as a GDD-static linter, not a Luau test):
 the project is pre-production — there is no PC Luau source to grep yet, so the only
@@ -66,6 +67,14 @@ EXTERNAL_OWNED = {
     "RequestBeaconActivate": "Crafting C.15 — Crafting-owned receive-side event",
     "OnPlayerStatusUnknown": "HUD GDD (F.4 HUD row) — optional interim roster state PC owes HUD, not a PC wiring",
     "Emit":                  "ED DisturbanceService:Emit (ED.C.3.2) — a pre-existing ED API PC calls; modeled in C.10, not a PC-introduced C.9 signal",
+    # round-30 widen (build-from-artifact G-1): the GatherNode* consumer-event family
+    # escaped BOTH matcher arms before round-30 (no On/Request/Run prefix, not Service:Method),
+    # so the hook was BLIND to it. The round-30 _TOK_CONSUMER arm now SEES it; these two are
+    # Resource-Node-owned S->C events PC's C.7 proximity UI subscribes to (RN F.2 row, C.9 line
+    # cross-ref) — accounted here, not silenced. A future *PC-owned* `<Noun>Armed/Disarmed` event
+    # would now be SEEN-and-leak rather than invisible (the point of widening).
+    "GatherNodeArmed":       "Resource Node GDD (F.2 RN row / C.9 cross-ref) — RN-owned S->C proximity-prompt event PC consumes in C.7, not a PC-introduced signal",
+    "GatherNodeDisarmed":    "Resource Node GDD (F.2 RN row / C.9 cross-ref) — RN-owned S->C proximity-prompt event PC consumes in C.7, not a PC-introduced signal",
 }
 
 # Identifiers that match the signal-token shape (On*/Request*/Run*) but are system /
@@ -83,6 +92,21 @@ NON_SIGNAL_NAMES = {
 # arm is load-bearing, not decorative.
 _TOK_PLAIN = re.compile(r"`((?:On|Request|Run)[A-Z]\w+)`")
 _TOK_QUALIFIED = re.compile(r"`(?:[A-Z]\w*Service|RunController)\s*:\s*(\w+)`")
+# round-30 widen (build-from-artifact G-1/G-2): two signal-wiring forms escaped the two arms
+# above before round-30 and were therefore invisible (net out balanced, no false RED, but also
+# UNCHECKED for completeness):
+#   - the C->S RemoteEvent `PlayerHeartbeat` (no On/Request/Run prefix) — it HAS a C.9 row, but
+#     the hook never verified that; if its row were deleted it would have leaked silently.
+#   - the `<Noun>Armed/Disarmed` consumer-event family (e.g. RN's GatherNodeArmed/Disarmed).
+# This arm makes both visible on BOTH the canonical (C.9 first-column) and the wired (body) sides,
+# so each must now be accounted by a real row or an EXTERNAL_OWNED entry. Kept narrow + explicit
+# (a named event + a specific suffix family) so a reviewer can audit that nothing real is silenced;
+# extend the alternation when a new non-prefixed PC signal shape appears.
+_TOK_CONSUMER = re.compile(r"`(PlayerHeartbeat|[A-Z]\w+(?:Armed|Disarmed))`")
+
+# The full matcher set used everywhere a token shape is scanned (canonical first-columns, body
+# wiring, S->C direction rows). Adding an arm here widens ALL three consistently.
+_ALL_TOKS = (_TOK_PLAIN, _TOK_QUALIFIED, _TOK_CONSUMER)
 
 
 def _normalize(name: str) -> str:
@@ -129,7 +153,7 @@ def _table_first_column_names(section: str) -> set[str]:
         col1 = cells[0]
         if set(col1) <= {"-", ":", " "}:  # separator row
             continue
-        for rx in (_TOK_PLAIN, _TOK_QUALIFIED):
+        for rx in _ALL_TOKS:
             for m in rx.finditer(col1):
                 names.add(_normalize(m.group(1)))
     return names
@@ -164,7 +188,7 @@ def extract_s2c_events(text: str) -> set[str]:
         direction = cells[1].replace("→", "->")
         # Tolerant of "S -> C", "S -> C (broadcast)" and "S -> owning C only".
         if re.search(r"\bS\s*->.*\bC\b", direction):
-            for rx in (_TOK_PLAIN, _TOK_QUALIFIED):
+            for rx in _ALL_TOKS:
                 for m in rx.finditer(cells[0]):
                     out.add(_normalize(m.group(1)))
     return out
@@ -181,11 +205,23 @@ def extract_nonsubscriptions(text: str) -> set[str]:
     return out
 
 
+def _f2_hud_pushrow(text: str) -> str:
+    """The F.2 table row(s) whose first cell names HUD — the PC->HUD push-contract row.
+    Returns the joined HUD-row text, or the whole F.2 slice as a fallback if no HUD row
+    is found (so a future restructure degrades gracefully, never false-REDs)."""
+    f2 = _section_slice(text, r"F\.2\b")
+    hud_rows = []
+    for cells in _table_rows(f2):
+        if cells and re.search(r"\bHUD\b", cells[0]):
+            hud_rows.append(" | ".join(cells))
+    return "\n".join(hud_rows) if hud_rows else f2
+
+
 def extract_body_wiring(text: str) -> set[str]:
     """Every signal-shaped token referenced anywhere in the doc (the things PC wires
     in prose). When PC code exists, also scan the .luau call sites here."""
     out: set[str] = set()
-    for rx in (_TOK_PLAIN, _TOK_QUALIFIED):
+    for rx in _ALL_TOKS:
         for m in rx.finditer(text):
             name = _normalize(m.group(1))
             if name not in NON_SIGNAL_NAMES:
@@ -204,10 +240,16 @@ def check_inv1(text: str) -> tuple[bool, list[str], dict]:
     accounted = canonical | nonsub | external
     leaks = sorted(n for n in wired if n not in accounted)
 
-    # 1b: every S->C push event must also appear in the F.2 HUD push-contract row.
+    # 1b: every S->C push event must also appear in the F.2 HUD push-contract ROW.
+    # round-30 (build-from-artifact R-1): tightened from "anywhere in the F.2 slice" to the
+    # specific HUD push-row(s) — the row(s) whose first table cell names HUD. The looser form
+    # would be satisfied by any incidental mention of the event name elsewhere in F.2 (e.g. the
+    # OnBeaconWindowFailed row or cross-ref prose), so it verified "appears somewhere in F.2,"
+    # not "is in the PC->HUD push contract." Falls back to the full slice only if no HUD row is
+    # found (so a future F.2 restructure degrades to the old behaviour rather than false-RED).
     s2c = extract_s2c_events(text)
-    f2 = _section_slice(text, r"F\.2\b")
-    hud_missing = sorted(n for n in s2c if not re.search(rf"`{re.escape(n)}`", f2))
+    hud_scope = _f2_hud_pushrow(text)
+    hud_missing = sorted(n for n in s2c if not re.search(rf"`{re.escape(n)}`", hud_scope))
 
     ok = not leaks and not hud_missing
     msgs = []
@@ -238,30 +280,56 @@ def check_inv2(gdd: str, entities: str) -> tuple[bool, list[str], dict]:
 
 
 def _table_first_column_names_backtick(section: str) -> set[str]:
-    """First-column backtick identifiers (any `name`), used for G.9.1 field rows."""
+    """First-column backtick identifiers from the AUTHORED-FIELD table only.
+
+    round-30 (build-from-artifact R-2): anchored to the table whose header row's first cell
+    labels the field column ("Authored field"), instead of "first column of ANY table in the
+    slice." The old form happened to be correct (G.9.1 holds exactly one table) but a second
+    table added to G.9.1, or a floor-gated field authored in a non-first column, would have
+    been miscounted. We switch ON at the labelled header and only collect backtick names from
+    its first column.
+    """
     names: set[str] = set()
+    in_field_table = False
     for cells in _table_rows(section):
-        if cells:
-            for m in re.finditer(r"`([A-Za-z_][A-Za-z0-9_]*)`", cells[0]):
-                names.add(m.group(1))
+        if not cells:
+            continue
+        first = cells[0]
+        if "`" not in first:
+            # A header / label row. Switch into the field table only at the labelled header.
+            in_field_table = bool(re.search(r"(?i)\b(authored\s+)?field\b", first))
+            continue
+        if not in_field_table:
+            continue
+        for m in re.finditer(r"`([A-Za-z_][A-Za-z0-9_]*)`", first):
+            names.add(m.group(1))
     return names
 
 
 STAMINA_KNOBS = ["STAMINA_MAX", "STAMINA_REGEN_RATE", "STAMINA_REGEN_DELAY", "STAMINA_DRAIN_RATE"]
+# round-30 (systems): STATIONARY_EMISSION_FACTOR is the emission-path sign-sensitive knob C.12
+# invariant #3 always named but H.12a left ungated until clause (vi). It is gated in clause (vi),
+# whose context line names "emission-attenuation factor domain gate" — so the domain context the
+# hook scans is widened to include that clause-(vi) line (below).
+SIGN_KNOBS = STAMINA_KNOBS + ["STATIONARY_EMISSION_FACTOR"]
 
 
 def check_inv3(text: str) -> tuple[bool, list[str], dict]:
     msgs = []
-    clauses = ["(i)", "(ii)", "(iii)", "(iv)", "(v)"]
+    clauses = ["(i)", "(ii)", "(iii)", "(iv)", "(v)", "(vi)"]  # round-30: (vi) added for STATIONARY_EMISSION_FACTOR
     present = [c for c in clauses if re.search(rf"clause\s*{re.escape(c)}", text)]
     if len(present) != len(clauses):
         missing = [c for c in clauses if c not in present]
         msgs.append(f"  H.12a config-validation gate is missing clause(s): {', '.join(missing)}.")
-    # The G.2 domain-gate block must assert each sign-sensitive stamina knob.
+    # The H.12a/G.2 domain-gate block must assert each sign-sensitive knob.
     g2 = _section_slice(text, r"G\.2\b")
     domain_ctx = g2 + "\n" + "\n".join(
-        ln for ln in text.splitlines() if "stamina-curve domain gate" in ln or "H.12a clause (v)" in ln)
-    for k in STAMINA_KNOBS:
+        ln for ln in text.splitlines()
+        if "stamina-curve domain gate" in ln
+        or "H.12a clause (v)" in ln
+        or "emission-attenuation factor domain gate" in ln  # round-30 clause (vi) context
+        or "clause (vi)" in ln)
+    for k in SIGN_KNOBS:
         if not re.search(rf"\b{re.escape(k)}\b", domain_ctx):
             msgs.append(f"  sign-sensitive knob `{k}` has no domain-gate assertion in the H.12a/G.2 block.")
     return (not msgs), msgs, {"clauses": len(present)}
@@ -295,7 +363,7 @@ def run(gdd_path: str, entities_path: str) -> int:
     line("inv#1 canonical-table", ok1,
          f"({s1['canonical']} canonical, {s1['s2c']} S->C, {s1['wired']} wired, {s1['nonsub']} non-sub)")
     line("inv#2 floor-fields", ok2, f"({s2['fields']} declared)")
-    line("inv#3 sign-knob gates", ok3, f"(clauses i-v: {s3['clauses']}/5)")
+    line("inv#3 sign-knob gates", ok3, f"(clauses i-vi: {s3['clauses']}/6)")
 
     all_ok = ok1 and ok2 and ok3
     print(f"  RESULT: {'GREEN' if all_ok else 'RED'}")

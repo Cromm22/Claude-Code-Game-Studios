@@ -199,7 +199,7 @@ constants:
     unit: dimensionless (multiplier)
     source: design/gdd/ecological-disturbance.md (G.5)
     referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md]
-    notes: "Q9 stationary attenuation magnitude multiplier applied to recurring Sprint/Light pulses below EMITTER_MOVEMENT_DELTA_FLOOR. Range: 0.10-0.60. First pulse on state-entry is exempt."
+    notes: "Q9 stationary attenuation magnitude multiplier applied to recurring Sprint/Light pulses below EMITTER_MOVEMENT_DELTA_FLOOR. Range: 0.10-0.60. First pulse on state-entry is exempt. Config-validation gate (Player Controller H.12a clause (vi), round-30 systems): PC validates this ED-owned constant it consumes in D.4 — within [0.10, 0.60], rejected at <= 0 or > 1. A value of 0/negative zeroes/inverts the Light-axis stationary attenuation (a stationary raised lantern emits 0.08*0 = 0.0 — a free stealth-lantern Pillar-1 hole; the Sprint axis is protected by its max(SPRINT_HOLD_FLOOR,...) floor, the Light axis is not — PC H.81)."
 
   - name: SPATIAL_GRID_CELL_SIZE
     category: constant
@@ -307,7 +307,7 @@ constants:
     unit: units/s
     source: design/gdd/player-controller.md (C.2, D.1, G.2)
     referenced_by: []
-    notes: "Drain rate while sprinting. 100 / 12.5 = 8s of full sprint at max stamina. Range: 8-20. Coupled with STAMINA_REGEN_RATE — adjust as a pair."
+    notes: "Drain rate while sprinting. 100 / 12.5 = 8s of full sprint at max stamina. Range: 8-20. Coupled with STAMINA_REGEN_RATE — adjust as a pair. Config-validation gate (Player Controller H.12a clause (ii)): STAMINA_DRAIN_RATE > 0 is a load-bearing sign-gate, rejected at <= 0 (D.3 T_sprint = s_0 / STAMINA_DRAIN_RATE / C.2.2 time-to-empty divide-by-zero). round-30 systems-IMPORTANT: this annotation aligns the row with its three stamina siblings (STAMINA_MAX/REGEN_RATE/REGEN_DELAY), which each already document their H.12a clause (v) gate — DRAIN_RATE is the original sign-gate but was the only stamina knob whose row omitted the gate annotation."
 
   - name: STAMINA_REGEN_RATE
     category: constant

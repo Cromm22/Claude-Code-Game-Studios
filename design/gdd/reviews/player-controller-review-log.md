@@ -1866,3 +1866,95 @@ Narrow gate 1 — build-from-artifact (general-purpose): VERDICT BUILDABLE. Hook
 Narrow gate 2 — network-programmer (PROTECT re-confirm): VERDICT PROTECT SOUND (28th consecutive round). Property 1 renderScope server-minted/forge-proof (RequestEmote carries only `slot`) — SOUND. Property 2 no client-influenced run-end (PC does NOT subscribe `OnBeaconWindowFailed`; `RunEnded.outcome` originates server-side from the arbiter) — SOUND. Property 3 death-cost double-charge-proof (`RequestSquadOxygenSpend` server-internal Knit call, RM idempotent per `(userId, deathEventId)`) — SOUND. Property 4 windowDurationSeconds PC-ignored (self-heal uses the G.6 constant only) — SOUND. Round-29 edits authority-neutral (CI-tooling records, no new client-reachable surface). 0 findings.
 
 NEXT = a closure-round verdict where the now-green C.12 hook certifies the completeness axis. DO NOT predict APPROVED — let the built hook running green certify closure, not a prediction. NOT committed (branch crafting-round2-patch).
+
+
+## Review — 2026-06-16 — Verdict: NEEDS REVISION — Round-30 (CLOSURE-ROUND FULL PANEL — the binding gate after the round-29 hook-build; revisions applied in-session)
+Scope signal: S (one focused authoring pass — 4 mechanical BLOCKING + the hook-widening tooling sweep + confirmed IMPORTANTs; no new system, no new ADR, spine untouched).
+Specialists: build-from-artifact (general-purpose), network-programmer, ai-predator-contract (general-purpose), systems-designer (general-purpose), qa-lead, ux-designer, game-designer, audio-director, creative-director (senior synthesis). All 9 lenses + CD delivered.
+Blocking items: 4 (applied in-session) | Recommended: ~9 IMPORTANT (the confirmed/build-relevant ones applied) | Nice-to-have: several
+Prior verdict resolved: Yes — round-28/29 NEEDS REVISION superseded; this closure-round panel returns NEEDS REVISION (28th consecutive non-APPROVED) but the FIRST closure-shaped one.
+
+### Verdict: NEEDS REVISION (scope S) — closure-shaped: the recurring under-enumeration class is CERTIFIED CLOSED on covered surfaces.
+
+### Headline — the certification HELD
+The round-29-built C.12 CI hook (`tools/ci/c12_completeness_check.py`) ran GREEN and the build-from-artifact lens hunted for a pass-yet-leak on EVERY covered surface (C.9 outbound server-internal, the 5-row inbound-subscription table, the F.2 HUD push-contract) — **NONE FOUND**. Per the round-28 CD falsifier (the re-architecture bar trips ONLY on a built/green hook that passes-yet-leaks on a covered surface), the bar stays **UN-TRIPPED**. The hook's `--self-test` still goes RED on the seeded `ReleasePredatorLock` omission, so the gate is provably non-vacuous. For the first time across 28 rounds the recurring class is machine-gated closed.
+
+### Spine SOUND a 29th round
+- **network-programmer: PROTECT SOUND (29th).** Re-ran renderScope-forge / client-influenced-run-end / death-cost-double-charge / windowDurationSeconds-ignored / flood-drop-ordering — all failed to break. 0 findings.
+- **ai-predator-contract: PASS (29th), ZERO findings.** Perception surface closed-enumerable (HRP.Position + S4/T6 lifecycle + 2 Emit sites); S4 no-re-acquire gate undefeatable under reconciliation re-invocation (membership-span, not edge); dead-emote/ping position-isolated; T6 single clearance channel race-free.
+- **systems-designer: APPROVE.** Formulas degenerate-free GIVEN the gated inputs; both state machines complete (no deadlock/unreachable); round-28 entities.yaml↔H.12a threshold reconciliations held; emission hierarchy holds across the full STATIONARY_EMISSION_FACTOR range.
+- **game-designer: APPROVED for the closure gate, 0 BLOCKING-NEW.** Round-28/29 build-completeness work is fantasy-neutral/positive. Design-completeness axis (DP-1/DC-5/DP-2/DP-4/DEG-1) restated NON-GATING.
+- **audio-director: SOUND, no BLOCKING** (4 IMPORTANT — AD-30-1 dB-conversion applied).
+
+### The 4 BLOCKING (off the certified axis — all mechanical, no design forks) — APPLIED IN-SESSION
+1. [qa BLOCKING-1] H.11 grace-anchor assertion was `== t_0` with t_0 not sentinel-distinguishable → weak-injection vacuity. FIX: inject sentinel `t_0 = 12345.0`, assert `t_lastGracePulse_sprint == 12345.0` (not `~= nil`, not 0).
+2. [qa BLOCKING-2] H.11e (per-axis independence) asserted magnitudes only → cross-axis anchor contamination uncatchable. FIX: distinct per-axis sentinels (12345.0 / 23456.0), assert BOTH anchor side-effects independently.
+3. [ux-B1] Jump + Lantern touch buttons had no min tap-target — the round-28 emote 44px floor was never propagated. FIX: new G.5 `JUMP_TOUCH_TARGET_MIN` / `LANTERN_TOUCH_TARGET_MIN` (44px) + U.2 commitments.
+4. [ux-B2] Interact/Gather zone had no min target / no Jump-to-Gather separation despite being the named highest-risk adjacency. FIX: new G.5 `GATHER_TOUCH_TARGET_MIN` (44px) + `JUMP_GATHER_SEPARATION_MIN` (8px edge-to-edge) + right-thumb-cluster floor note + new MANUAL-DEVICE/ADVISORY AC **H.83**.
+
+### Hook-widening sweep (CD ruled GATING this round — "widen, not re-architect") — APPLIED + re-run GREEN
+- **G-1**: new `_TOK_CONSUMER` matcher arm catches the `GatherNode*` family (was invisible to both arms); `GatherNodeArmed`/`GatherNodeDisarmed` accounted on `EXTERNAL_OWNED` (RN-owned). A future PC-owned `<Noun>Armed/Disarmed` event now leaks-visibly instead of silently.
+- **G-2**: the same arm catches the non-prefixed C→S `PlayerHeartbeat` — its C.9 row is now completeness-checked (canonical 26→27).
+- **R-1**: sub-check 1b now scans the specific F.2 HUD push-row, not anywhere in the F.2 slice.
+- **R-2**: inv#2 anchored to the labelled "Authored field" column.
+- **inv#3 clause (vi)**: H.12a gains clause (vi) gating `STATIONARY_EMISSION_FACTOR` (the last sign-sensitive emission-path knob; a 0/negative value = free stealth-lantern on the floor-less Light axis); the hook now asserts clauses (i)–(vi) 6/6 and the knob's domain gate. Teeth re-verified: the hook goes RED if clause (vi) or the knob's gate context is removed.
+- Hook re-runs GREEN: 27 canonical, 9 S→C, 34 wired, 4 floor-fields, clauses i–vi 6/6; `--self-test` still RED-on-leak.
+
+### Confirmed IMPORTANTs applied
+- AD-30-1: H.57a Part 1 + G.9.1 — the full-vs-hold delta gate now states the dB-domain conversion `20·log10(full/hold)` (was a dB constant compared against a raw scalar difference → unbuildable-as-written).
+- systems-IMPORTANT: `entities.yaml` `STAMINA_DRAIN_RATE` note gains its H.12a clause-(ii) annotation (aligning it with its 3 stamina siblings — the same cross-doc divergence class round-28 closed for the others). `STATIONARY_EMISSION_FACTOR` note gains the clause-(vi) gate annotation.
+- qa (de-escalated from BLOCKING-3 to IMPORTANT by CD): H.78 gains a subscription-liveness guard (fire a SECOND up-crossing, assert count==2 before the down-crossing negative) — closes the subscription-fires-once-then-dies false-negative.
+
+### Specialist split — synthesized (CD C30-4)
+5 lenses affirm the spine (systems APPROVE, game APPROVED, audio SOUND, network PROTECT 29th, ai PASS 29th) vs 2 dissent on leaf-hardening only (qa AC-vacuity, ux tap-target). This is NEEDS REVISION of a DIFFERENT KIND than rounds 2–29 — the spine that kept it in review is now sound; the dissent is bounded mechanical leaf items, none on the certified axis.
+
+### CD governance rulings (binding, precedents recorded)
+- **C30-1**: re-architecture bar NOT tripped (no pass-yet-leak on a covered surface).
+- **C30-2**: the two widen-hook gaps + STATIONARY_EMISSION_FACTOR = widen-the-hook, GATING as a TD/qa tooling sweep (design unchanged), do NOT reopen the certified axis.
+- **C30-3**: BLOCKING ledger = 4 (qa-1/qa-2 + ux-B1/ux-B2); qa-3 (H.78) de-escalated to IMPORTANT.
+- **Governance**: re-architecture bar stays UN-TRIPPED. The "DO NOT predict APPROVED" caution is HELD for THIS verdict but explicitly **DISCHARGED for the next round** — the falsifier it was waiting for has fired clean; the next round MAY legitimately reach APPROVED. Precedents recorded to `.claude/agent-memory/creative-director/` (certified-closure-via-ci-gate; recurring-shape-recurs-on-uncovered-ui-axis).
+
+### NEXT (binding CD prescription)
+The in-session patch is applied. Re-verify via a **closure-VERDICT round (NOT a full re-panel)**: the widened green hook + TWO narrow gates (qa AC-vacuity re-scan of H.11/H.11e/H.78/H.83; ux tap-target) + a build-lens hook re-run. Reserve a full panel only if a future pass touches the spine (it should not). TD/qa still own wiring the green hook into CI as a blocking gate + extending `extract_body_wiring()` to grep PC `.luau` call sites once PC code exists. The design-completeness axis (DP-1/DC-5/DP-2/DP-4/DEG-1) is the next game-designer work item, sequenced after build-completeness closes — non-gating.
+
+### State
+Branch `crafting-round2-patch`. Round-30 = closure-round panel + in-session revision. Files this round: `design/gdd/player-controller.md` (H.11/H.11e/H.78/H.12a/H.57a/G.5/U.2/G.9.1/C.12/header + new AC H.83), `design/registry/entities.yaml` (STAMINA_DRAIN_RATE + STATIONARY_EMISSION_FACTOR notes), `tools/ci/c12_completeness_check.py` (G-1/G-2/R-1/R-2 + inv#3 clause vi widening; re-runs GREEN + self-test), this review-log (round-30 entry), `systems-index.md` (round-30 status), `active.md`, memory. **NOT committed** (alongside the broader rounds 3–29 + Crafting + ED work).
+
+
+## Review — 2026-06-17 — Verdict: APPROVED — Round-31 (CLOSURE-VERDICT round — the widened green C.12 hook certifies the completeness axis)
+Scope signal: S (no authoring — a verification round: re-run the widened green hook + two narrow gates + a build-lens hook re-run against the round-30 in-session patch).
+Specialists: qa-lead (AC-vacuity narrow gate), ux-designer (tap-target narrow gate), build-from-artifact / gameplay-programmer + direct teeth-probe (hook re-run), creative-director (synthesis).
+Blocking items: 0 | Recommended: 0 new | Nice-to-have: 0 new
+Prior verdict resolved: Yes — round-30 NEEDS REVISION (closure-shaped) superseded. The round-30 in-session patch is verified clean across all three closure-round components. First APPROVED in 31 rounds.
+
+### Verdict: APPROVED (scope S) — the recurring under-enumeration class is CERTIFIED CLOSED with machine-verified teeth.
+
+### Headline — closure holds across all three components
+- **Widened green hook**: `tools/ci/c12_completeness_check.py` runs GREEN (27 canonical, 9 S→C, 34 wired, 4 floor-fields, clauses i–vi 6/6); `--self-test` still RED-on-leak; exit codes are real-gate (0 green / 1 red), so it is CI-wireable as a blocking gate.
+- **Teeth independently re-verified on EVERY round-30-widened surface** (each mutation flips GREEN→RED, deterministically, on a temp copy): (A) drop the `PlayerHeartbeat` canonical C.9 row (G-2) → RED; (B) wire a new unaccounted `GatherNode*Armed` consumer event (G-1) → RED; (C) strip the `clause (vi)` marker (inv#3) → RED; (C2) rename `STATIONARY_EMISSION_FACTOR` everywhere (inv#3 knob) → RED; (D) remove a floor-field from `entities.yaml` (inv#2) → RED. The teeth are real on each covered surface, not just the seeded `ReleasePredatorLock` case — this is the pass-yet-leak hunt the build lens owed, and it found NONE.
+
+### Narrow gate 1 — qa-lead (AC-vacuity re-scan): GATE PASS
+H.11 OK (sentinel `t_0 = 12345.0` distinct from nil/0/un-injected wall-clock; a build that returns 0.10 but fails to write the anchor now FAILS). H.11e OK (distinct per-axis sentinels 12345.0/23456.0; a cross-axis overwrite is caught on the side-effect, not inferred from magnitudes). H.78 OK (round-24 positive cue-fired anchor + round-30 subscription-liveness `count==2` guard both precede the negatives in the same body → closes BOTH the unwired-handler and the fires-once-then-dies vacuity modes). H.83 OK (clauses a–d are concrete measurable criteria; ADVISORY label correct per the coding-standards Visual/Feel matrix). Sanity: H.12a clause (vi) + H.81 non-vacuous. 0 findings.
+
+### Narrow gate 2 — ux-designer (tap-target): GATE PASS
+G.5 knobs OK (all six present with value/range/rationale: EMOTE/JUMP/LANTERN/GATHER `_TOUCH_TARGET_MIN` 44 px, `EMOTE_TOUCH_SEPARATION_MIN` 12 px, `JUMP_GATHER_SEPARATION_MIN` 8 px). U.2 OK (every PC-owned touch affordance — Lantern, Sprint, Jump, Emote-Open, Interact/Gather — cites its floor; right-thumb cluster names both separation floors; HUD-ownership boundary stated). H.83 OK (clauses a–d are the testable manifestation; constants agree across G.5/U.2/H.83). Coverage complete — no affordance missed, no value mismatch, no orphan constant. 0 findings.
+
+### Build-lens hook re-run: GREEN-CONFIRMED
+Hook GREEN + self-test RED-on-leak + teeth verified on all 5 widened surfaces (above). No pass-yet-leak on any covered surface. Re-architecture bar stays UN-TRIPPED.
+
+### Spine SOUND a 30th round
+network PROTECT SOUND + ai-predator-contract PASS, 30 consecutive rounds (carried from round-30; this verification round introduced no GDD change that touches the spine). systems formulas degenerate-free; game-designer + audio APPROVED/SOUND for the gate.
+
+### CD governance (binding)
+- **C31-1**: the round-30 "DO NOT predict APPROVED" caution was DISCHARGED for this round (the falsifier fired clean in round-30); this round legitimately reaches APPROVED — the completeness axis is certified by an executable, teeth-proven CI gate, not by a promised future panel.
+- **C31-2**: this APPROVED is on the BUILD-COMPLETENESS axis. The design-completeness axis (DP-1 sprint-necessity / DC-5 lantern-necessity / DP-2 / DP-4 / DEG-1) remains a SEPARATE, non-gating game-designer work item, now unblocked and sequenced next.
+- **C31-3**: the C.12 hook is now a STANDING gate — TD/qa must wire `tools/ci/c12_completeness_check.py` into CI as a blocking check and extend `extract_body_wiring()` to grep PC `.luau` call sites once PC code lands. The invariants are unchanged by that extension.
+
+### NEXT
+1. TD/qa — wire the C.12 hook into CI as a blocking gate; extend it to scan PC `.luau` when code lands.
+2. PC design-completeness pass (game-designer, non-gating) — DP-1/DC-5/DP-2/DP-4/DEG-1.
+3. ED Session B/C + the deferred ED AC-extraction, then ED round-21 `/design-review`.
+4. RM / Resource Node / HUD / Camera (OQ.3) GDDs unauthored.
+
+### State
+Branch `crafting-round2-patch`. Round-31 = verification round (no GDD authoring). Files this round: this review-log (round-31 entry), `design/gdd/player-controller.md` (status header), `systems-index.md` (round-31 status), `active.md`, memory. Committed this session alongside the round-30 records + the broader uncommitted rounds 3–30 backlog.
