@@ -4,6 +4,109 @@ Revision history for `design/gdd/resource-management.md`. Most recent entry firs
 
 ---
 
+## Review — 2026-06-17 — Verdict: APPROVED (round-4 — two narrow gates + in-session fix)
+Scope signal: S (precision pass — RM-only, no new ADR, no formula changes)
+Gates (CD round-4 prescription — NOT a fresh full panel; user-selected): **network-programmer** (authority spine re-confirm) + **qa-lead** (determinism + AC integrity)
+Blocking items: network 0 / qa 6 (all fixed in-session) | IMPORTANT: network 2 (both folded) + qa 5 advisories (all folded) | Prior verdict resolved: Yes — round-3 NEEDS REVISION, all 9 + R3-1/R3-2/R3-3 applied
+
+**Gate results.** **network = PASS** (spine SOUND, no round-4 regression): pool `P` still write-unreachable; `serverSendTime` + latency-projection strictly display-only (server stamps, never reads client copy); H.47 retirement opened no introspection gap (H.27 absorbed the identical `.Client` assert); idempotent `k`-coalescing correct + retry-safe, per-player attribution preserved server-side. **qa = NEEDS REVISION** — but AC-miscount class GREP-CONFIRMED CLOSED (independent re-count 52 = 35/10/3/4 exact; retired set clean; no dangling H.47 refs; WCAG trigger-vs-flash intact; CR.3/CR.4 sub-step consistent). The 6 qa blockers were ALL determinism/AC-precision on the round-4-touched ACs — none touched spine/arithmetic/economy/design.
+
+**In-session fix (user chose "fix all now"; self-verified, not re-gated):** all 6 qa blockers + both network IMPORTANTs + all 5 qa advisories applied, reconciliation-fanout-checklisted —
+- **Q1** H.49 → stub-testable-now label (consistent w/ H.2–H.5; body + header).
+- **Q2** H.50 → pinned `≥` predicate + exact-`t=0.334 s` boundary sub-assertion.
+- **Q3** H.52 → pinned `dt=1/60` + dt-independent invariant `P ≥ 9.2`.
+- **Q4** H.55 → narrowed to RM-side emission only; PC-consumption → PC GDD's AC.
+- **Q5** H.56 → exact strict predicate `… < OXYGEN_DRAIN_BC3` ⇔ `canisterCycleTime > 9.09 s` + 9.0/9.1 boundary checks.
+- **Q6** H.49 → threshold 280 = formula equality; float-safe test values (272 loss / 288 survive) + tie as single-tick R3-2 policy (no 2100-tick IEEE-754 accumulation).
+- **N1** CR.4 → run-end flip is end-of-tick after step ① (final-tick death still charges; later-tick spends rejected).
+- **N2** CR.1 → "prevents false-Empty flash" softened to best-effort; Empty *cue* driven only by authoritative `OnOxygenStateChanged`, periodic sync is the correctness guarantee.
+- Advisories A1–A5: H.54 starting-P, H.51 server-P precondition, H.44 dup-key identity, H.20 pinned `t=0.4`, H.50 rate-vs-gap note.
+
+AC totals unchanged by the patch (H.55 narrowed in place): **52 live = 35 Logic / 10 Integration / 3 Security / 4 Config-Data**, 4 retired (H.38/39/40/47), 9 forward-pending (7 BCT-accessor [stub-testable now] + H.23/H.56 RN).
+
+**Verdict: APPROVED (by user acceptance — determinism axis closed-by-fix).** The network spine PASSED outright; the AC-miscount class is grep-confirmed closed; every round-4 blocker was RM-only AC-precision and is now fixed + self-verified. User accepted in lieu of a final independent re-gate (the fixes are mechanical precision with no design change). Forward-pending obligations remain correctly flagged (BCT accessor — ED Session B; RN `canisterCycleTime`; HUD GDD consumption incl. combined-flash WCAG bound; Crafting OQ.8 faucet-name + H.106 + OQ.10 per-squad stack cap). **Approval is on RM's own design/contracts; it does not close the cross-GDD reconciliation obligations owned by ED / Crafting / RN / HUD.** NOT committed (branch `crafting-round2-patch`).
+
+---
+
+## Revision — 2026-06-17 — Round-3 blockers applied (pre round-4 re-review)
+Type: Revision pass (NOT a verdict) — ONE authoring pass per the CD round-4 prescription, reconciliation-fanout-checklisted (6 of 9 blockers were self-inflicted fix-creates-next-gap instances).
+Applied: all 9 round-3 blockers + CD rulings R3-1/R3-2/R3-3 + the IMPORTANT fold-in.
+
+**Reconciliation-fanout checklist (every site each fix touched, to prevent the recurring next-gap):**
+- **B1 (R3-3 per-squad cap):** D.5(a) bullet (multi-stack honesty + R3-3) → coast-threshold ¶ (arithmetic replaces circular dismissal: banked items ≤ 100 of the 280 needed, rest must be a deep carried pool the countdown drains) → degenerate-scan (stockpiling/hoard/coast bullets) → new **OQ.10** (lock `ITEM_STACK_MAX` per-squad with Crafting; H.26 + D.5(a) now conditional on it). BC4=8.0 untouched.
+- **B2 (`P_after` sub-step):** CR.1 dead-reckon ¶ (pinned: Deducted = post-step-①, Restored = post-step-②; emission in sub-step order) → CR.3 emit line → Interactions HUD row → Dependencies HUD row → UI Reqs → H.51 → H.52. + IMPORTANT latency-pop: `serverSendTime` + client forward-projection added to CR.1/H.51/event sigs.
+- **B3 (R3-1 strike HUD obligations):** Interactions HUD row + OQ.7 + Dependencies HUD row — `OnBandChanged`/`wasCriticalSave`/death-spiral+`aliveCount` struck wholesale to the HUD GDD (`aliveCount` PC-owned; RM tracks no headcount).
+- **B4 (H.27/H.47 dup):** H.47 RETIRED (number not reused) + merged "mirrors Crafting H.24" note into H.27; header enum + totals updated (Security 4→3).
+- **B5 (WCAG flash ≠ trigger):** Accessibility WCAG bullet (RM caps only the state-change trigger; restore/death flashes uncapped ⇒ combined ≤3/s visual bound is a named HUD obligation) → Tuning row → H.50 → OQ.7 → Accessibility coalescing rule.
+- **B6 (H.44 idempotent-coalesce):** CR.4 new idempotency×coalescing ¶ (applied total `k×cost`, `simultaneousCount=k`, `k=0`⇒no event) → CR.3 step① → H.44 (worked k=2 example) → H.52 → event sigs → Accessibility coalescing rule.
+- **B7 (H.50 determinism):** H.50 rewritten with injected monotonic clock + scripted timestamps `t=[0,0.1,…,0.5]` ⇒ emits only at t=0 and t=0.4 (2 emissions, no wall-clock dependency).
+- **B8 (MAX_TICK_DT AC):** new **H.54** (Logic) — `dt=0.5 s` at BC4 ⇒ `dtₑ=min(0.5,0.1)=0.1` ⇒ drains 0.8 not 4.0; header enum + totals updated.
+- **B9 (Player Fantasy honesty):** "clock that forces noise" ¶ split into two-truths framing (hiding always loses vs deep-pool coast is reachable only by gathering, not hiding) + explicit 2-player-net-negative-at-all-bands (modal Roblox case) acknowledgment.
+
+**CD rulings applied:** R3-1 (strike HUD obligations, B3); R3-2 (coast tie at `≥`: H.49 → `P=280` survives, `279` dies; stale `BEACON_SURVIVAL_WINDOW_min` forward-pending tag fixed — constant exists today); R3-3 (per-squad Canister-stack cap, B1/OQ.10).
+
+**IMPORTANT folded in:** latency-pop bound (serverSendTime projection); `OnPlayerOxygenExpired` argless silent-nil gating → new **H.55** (Integration, testable now); D.5(b) `≥2.5s`→strict `>2.5s` + 9.1 s HARD floor governs; BC3 HARD floor → new **H.56** init-assert (Config-Data, forward-pending RN); H.51 numeric; H.17 exact-37.001 boundary; H.49 tag; run-end dedup-clear race → CR.4 run-state guard; BIOMASS diversion noted Crafting-cost-dependent (conservative, OQ.6/OQ.9).
+
+**AC accounting (grep-verified, self-auditable):** round-3 50 → **round-4 52 live = 35 Logic / 10 Integration / 3 Security / 4 Config-Data** (−1 H.47 retired; +3 H.54/H.55/H.56). 9 forward-pending of 52 (H.2/3/4/5/21/41/49 BCT accessor; H.23/H.56 RN). H.55 testable now. NOT committed.
+
+---
+
+## Revision — 2026-06-17 — Round-2 blockers applied (pre round-3 re-review)
+Type: Revision pass (NOT a verdict)
+Applied: all 9 round-2 blockers + the IMPORTANT fold-in.
+
+- **B1** AC header recounted + per-AC enumerated (self-auditable), H.1 acknowledged Integration, 8 forward-pending + 1 import-partial disclosed.
+- **B2** D.5(a) `oxygen_pool_start` drop named intentional under shared pool (R2-1); entry-reserve carried by coast threshold.
+- **B3** `=28` literal → formula `BEACON_SURVIVAL_WINDOW_min × OXYGEN_DRAIN_BC4_FLOOR ÷ ITEM_STACK_MAX` (= 28 at defaults).
+- **B4** BC3 net-negativity hedged conditional (`canisterCycleTime > 20/2.2 ≈ 9.1 s`), forward-pending; HARD RN floor stated, [7.5,11.1] overlap flagged.
+- **B5** DP-2 "no crash zones" corrected — 3/4 corners violate; pool-relative range; H.24 init-assert = real defense.
+- **B6** `OXYGEN_STATE_CHANGE_MIN_INTERVAL = 0.334 s` knob + H.50 + accessibility-floor ref.
+- **B7** CR.1 dead-reckon base reset via authoritative `P_after` on semantic events; H.51; propagated to all event signatures.
+- **B8** D.6 per-squad-size dP/dt table (2-player cap=1 ⇒ net-negative at all bands incl. BC1); CR.8 + Player Fantasy made honest.
+- **B9** Coast-residual framing softened guarantee→probability (Player Fantasy, D.5, degenerate scan); OQ.9 elevated.
+- **IMPORTANT** dt cap (MAX_TICK_DT=0.1 in CR.3/D.1); normative per-tick order in CR.3; 68-Canister relabel total-run; `deathEventId` uniqueness + write-before-throw (CR.4); H.27/28/29 reframed structural; `OnPlayerOxygenExpired` → argless squad-wide; H.52/H.53 added; HUD-contract obligations named in OQ.7; "spending the dead" prose reconciled to CR.5.
+
+ACs 46 → **50 live** (added H.50–H.53). NOT committed.
+
+---
+
+## Review — 2026-06-17 — Verdict: NEEDS REVISION (round-3)
+Scope signal: M (one cross-GDD ruling + a fanout-checklisted precision pass; no new ADR)
+Specialists: game-designer, systems-designer, economy-designer, network-programmer, qa-lead, ux-designer, creative-director (synthesis)
+Blocking items: 9 (grouped; all RM-addressable) | Recommended (IMPORTANT): ~10 | Prior verdict resolved: Yes — round-2 NEEDS REVISION, all 9 blockers applied
+
+**Summary:** First full-panel re-review against the round-3 revision. Unanimous NEEDS REVISION, **none MAJOR** — a genuinely converging design. The recurring **AC-miscount class is RESOLVED**: qa-lead AND systems-designer independently re-counted and confirmed **50 live = 34 Logic / 9 Integration / 4 Security / 3 Config-Data** with the forward-pending list accurate. systems-designer verified ALL round-3 arithmetic correct (BC3 9.1 s floor, the per-squad-size dP/dt table, D.5a 100<280, DP-2 corners, H.52). network-programmer re-confirmed the **authority/attribution spine SOUND** with no new client-write path and the **vacuous-security-AC class CLOSED** (H.27/28/29 reframe now substantively testable). The defect surface narrowed from arithmetic/framing (round-2) to **implementation-contract precision** (round-3) — and **6 of the 9 new blockers are self-inflicted fix-creates-next-gap instances** from the round-3 edits (the `P_after` feature, the OQ.7 HUD-contract naming, the MAX_TICK_DT cap, the `OnPlayerOxygenExpired` arity change).
+
+**CD binding rulings (R3-x):**
+- **R3-1:** STRIKE the half-named HUD-contract obligations (`OnBandChanged`, `wasCriticalSave`, death-spiral-trajectory + `aliveCount`) from OQ.7 — defer fully to the HUD GDD; do not ship dangling signatures. (`aliveCount` is PC-owned; RM tracks no headcount.)
+- **R3-2:** Coast-threshold tie resolves at **`≥`** — a squad entering BC4 at exactly 280 survives the window (the Beacon-survival check wins the final-tick tie over oxygen-empty). H.49 to use 280 (not 281) as the survive boundary.
+- **R3-3 (user ruling, 2026-06-17):** the multi-stack BC4 fence resolves as a **per-squad Canister-stack cap** — Canister supply is squad-bounded (one effective stack) so `100 < 280` holds and the protected **BC4=8.0 is untouched**. RM must lock/confirm `ITEM_STACK_MAX` per-squad semantics with Crafting (cross-GDD obligation, new OQ).
+
+### Blocking items (round-4 targets; ⚠ = self-inflicted by round-3 edits)
+1. **[economy+game] Multi-stack inventory scope / coast-banking** — resolve via R3-3 (per-squad cap); restate D.5(a) honestly; replace the circular "coast-on-a-fat-pool" degenerate dismissal with arithmetic.
+2. ⚠ **[systems+network DOUBLE] `P_after` sub-step timing** — pin `OnOxygenDeducted.P_after`=post-step-1, `OnOxygenRestored.P_after`=post-step-2.
+3. ⚠ **[ux+game+network CONV] OQ.7 HUD-contract obligations half-named** — resolve via R3-1 (strike to HUD GDD).
+4. **[network+qa+systems TRIPLE] H.27/H.47 duplicate Security ACs** — merge/retire one (Security count → effectively 3 distinct).
+5. **[economy+game] H.50/WCAG** — state-change rate-limit ≠ visual-flash cap; `OnOxygenRestored` flash uncapped; HUD-side bound must be a named obligation.
+6. **[systems+network DOUBLE] H.44 coalescing vs CR.4 idempotency** — pin per-death idempotent application, coalesced emission, `amount` = applied total.
+7. **[qa+ux] H.50 not deterministically testable** — rewrite with injected timestamps.
+8. ⚠ **[qa+economy DOUBLE] MAX_TICK_DT cap has no AC** — add one (e.g. dt=0.5 s drains only drain×0.1).
+9. **[game] Player Fantasy half-updated** — still reads as full-squad guarantee then self-contradicts; never acknowledges 2-player (modal) net-negative at all bands.
+
+### Recommended (IMPORTANT — same pass)
+Dead-reckon latency-pop at BC4 (re-base to a `P_after` stale by latency×8.0 → violates ±0.5 on mobile; consider send-timestamp projection or bound the pop); `OnPlayerOxygenExpired` argless silent-nil risk + a gating integration AC; D.5(b) `≥2.5s`→strict `>2.5s` + cross-ref the 9.1 s HARD floor; BC3 HARD constraint needs an RM-owned forward-pending init-assert AC; BIOMASS allocation tension unquantified (cite Crafting Beacon cost or log OQ); run-end dedup-clear race vs in-flight spends (run-state guard on `RequestSquadOxygenSpend`); H.51 missing numeric assertion; H.17 exact-37.001 boundary; H.49 stale `BEACON_SURVIVAL_WINDOW_min` forward-pending tag (constant exists today).
+
+### Convergences (≥2 independent lenses — strongest)
+`P_after` sub-step timing (systems+network); H.27/H.47 duplicate (network+qa+systems); multi-stack fence / coast-banking (economy+game); H.44 coalescing-vs-idempotency (systems+network); MAX_TICK_DT no AC (qa+economy); HUD-contract dangling (ux+game+network); run-end dedup race (network+economy).
+
+### Forward-pending (correctly flagged, NOT gating APPROVED)
+Final `canisterCycleTime`/`restoreRate` + H.23 (Resource Node); BCT accessor + pre-Beacon mapping (ED Session B); HUD consumption of the events (HUD GDD).
+
+### Next
+Round-4 (CD prescription): one ruling-confirm → ONE authoring pass with an explicit reconciliation-fanout checklist (6 of 9 are self-inflicted) → TWO narrow gates (qa-determinism + network re-confirm), **not** a fresh full panel. User chose revise-in-a-fresh-session. **DO NOT predict APPROVED for round-4** — but the trajectory is strongly converging (spine SOUND, arithmetic SOUND, miscount class closed; remaining surface is contract-precision + the round-3 self-inflicted gaps).
+
+---
+
 ## Review — 2026-06-17 — Verdict: NEEDS REVISION (round-2)
 Scope signal: L (system surface) / M (the revision itself — one self-contained authoring pass, no upstream blocker)
 Specialists: game-designer, systems-designer, economy-designer, network-programmer, qa-lead, ux-designer, creative-director (synthesis)
