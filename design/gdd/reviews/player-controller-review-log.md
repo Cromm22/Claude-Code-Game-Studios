@@ -1994,3 +1994,42 @@ DC-5 is a genuine new mechanic and the pass leans on three UNAUTHORED GDDs — R
 
 ### State
 Branch `crafting-round2-patch`. Files: `design/gdd/player-controller.md` (B/C.3/C.8/E.D/E.E/F.4/G.1/G.3/G.6/H + status header), this review-log (round-32 entry), `systems-index.md` (round-32 status), `active.md`, memory. Committed this session.
+
+
+## Review — 2026-06-17 — Verdict: NEEDS REVISION — Round-32 design-completeness FULL PANEL (design axis only; does NOT reopen the build-completeness APPROVED)
+Scope signal: M
+Specialists: game-designer, systems-designer, economy-designer, qa-lead, ux-designer, ai-programmer, network-programmer, creative-director (synthesis)
+Blocking items: ~13 (mechanical fixes + relabeling applied in-session; deep design forks deferred to OQ.12–OQ.16) | Recommended: ~10
+Prior verdict resolved: N/A — first full panel on the design-completeness axis (the round-32 authoring pass). Build-completeness APPROVED (round-31, CI-hook-certified) UNCHANGED.
+
+### Verdict: NEEDS REVISION (design-completeness axis) — build-completeness APPROVED NOT reopened
+network-programmer returned PROTECT SOUND (no new exploit/forge path; C.12 hook GREEN) — the build axis is intact. The other six lenses converged on NEEDS REVISION of the new design content. These are disjoint axes (build vs design), not a disagreement.
+
+### The three structural problems (CD synthesis)
+(a) A clutch of concrete in-doc defects; (b) one load-bearing claim that isn't mechanically true — "sprint = reliable escape" (a speed invariant alone does not create an escape window; perfect pathfinding re-closes, partial stamina force-walks you back); (c) the recurring "borrowed against unauthored systems" honest-framing failure — DEG-1 / H.84 / H.85 presented as CLOSED when they are CONDITIONAL on the unauthored Resource Node / Resource Management / Predator AI GDDs. This reproduces the PC GDD's signature recurring shape on a NEW axis (design-completeness) outside the build-completeness hook's scope — the next design ring, not a reopening.
+
+### Mechanical fixes + honest relabeling — APPLIED IN-SESSION
+- DP-1 invariant `<=` → strict `<` (zero-margin degenerate at predator==sprint) [systems+ai]; new H.88 config gate asserts `WALK_SPEED < SPRINT_SPEED` (G.1 ranges overlap at 16) [systems+network].
+- DC-5: C.3.6 two-stage reveal(`LANTERN_VISIBILITY_RADIUS`=20, identify) vs arm(`GATHER_PROXIMITY_RADIUS`=4, gather) clarification + H.88 coupled guard `GATHER_PROXIMITY_RADIUS < LANTERN_VISIBILITY_RADIUS`; server-authoritative `lanternRaised` + server-authoritative dark-zone classification notes [network]; mid-gather lantern-lower cancel rule + new H.89 [systems+qa].
+- DP-2: Canister SHOULD→MUST (`canister_restore < DEATH_OXYGEN_COST`, or cite Crafting BC4) [economy]; `P` pinned = STARTING pool; struck the "~2–4 deaths before terminal" arithmetic trap ("terminal" reframed as the RM-owned out-gather-the-drain level) [economy]; H.87 reverse-cite stub anchor on the F.2 RM row [qa].
+- H.84 split into a PC-testable AUTO-UNIT (the `lanternRaised`-in-dark-zone predicate) + a forward AUTO-INTEGRATION (stranded on RN) [qa].
+- DEG-1 relabeled CONDITIONAL-on-RM (Player Fantasy + F.4): the "patient-hide is a losing stall" closure is borrowed against the unauthored RM oxygen clock; F.4 states the falsifiable inequality RM must author [game+economy].
+- DP-4: H.86 latency pinned `<= 100 ms` (Emit→first flora frame) + iPhone-SE/in-motion/low-brightness test condition + world-response-cue distinguishability [qa+ux]; F.4 ED-flora row adds a minimum-perceptible `INFLUENCE_RADIUS` floor + a motion-reduction surrogate obligation [systems+ux].
+- H.85 relabeled FORWARD-OBLIGATION (not executable until Predator AI authored) [qa+ai].
+- F.4 Predator AI row adds the missing escape-success / lose-lock-on-evasion contract (paralleling `:ReleasePredatorLock`) [ai].
+
+### Deep design forks — DEFERRED to Open Questions (coupled to unauthored GDDs)
+- OQ.12 DP-1 escape model (lose-aggro/LOS/timeout/hiding-spot mechanism + dread-fantasy reconciliation + stamina-gap; the headline) — Predator AI.
+- OQ.13 DC-5 lantern-bearer role-split + hoard-gather (1 pulse per RAISE not per gather) degenerates.
+- OQ.14 DC-5 two-step opposing-corner touch friction.
+- OQ.15 DP-2 squad-size-aware ratio + death-spiral circuit-breaker + PC-ratio×Crafting-BC4 joint feasibility — RM.
+- OQ.16 minimum-ambient-light floor VALUE + dark-zone unlit-node positive affordance (absence-as-signal reads as broken on cold-start mobile) — accessibility spec.
+
+### Verification
+C.12 hook re-runs GREEN (27 canonical UNCHANGED — no new PC signal); the new H.88/H.89 + the prose carry no new signal token. All 8 sections intact.
+
+### NEXT
+A design-axis re-review AFTER Predator AI / Resource Node / Resource Management are authored — the deferred forks (OQ.12–OQ.16) cannot be soundly closed until those systems exist. RM is the highest-priority unblocked GDD (unblocks OQ.15 + DEG-1 + DP-2). Build-completeness APPROVED stands.
+
+### State
+Branch `crafting-round2-patch`. Files: `player-controller.md` (B/C.3.6/E.E/F.4/G.1/G.3/H.84-89/OQ.12-16 + status header), this review-log (round-32 review entry), `systems-index.md`, `active.md`, memory. Committed this session.
