@@ -1958,3 +1958,39 @@ network PROTECT SOUND + ai-predator-contract PASS, 30 consecutive rounds (carrie
 
 ### State
 Branch `crafting-round2-patch`. Round-31 = verification round (no GDD authoring). Files this round: this review-log (round-31 entry), `design/gdd/player-controller.md` (status header), `systems-index.md` (round-31 status), `active.md`, memory. Committed this session alongside the round-30 records + the broader uncommitted rounds 3–30 backlog.
+
+
+## Authoring Pass — 2026-06-17 — Round-32 DESIGN-COMPLETENESS PASS (a patch, NOT a verdict; non-gating to the round-31 build-completeness APPROVED)
+Scope signal: M (one game-designer authoring pass closing the SEPARATE design-completeness axis that was deferred behind build-completeness; introduces a new mechanic [DC-5] + cross-system forward-obligations).
+Owner: game-designer (analysis + authoring), user-locked decisions on the 3 load-bearing forks, lead synthesis + verification.
+Prior verdict resolved: N/A — this is the previously-deferred design-completeness axis (opened round-26, sequenced after build-completeness cleared at round-31). The build-completeness APPROVED (round-31) is UNCHANGED.
+
+### Context
+Round-31 cleared the build-completeness axis (C.12-hook-certified). The design-completeness axis (DP-1 sprint-necessity / DC-5 lantern-necessity / DEG-1 combined degenerate equilibrium / DP-4 sprint-transaction legibility / DP-2 death-cost economy anchor) — the "loud axes carry no opportunity cost → dominant strategies" thesis opened by game-designer at round-26 — was explicitly SEPARATE and non-gating, sequenced next. This pass closes it.
+
+### Analysis → user-locked decisions (the 3 load-bearing forks)
+A game-designer analysis pass produced 2–3 options per item grounded in the actual cross-system numbers (e.g. ED math: a stationary raised lantern steady-states at 0.272, just below Tense 0.30 — the lantern's cost is real but toothless without a necessity). The user chose all three recommended options:
+- **DC-5 = Gather-requires-light** — resource nodes in dark zones are audible but not identifiable/interactable until lit; the gather affordance arms only on `playerWithinGatherProximity AND lanternRaised`. The lantern's 20-stud radius becomes a GAMEPLAY gate. (A genuine new mechanic.)
+- **DP-1 = Predator escapable by sprint** — lock `WALK_SPEED (12) < PREDATOR_HUNT_APPROACH_SPEED <= SPRINT_SPEED (20)`; sprint is the Hunt-evasion tool.
+- **DP-4 = Flora micro-pulse** — each Sprint pulse twitches nearby flora at the emit position; diegetic, non-directional. Modeled as an ED-flora RENDER RESPONSE to the existing Sprint emission — NO new PC signal.
+- **DP-2 = ratio anchor** (proceeded on recommendation) — `DEATH_OXYGEN_COST / P ∈ [0.10, 0.15]`; RM sets P; ~2–4 deaths before terminal.
+- **DEG-1** (verification, no fork) — the three cohere into one mixed-strategy loop (quiet open → light-to-gather → sprint-to-evade → go-dark-and-decay); the residual "patient hide-and-gather" stall is closed by RM's oxygen clock (F.4 obligation).
+
+### Edits applied (player-controller.md only — cross-system needs recorded as F.4 forward-obligations, no other GDD touched)
+- **Player Fantasy (B)**: new risk/reward-loop block naming the three "loud for a reason" beats + the mixed-strategy arc (DEG-1).
+- **C.3 Lantern**: radius reclassified Feel→gameplay gate; new item 6 = light-to-gather gate (arm predicate + reveal-state ownership + accessibility floor).
+- **C.8.1 Sprint emission**: flora micro-pulse render-response (explicitly NOT a new PC signal — keyed off the existing `DisturbanceService:Emit("Sprint")`).
+- **E.D / E.E**: gather-in-dark-with-lantern-down edge case; two-death 20–30%-of-pool ratio note.
+- **Dependencies F.4**: 5 new forward-obligation rows — Predator AI (`WALK < PREDATOR_HUNT_APPROACH_SPEED <= SPRINT` invariant + config AC), Resource Node (dark-zone reveal state), ED flora (micro-pulse trigger mode), Resource Management (death-cost ratio + oxygen-clock anti-idle), Accessibility/UX (minimum ambient-light floor).
+- **Tuning Knobs**: G.1 `PREDATOR_HUNT_APPROACH_SPEED` cross-system invariant; G.3 `LANTERN_VISIBILITY_RADIUS` Feel→Gate; G.6 `DEATH_OXYGEN_COST` ratio knob.
+- **Acceptance Criteria (append-only)**: H.84 (DC-5 gather-gate, AUTO-INTEGRATION + MANUAL, non-vacuous lowered/raised contrast), H.85 (DP-1 evasion playtest, ADVISORY + Predator-AI config-gate cross-ref), H.86 (DP-4 flora micro-pulse, MANUAL/ADVISORY), H.87 (DP-2 death-cost ratio, RM-owned forward-obligation AC).
+
+### Verification
+- **C.12 hook re-runs GREEN** (27 canonical / 9 S→C / 34 wired / 4 floor-fields / clauses i–vi 6/6) — UNCHANGED canonical count, confirming NO new PC-wired signal was introduced. `--self-test` still RED-on-leak. The flora micro-pulse + the gather-gate both reuse existing contracts (`DisturbanceService:Emit("Sprint")`, `GatherNodeArmed`/`RequestGather`).
+- All 8 required GDD sections intact. The build-completeness APPROVED is not reopened (contract-completeness surface untouched).
+
+### Honest flag / NEXT
+DC-5 is a genuine new mechanic and the pass leans on three UNAUTHORED GDDs — Resource Node (reveal state + dark-zone classification), Resource Management (oxygen pool P + anti-idle drain — also closes the DEG-1 patient-hide residual), and the accessibility spec (ambient-light floor). PC's side is complete and self-consistent and the loop cannot be exercised end-to-end until those land. This new design content would benefit from a `/design-review` before it is considered settled (NON-gating to the build-completeness APPROVED). RM is the highest-priority unblocked GDD.
+
+### State
+Branch `crafting-round2-patch`. Files: `design/gdd/player-controller.md` (B/C.3/C.8/E.D/E.E/F.4/G.1/G.3/G.6/H + status header), this review-log (round-32 entry), `systems-index.md` (round-32 status), `active.md`, memory. Committed this session.
