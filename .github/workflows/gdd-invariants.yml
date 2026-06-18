@@ -23,6 +23,10 @@ permissions:
 
 jobs:
   gdd-invariants:
+    # The job name IS the status-check context branch protection matches. Set it
+    # explicitly to "GDD Invariant Checks" so the required-check name == the intent
+    # (default would be the job id 'gdd-invariants').
+    name: GDD Invariant Checks
     runs-on: ubuntu-latest
     env:
       PYTHONUTF8: "1"   # belt-and-suspenders: the checkers echo non-ASCII glyphs
