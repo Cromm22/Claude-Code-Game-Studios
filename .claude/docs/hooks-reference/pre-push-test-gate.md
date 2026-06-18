@@ -34,6 +34,17 @@ done
 
 echo "=== Pre-Push Quality Gate ==="
 
+# Step 0: GDD invariant checks (ALWAYS run, all branches -- fast, <1s each).
+# The executable GDD-static linters in tools/ci/. Each runs its --self-test first
+# (exit 2 = the hook itself is broken) then the real check (exit 1 = a GDD
+# invariant was violated). Mirrored by .github/workflows/gdd-invariants.yml.
+echo "Checking GDD invariants..."
+python tools/ci/c12_completeness_check.py --self-test || exit 1
+python tools/ci/c12_completeness_check.py || exit 1
+python tools/ci/determinism_check.py --self-test || exit 1
+python tools/ci/determinism_check.py || exit 1
+echo "GDD invariants: PASS"
+
 # Step 1: Build
 echo "Building..."
 # Adapt to your build system:
