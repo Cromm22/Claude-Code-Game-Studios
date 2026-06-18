@@ -8,8 +8,9 @@ name: GDD Invariant Checks
 # non-zero exit fails the job.
 #
 # Currently wired (extend this list as more tools/ci checks are authored):
-#   - tools/ci/c12_completeness_check.py   -> design/gdd/player-controller.md (+ entities.yaml)
-#   - tools/ci/determinism_check.py        -> design/gdd/crafting-and-items.md
+#   - tools/ci/c12_completeness_check.py        -> design/gdd/player-controller.md (+ entities.yaml)
+#   - tools/ci/determinism_check.py             -> design/gdd/crafting-and-items.md
+#   - tools/ci/crafting_reconciliation_check.py -> design/gdd/crafting-and-items.md
 
 on:
   push:
@@ -38,6 +39,7 @@ jobs:
         run: |
           python -m py_compile tools/ci/c12_completeness_check.py
           python -m py_compile tools/ci/determinism_check.py
+          python -m py_compile tools/ci/crafting_reconciliation_check.py
 
       - name: C.12 contract-completeness hook self-test (prove teeth)
         run: python tools/ci/c12_completeness_check.py --self-test
@@ -50,3 +52,9 @@ jobs:
 
       - name: Determinism-preamble invariant (crafting-and-items.md)
         run: python tools/ci/determinism_check.py
+
+      - name: Crafting reconciliation hook self-test (prove teeth)
+        run: python tools/ci/crafting_reconciliation_check.py --self-test
+
+      - name: Crafting reconciliation invariant (crafting-and-items.md)
+        run: python tools/ci/crafting_reconciliation_check.py

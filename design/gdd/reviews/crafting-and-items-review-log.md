@@ -1380,3 +1380,22 @@ ACs unchanged (**122**, H.130 highest). Edge cases unchanged (**32**, through E.
 **Falsification rule (recorded in the hook docstring, mirrors c12):** if the class recurs on a surface the hook covers → the hook is broken, fix it. If it recurs outside coverage (a new timing-AC shape the detector misses, or a band literal in a new location) → widen the hook (add a detector arm or an `EXCLUDED_ACS` entry); never silence a genuine omission.
 
 **Files:** `tools/ci/determinism_check.py` (new); `tools/ci/determinism_fixtures/{clean_min,broken_missing_enum,broken_stale_band}.md` (new); `design/gdd/crafting-and-items.md` (H.29 enumerated in the preamble + Last-Updated note; AC counts unchanged 122/32); `.claude/settings.local.json` (run/self-test permission entries). Branch `crafting-round2-patch`; NOT committed (awaiting user instruction).
+
+---
+
+## Hardening pass — 2026-06-18 — Reconciliation-defect hardening: scope finding + REC-1 count-consistency hook
+
+**Ask:** harden the GDD against its recurring reconciliation defects (the ~23-round "a fix lands on one normative surface but a sibling stays stale" class).
+
+**Key finding (the important part): the DOMINANT reconciliation class is NOT reliably machine-checkable by forbidden-token grep, and a broad linter would be untrustworthy.** This GDD legitimately narrates its own history and reuses tokens with multiple meanings, so naive stale-form patterns are dominated by false positives. Worked evidence from the investigation:
+- `30 studs` = `SIGNAL_ANCHOR_DETECTION_RADIUS` (legitimately 30), NOT the stale `BEACON_HOLD_RADIUS` (12) — 8 "30 stud" hits, all legit;
+- `8 events/s` = the rate-limit reachability discussion, NOT the "7 named events" count — 7 hits, all legit;
+- `Squad Relay` / `RELAY` (40+ mentions) = legitimate narration of the round-5 cut;
+- `requiredHolders = ceil(#aliveMembers/2)` = an accepted round-15 SHORTHAND that coexists with the canonical round-19 `min(requiredHoldersBaseline, #aliveMembers)` (it appears even in `entities.yaml`'s own notes) — a gloss-vs-canonical split a grep cannot adjudicate.
+This is exactly why the CD originally scoped the CI grep hook to the two precise surfaces (the determinism-preamble enumeration + the canonical band literal), now both covered by `tools/ci/determinism_check.py`; the C.9 contract surface is covered by `tools/ci/c12_completeness_check.py`. **The residual stale-sibling class remains a human review-discipline item by necessity — recorded here so a later author does not mistake "no broad linter" for "not yet attempted."**
+
+**What WAS hardened (the robustly grep-able sub-class): REC-1 count consistency.** New `tools/ci/crafting_reconciliation_check.py` (TDD + fixtures, wired into `.github/workflows/gdd-invariants.yml` + the local pre-push gate). It recomputes the section-preamble count claims from the actual headers — live ACs (= `**H.NN` headers minus the italic stub form `*REMOVED/*RETIRED (round-X)*`), max H, retired count; live edge cases, max E — and fails on any drift. Verified GREEN on the GDD: **122 live ACs / 8 retired {18,19,20,23,34,35,36,59} / through H.130; 32 live edge cases / through E.34** — all match the claims. `--self-test` OK (clean fixture passes; a seeded count-drift fixture is caught).
+
+**Human-review item surfaced (NOT auto-fixed — APPROVED content, judgment call):** the BC5 victory row (≈ C.5/Section-C state table) states `requiredHolders = ceil(#aliveMembers/2)` (the round-15 shorthand) rather than the canonical round-19 `min(requiredHoldersBaseline, #aliveMembers)`. It has survived 10 review rounds as an accepted descriptive gloss; if a future revision touches that row, add a "(shorthand; canonical = … per G.6)" pointer. Left as a review note, not a CI rule (the canonical form is a complex expression with accepted shorthand variants — un-grepable, see above).
+
+**Files:** `tools/ci/crafting_reconciliation_check.py` (new); `tools/ci/crafting_reconciliation_fixtures/{clean_min,broken_count}.md` (new); `.github/workflows/gdd-invariants.yml` (third hook wired); `.claude/docs/hooks-reference/pre-push-test-gate.md` (Step 0 extended). No GDD content change (counts unchanged 122/32). Branch `crafting-round2-patch`; NOT committed (awaiting user instruction).

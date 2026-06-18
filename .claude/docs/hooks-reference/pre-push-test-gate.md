@@ -43,6 +43,8 @@ python tools/ci/c12_completeness_check.py --self-test || exit 1
 python tools/ci/c12_completeness_check.py || exit 1
 python tools/ci/determinism_check.py --self-test || exit 1
 python tools/ci/determinism_check.py || exit 1
+python tools/ci/crafting_reconciliation_check.py --self-test || exit 1
+python tools/ci/crafting_reconciliation_check.py || exit 1
 echo "GDD invariants: PASS"
 
 # Step 1: Build
