@@ -1364,3 +1364,19 @@ ACs unchanged (**122**, H.130 highest). Edge cases unchanged (**32**, through E.
 - Systems index: `design/gdd/systems-index.md` (Crafting row 6 — round-25 note pending if the user commits).
 
 **User chose to apply all 3 residues in-session (R1+R2+R3) and keep the system APPROVED-by-acceptance (residue sweep, not a verdict change). Branch `crafting-round2-patch`; rounds 3–25 work all still NOT committed (awaiting user instruction per CLAUDE.md).**
+
+---
+
+## Tech-debt closed — 2026-06-18 — Determinism-preamble CI hook built (the durable fix for the enumeration + band-literal recurring class)
+
+**What:** Built `tools/ci/determinism_check.py` — the standing falsifier the round-20/23 reviews logged as a TD/qa task to retire the determinism preamble's author-discipline dependence (the "Forward-maintenance" rule was hand-maintained; it was missed at rounds 21/22/23/25). Mirrors the existing `tools/ci/c12_completeness_check.py` precedent (Python GDD-static linter, `--self-test` fixtures, exit codes 0/1/2, explicit auditable allowlist). Built TDD: fixtures (the tests) first, watched them fail, then the checker, red→green.
+
+**Two invariants:**
+- **DET-1 — enumeration completeness.** Every AC whose test drives the C.16 clock seam (`_clock(` OR `_step`+duration/grace/window keyword) must be enumerated in the determinism preamble OR on the explicit `EXCLUDED_ACS` allowlist (reason-tagged: H.86 static meta-check, H.94 position-cross, H.99 data-model, H.113 lifecycle-latch). A new timing AC the author forgets to enumerate → RED.
+- **DET-2 — canonical band-literal.** Forbids the stale enforced predicate `<= 70.0` (spec-wide, comment/header-narration stripped) and requires the H.105 config-gate AC to carry `[35.0, 70.1]`, never the decimal-less `[35,70]`. The legitimate ED-*derived-range* prose (`varies across [35,70] s`) lives outside H.105 and is not flagged.
+
+**The hook earned its keep on first run — it surfaced a genuine latent omission the round-25 gate's looser detector missed:** **H.29** (a `_clock()`-driven D.1 clamp-boundary AC) was not in the time-driven enumeration. Fixed honestly — **enumerated H.29** in the preamble's time-driven cluster (NOT silenced on the exclude-allowlist; that would be the anti-pattern the allowlist warns against). After the fix the hook is **GREEN** on the GDD (DET-1 PASS: 26 seam-driven / 32 enumerated / 4 excluded; DET-2 PASS); `--self-test` is OK (clean fixture passes, both seeded-defect fixtures caught).
+
+**Falsification rule (recorded in the hook docstring, mirrors c12):** if the class recurs on a surface the hook covers → the hook is broken, fix it. If it recurs outside coverage (a new timing-AC shape the detector misses, or a band literal in a new location) → widen the hook (add a detector arm or an `EXCLUDED_ACS` entry); never silence a genuine omission.
+
+**Files:** `tools/ci/determinism_check.py` (new); `tools/ci/determinism_fixtures/{clean_min,broken_missing_enum,broken_stale_band}.md` (new); `design/gdd/crafting-and-items.md` (H.29 enumerated in the preamble + Last-Updated note; AC counts unchanged 122/32); `.claude/settings.local.json` (run/self-test permission entries). Branch `crafting-round2-patch`; NOT committed (awaiting user instruction).
