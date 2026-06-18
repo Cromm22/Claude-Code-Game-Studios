@@ -140,24 +140,24 @@ constants:
     value: 0.15
     unit: dimensionless (t)
     source: design/gdd/ecological-disturbance.md
-    referenced_by: [design/gdd/crafting-and-items.md]
-    notes: "Light-node Gather emission magnitude."
+    referenced_by: [design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
+    notes: "Light-node Gather emission magnitude. RN is the publisher — fires this at the node on gather completion per ED.C.3.1 (RN CR.2/CR.4)."
 
   - name: MAGNITUDE_GATHER_MEDIUM
     category: constant
     value: 0.25
     unit: dimensionless (t)
     source: design/gdd/ecological-disturbance.md
-    referenced_by: [design/gdd/crafting-and-items.md]
-    notes: "Medium-node Gather emission magnitude."
+    referenced_by: [design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
+    notes: "Medium-node Gather emission magnitude. RN is the publisher (RN CR.2/CR.4)."
 
   - name: MAGNITUDE_GATHER_HEAVY
     category: constant
     value: 0.40
     unit: dimensionless (t)
     source: design/gdd/ecological-disturbance.md
-    referenced_by: [design/gdd/crafting-and-items.md]
-    notes: "Heavy/loud-node Gather emission magnitude."
+    referenced_by: [design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
+    notes: "Heavy/loud-node Gather emission magnitude. RN is the publisher (RN CR.2/CR.4)."
 
   - name: MAGNITUDE_SPRINT_PULSE
     category: constant
@@ -450,8 +450,8 @@ constants:
     value: 0.5
     unit: seconds
     source: design/gdd/player-controller.md (C.7, G.5)
-    referenced_by: [design/gdd/crafting-and-items.md]
-    notes: "Tap-hold gather commit duration. Wall-clock, NOT frames (defining in frames would make PC fire 2x as fast as mobile). 500ms is Apple HIG long-press floor. Range: 0.3-0.8s."
+    referenced_by: [design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
+    notes: "Tap-hold gather commit duration. Wall-clock, NOT frames (defining in frames would make PC fire 2x as fast as mobile). 500ms is Apple HIG long-press floor. Range: 0.3-0.8s. RN's two-phase gather: this is phase 1 (commit), then RN runs the per-tier NODE_EXTRACT_TIME_* (RN CR.4)."
 
   - name: GATHER_PROXIMITY_RADIUS
     category: constant
@@ -459,7 +459,96 @@ constants:
     unit: studs
     source: design/gdd/player-controller.md (C.7, G.5)
     referenced_by: [design/gdd/crafting-and-items.md]
-    notes: "Proximity-gate threshold for mobile gather affordance. Range: 2-8 studs."
+    notes: "Proximity-gate threshold for mobile gather affordance. Range: 2-8 studs. RN re-validates server-side: gather rejected if server-measured distance > GATHER_PROXIMITY_RADIUS + GATHER_JITTER_TOLERANCE (RN CR.5/H.5)."
+
+  # Resource Node constants (encoded 2026-06-17 from the RN GDD authoring pass — design/gdd/resource-node.md).
+  - name: NODE_YIELD_LIGHT
+    category: constant
+    value: 1
+    unit: count
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "BIOMASS units granted per completed Light-node gather. Range: 1-2 (G). Yield 2 = 1 gather/Canister, which breaks the canisterCycleTime floor unless extract compensates (RN D.1 coupled-knob note)."
+
+  - name: NODE_YIELD_MEDIUM
+    category: constant
+    value: 1
+    unit: count
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "MINERAL units granted per completed Medium-node gather. Range: 1-2 (G)."
+
+  - name: NODE_YIELD_HEAVY
+    category: constant
+    value: 1
+    unit: count
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "RESONANT units granted per completed Heavy-node gather. Range: 1-2 (G)."
+
+  - name: NODE_EXTRACT_TIME_LIGHT
+    category: constant
+    value: 3.5
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, D.1, G)
+    referenced_by: [design/gdd/resource-management.md]
+    notes: "Server-side extraction timer for Light nodes (phase 2 of the two-phase gather). LOAD-BEARING: backs the canisterCycleTime HARD floor — 2 x (TAP_HOLD_COMMIT_DURATION + this) + CRAFT_TIME_CANISTER must be > 9.09 s (RN D.1/H.12). At 3.5 s cycle = 10.0 s (+0.91 s margin). Range: 3.1-8.0 (G); <3.05 violates the floor."
+
+  - name: NODE_EXTRACT_TIME_MEDIUM
+    category: constant
+    value: 5.0
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: []
+    notes: "Server-side extraction timer for Medium nodes. Range: 3.5-10.0 (G)."
+
+  - name: NODE_EXTRACT_TIME_HEAVY
+    category: constant
+    value: 8.0
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: []
+    notes: "Server-side extraction timer for Heavy (RESONANT) nodes. Preferred lever for RESONANT scarcity (raise this, not node count). Range: 6.0-15.0 (G)."
+
+  - name: NODE_RESPAWN_TIME_LIGHT
+    category: constant
+    value: 30
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: []
+    notes: "Depleted->Available respawn delay for Light nodes. Range: 15-60 (G). Too low = oxygen pressure evaporates."
+
+  - name: NODE_RESPAWN_TIME_MEDIUM
+    category: constant
+    value: 60
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: []
+    notes: "Depleted->Available respawn delay for Medium nodes. Range: 30-120 (G)."
+
+  - name: NODE_RESPAWN_TIME_HEAVY
+    category: constant
+    value: 120
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, CR.7, G)
+    referenced_by: []
+    notes: "Depleted->Available respawn delay for Heavy (RESONANT) nodes. With min 4 Heavy nodes and 3 RESONANT needed for the Beacon, this gates exploration without forcing a revisit-lockout under normal play. If RESONANT feels impossible, lower toward 90 (not add nodes). Range: 60-240 (G)."
+
+  - name: GATHER_LOCK_TIMEOUT_BUFFER
+    category: constant
+    value: 2.0
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.6, G)
+    referenced_by: []
+    notes: "Safety-valve margin beyond NODE_EXTRACT_TIME_tier before a stuck gather lock is force-released to Available (no yield, no emit) (RN T5/H.21). Range: 1.0-5.0 (G)."
+
+  - name: GATHER_JITTER_TOLERANCE
+    category: constant
+    value: 1.5
+    unit: studs
+    source: design/gdd/resource-node.md (CR.5, G)
+    referenced_by: []
+    notes: "Server proximity tolerance added to GATHER_PROXIMITY_RADIUS for the gather range gate + range-exit watcher (RN CR.5/H.5/H.11). Range: 1.0-2.0 (G); >2.0 opens teleport-adjacency."
 
   - name: PING_TWO_FINGER_WINDOW
     category: constant
@@ -721,8 +810,8 @@ constants:
     value: 20
     unit: count
     source: design/gdd/crafting-and-items.md (C.4, G.2)
-    referenced_by: []
-    notes: "Per-material per-player personal inventory cap. Surplus on gather is silently discarded (E.1, H.1). Range: 10-50 (G.2). At 10 every other gather forces a bench round-trip; at 50+ one player can hoard squad materials."
+    referenced_by: [design/gdd/resource-node.md]
+    notes: "Per-material per-player personal inventory cap. Surplus on gather is silently discarded (E.1, H.1). Range: 10-50 (G.2). At 10 every other gather forces a bench round-trip; at 50+ one player can hoard squad materials. RN rejects gather pre-lock when at cap (RN E.4/H.14); overflow mid-extract still depletes+emits, Crafting discards (RN E.4/H.25)."
 
   - name: SQUAD_INVENTORY_TYPE_CAP
     category: constant
@@ -892,6 +981,15 @@ formulas:
     referenced_by: []
     notes: "Empty-player guard required to avoid math.max() on empty arg list (E.15, H.22b). NaN guard delegated to E.16 emission-time schema validation (D.5 prose note). Server-internal accessor D.6b GetSquadAggregateT() returns the same value for predator Retreat-trigger logic; not exposed via Knit Service.Client."
 
+  - name: canisterCycleTime
+    category: formula
+    expression: "canisterCycleTime_best = BIOMASS_PER_CANISTER * (TAP_HOLD_COMMIT_DURATION + NODE_EXTRACT_TIME_LIGHT) + CRAFT_TIME_CANISTER"
+    variables: [BIOMASS_PER_CANISTER, TAP_HOLD_COMMIT_DURATION, NODE_EXTRACT_TIME_LIGHT, CRAFT_TIME_CANISTER]
+    output_range: [9.1, 18.0]
+    source: design/gdd/resource-node.md (D.1)
+    referenced_by: [design/gdd/resource-management.md]
+    notes: "Best-case (zero-travel) gather->craft->use cycle for one Oxygen Canister. HARD floor (RM D.6): must exceed CRAFT_CONCURRENCY_CAP * CANISTER_RESTORE_OXYGEN / OXYGEN_DRAIN_BC3 = 2*10/2.2 = 9.09 s. At defaults = 10.0 s (+0.91 s margin). Server-init assert (RN H.12). Supersedes RM's stale ~8 s dependency-table provisional (RM line 241, OQ.7). BIOMASS_PER_CANISTER=2, CRAFT_TIME_CANISTER=2 s both Crafting-locked."
+
   - name: spatialFalloffContribution
     category: formula
     expression: "contribution(P, S) = m(t, age) * max(0, 1 - dist2D(P, S) / INFLUENCE_RADIUS)^2"
@@ -1014,7 +1112,7 @@ enums:
     values: [Gather, Sprint, Light, Beacon, Craft]
     reserved_slots: 3 (for future Crafting-driven types; 1 of original 4 consumed 2026-04-30 by `Craft` per crafting-and-items.md C.11 + F.4)
     source: design/gdd/ecological-disturbance.md (C.1.2)
-    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md]
+    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
 
   - name: tier
     category: enum

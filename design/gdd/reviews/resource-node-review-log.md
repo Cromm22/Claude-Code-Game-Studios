@@ -4,6 +4,44 @@ Revision history for `design/gdd/resource-node.md`. Most recent entry first.
 
 ---
 
+## Revision — 2026-06-18 — Round-5 narrow fix-pass (CD prescription: one authoring pass, NO full panel)
+Applied the round-5 BLOCKING + RECOMMENDED punch list in one pass with a mandatory reconciliation-fanout checklist (the recurring defect class).
+
+**Decisive BLOCKING (B3) — the pre-commit firstArm-eviction contradiction, CLOSED.** CR.4 step 1 (pre-commit disarm) now evicts `positionAtArm` + the client prompt ONLY; the `firstArmTimestamp` hold anchor persists across a pre-commit walk-out-and-back, evicted only on the post-commit paths (T2 completion / T3 post-commit cancel / T4 death-disconnect / T5 safety valve). Reconciled the firstArm-anchor block (documented re-approach instant-commit as an intended, safe consequence — saves only the 0.5 s hold; extraction remains the real commitment; H.6 still blocks never-armed instant-fire) and rewrote H.32 to remove its own internal contradiction (it asserted both "fire at +501 ms → rejected" AND "does not reset the clock," impossible under a frozen anchor; the instant-fire rejection it conflated is H.6's job).
+
+**Reconciliation-fanout checklist caught 3 genuine stale siblings (the recurring class, exactly where predicted):** (1) the T3 table row cited "CR.4 step 1" for firstArm eviction — now the pre-commit path that does NOT evict — re-pointed to the post-commit anchor-eviction triggers; (2) the PC-interaction note (line 121) said the arm-*timestamp* record is cleared on `GatherNodeDisarmed` (pre-commit) — corrected; (3) H.24 said "the arm record is cleared on … range-exit" without distinguishing pre- vs post-commit — now asserts both halves of the decoupling.
+
+**RECOMMENDED punch list applied:** B1/B2 explicit `if node.state ~= "Gathering" then return end` guard added to T3/T4 rows (confirms an already-implicit invariant — the watcher only iterates `Gathering` nodes and the tick is non-yielding, so these were never live races); B4 H.37 case-C terminal-state assertions (T2-first→`Depleted`, T3-first→`Available`); ResetAllNodes step-1 false token claim corrected (extraction T2 guards on `runActive`/`node.state`, not the generation token) + S5-A `runActive`-vs-ResetAllNodes ordering clarified (dual-condition step-(0) guard makes ordering irrelevant); E.5 "run-end wins" reframed order-dependent; OQ.2 H.12 ~9 ms safe-range-minimum headroom caution (don't combine safe-range minimums; working min `TAP_HOLD=0.5+EXTRACT=3.5` → 0.91 s); audio "~12 clips" reframed `≥12` floor + asset-pass forward obligation (tier-keyed interrupt ×3, arm/respawn/reject unaccounted; ~12–20) and the now-redundant trailing REC removed; Overview "moment-to-moment heartbeat" reconciled to the ruled Beat-1 (per-gather approach decision) / Beat-2 (once-per-run RESONANT payoff, forward-pending) framing; CR.2 "8.5 s incl. commit" marked derived (floats with PC-owned `TAP_HOLD`, see D.2); UI commit-confirm visual-state + keyboard-only parity added as named RN forward-obligations; CR.5 `firstArmTimestamp` nil-guard (reject `not-armed`); S4-A ED-`Emit`-non-yielding obligation → OQ.8; qa literal-vs-constant test-discipline note added to the AC preamble.
+
+**Closed-by-user-ruling (NOT reopened):** the BIOMASS "non-decision" design claim (game-designer Finding 4 / economy 3a) is a re-derivation of the round-1 #2 / F-A user-ruled down-scope fork — per project precedent a fresh panel cannot overturn a user-accepted ruling; kept as the OQ.3 playtest watch-item, now enriched with a per-moment framing (2 BIOMASS now vs Canister delay at Beacon-push) + a concrete playtest prediction. The *prose* that over-described it (Overview) was swept; the *design verdict* was not reopened.
+
+**AC count unchanged: 42 = 38 BLOCKING + 4 ADVISORY** (no IDs added/removed; H.24/H.32/H.37 reworded only). Spine NOT touched — pure doc-integrity reconciliation, as the CD predicted.
+
+**Status:** pending ONE narrow systems+qa gate (fresh session) to confirm B3 reconciled with no new stale sibling, then accept-and-commit. **DO NOT predict APPROVED for the narrow gate.** Not committed (branch `crafting-round2-patch`).
+
+---
+
+## Review — 2026-06-18 — Verdict: NEEDS REVISION (round-5, narrow)
+Scope signal: L (unchanged)
+Specialists: game-designer, systems-designer, economy-designer, network-programmer, qa-lead, ux-designer, audio-director, performance-analyst, creative-director (senior synthesis)
+Depth: full (8-agent adversarial panel + senior synthesis)
+Blocking items: 1 decisive (B3) | Recommended: ~12 | Closed-by-ruling: 1 (BIOMASS non-decision)
+Prior verdict resolved: Yes — round-4 was a CD-prescribed authoring pass + two narrow gates (not a full panel); round-4 explicitly said "do not predict APPROVED for round-5." It did not approve.
+
+**Completeness:** 8/8 sections (+ Visual/Audio, UI, Open Questions). **AC header independently re-verified by qa: 42 = 38 BLOCKING + 4 ADVISORY — arithmetic correct** (the miscount class that plagued sibling GDDs is closed here). **Dependency graph:** ED/Crafting/PC/RM exist (RM APPROVED); Predator AI + HUD do not (correctly forward-pending).
+
+**Spine SOUND a 5th consecutive round** — network re-confirmed authority / emit-before-grant / single client event / attribution / rate-limit / ResetAllNodes race-safety, no exploits (slow-drift correctly reduces to the disclosed E.9 position-spoof ceiling); performance SOUND a 4th round (10 Hz all-pairs ~2,400 tests/s; bandwidth ~0.23 KB/s; ResetAllNodes = one full-state push); audio shimmer-duck reconciliation confirmed complete; no degenerate formulas.
+
+**The 1 decisive BLOCKING (B3):** the pre-commit firstArm-eviction contradiction — CR.4 step 1 "evicts the arm record" (singular) vs the firstArm-anchor block + H.32 "the anchor persists; walking out and back does NOT reset the clock." A genuine fresh instance of the recurring reconciliation/propagation class (the round-4 two-record decoupling left the eviction prose referring to one record), independently corroborated by network S2-A. Doc-integrity, not design; one-paragraph clarification.
+
+**Specialist disagreement (CD-adjudicated):** game-designer raised the BIOMASS "non-decision" as BLOCKING; CD declined — it re-derives the round-1 #2 / F-A user-ruled down-scope fork, and per project precedent a panel cannot reopen a user-ruled fork. Kept as the OQ.3 playtest watch-item (identical handling to round-3's CD adjudication of the same escalation). The prose over-describing the ruled design IS swept.
+
+**Senior verdict (CD):** NEEDS REVISION — narrow, doc-integrity only. The round-4 prediction landed as forecast: the panel confirmed (spine SOUND 5th round) and found one real contradiction plus a punch list. Defect trajectory held — round-1 structural → round-2 calibration → round-3/4/5 reconciliation residue, now down to a single decisive contradiction. **Prescription:** do NOT run a 6th full panel (against a spine-clean doc a full panel confirms rather than finds, and self-perpetuates via its own edits — the Crafting rounds-21–23 precedent); instead ONE narrow authoring pass (B3 + punch list) with a tight reconciliation-fanout checklist → ONE narrow systems+qa gate → accept-and-commit (RN reaches the maturity RM had at acceptance). Completability gate stands (RN ≠ Done until ED Emit API, PC death-signal/lantern, RunEnded signals, and the HUD/PC render obligations land). **Do not predict APPROVED for the narrow gate.**
+
+**Status:** User chose narrow-gate-in-a-fresh-session. Round-5 fix-pass applied this session (see revision entry above). Not committed (branch `crafting-round2-patch`).
+
+---
+
 ## Revision — 2026-06-17 — Round-4 (CD prescription: ruling session → one authoring pass → two narrow gates)
 Executed the round-3 CD prescription verbatim (NO fresh full panel). **4 user/CD rulings** applied: (1) **pin cap=2** — `CRAFT_CONCURRENCY_CAP = min(2, ceil(squad/2))`; D.1a "2 players → 2 slots → 3.33 u/s" was wrong (2p = cap 1); the floor assert pins cap=2 as the full-squad worst case (conservative, squad-size unknown at KnitInit). (2) **decouple positionAtArm** — `firstArmTimestamp` FROZEN at first entry (hold-bypass defense), `positionAtArm` REFRESHED every in-range 10 Hz tick (teleport reference); kills the legal walk-out-and-back false-reject without weakening the same-frame teleport guard. (3) **synchronous runActive re-check in T2** — step-(0) re-read of `runActive` + `node.state=="Gathering"` as the literal first non-yielding line of resolve; makes same-tick T2-vs-run-end safe and T2-vs-T3 order-independent; new H.37. (4) **strike D.4/skill-loop overclaims** — cut "races the predator" (D.4) + "expert at being small" mastery-loop (Player Fantasy) as unauthored-ED/Predator overclaims; H.29a reframed from an H.4 restatement into a genuinely independent RELATIONAL invariant.
 

@@ -710,3 +710,30 @@ Path forward — round-21 verdict review (separate fresh `/clear` session via `/
 **Next step is unchanged by the restructure:** round-20 Session B (arithmetic) + Session C (cross-GDD seam + IMPORTANT cluster) now proceed **against the slimmed GDD**, then a real round-21 `/design-review`. The decomposition makes that work tractable; it does not substitute for it.
 
 Files modified: `design/gdd/ecological-disturbance.md` (slimmed; 3 forwarding stubs inserted); `design/gdd/ecological-disturbance-forward-obligations.md` (new); `design/gdd/ecological-disturbance-verification.md` (new); `design/gdd/systems-index.md` (restructure note after systems table; ED status unchanged); `design/gdd/reviews/ecological-disturbance-review-log.md` (this entry); `production/session-state/active.md` (post-restructure state).
+
+
+## Patch session — 2026-06-09 (round-20 Session B arithmetic + derivation, fresh-session) — NOT a verdict
+
+**Context.** A round-21 `/design-review` was invoked. Before spawning specialists, a state reconstruction established that the prescribed round-20 **Session B (arithmetic) and Session C (cross-GDD seam) were never executed** — the 2026-05-30 decomposition happened instead and resolved zero BLOCKING. Five round-19 BLOCKING items were verified still-open against the slimmed GDD (B-CD18-1, B-R19-SD-1, B-R19-SD-2, B-R19-SD-3 deferred to Session B; B-R19-AI-1 deferred to Session C). The round-21 verdict therefore **provably carries as NEEDS REVISION before any panel** (same logic as PC round-7 lean re-review). User chose to **skip the panel and execute Session B now** rather than re-discover documented-open items via a 7-agent panel (honoring the "don't re-run self-perpetuating panels" precedent). This entry is a **patch record, not a verdict** — ED status stays NEEDS REVISION.
+
+**Authoring method:** chrusht-direct (per CD round-11 method-shift). **Spec-arithmetic validation pass (round-19 NEW protocol layer) ran BEFORE authoring** — every load-bearing claim re-derived independently:
+- `S_inf = 0.030 / (1 − 2^(−1/15))`: `r = 2^(−1/15) = 0.954842`, `1 − r = 0.0451584`, `S_inf = 0.030/0.0451584 = 0.66434 → 0.6643` (GDD previously carried unverifiable `0.6644`; coefficient `S_inf − 0.10 = 0.5643`).
+- **B-CD18-2 regression check after S_inf re-pin (mandated by Session A path-forward):** time-to-cross Hunt floor = `(0.6643−0.65)/0.5643 = 0.025341`, `N−1 = 79.55`, `×2 s = 159.1 s ≈ ~160 s` — the round-20 Session A `~160 s` closure remains arithmetically intact under the pinned `S_inf`. ✓
+- D.1 expiry @ `initialMagnitude = 0.25`: `ln(0.25/0.02)/0.0231049 = 109.3 s → ~109 s` (GDD carried `~116 s`, which matches 0.30; D.7 L996 already showed ~109 s for 0.25).
+- D.7 stationary-light asymptote (SQUAD_T lower bound): `0.024/(1−exp(−4λ)) = 0.024/0.088275 = 0.27188 → ~0.272`. ✓
+
+**Subagent gates (round-15 four-layer protocol + round-17/19 refinements): NOT run this session** — deferred to the round-21 verdict session per the user's skip-panel choice. The static-analysis-first + spec-arithmetic layers were applied manually by the authoring pass; the red-team gameplay-programmer + cross-section-consistency qa-lead subagent gates remain a pre-round-21 obligation.
+
+**4 BLOCKING items closed at the rule level (the Session-B-scoped subset of the round-19 set):**
+- **B-CD18-1** — G.5 `SQUAD_T_FAIL_FLOOR_THRESHOLD` published safe range narrowed `0.05 – 0.29` → **`(0.272, 0.30)`** (runtime-meaningful, supersedes the type-level range); default raised **`0.20` → `0.28`** (the prior 0.20 sat in the inert sub-band ≤ the D.7 ~0.272 asymptote, leaving criterion (iv) permanently inert); silent-defeat warning added; Session-A "narrowing pending" framing updated to "LANDED".
+- **B-R19-SD-1** — D.7 stationary-sprint derivation: `r` pinned to explicit `2^(−1/15) ≈ 0.954842`, `1−r ≈ 0.0451584` shown to 6 sig figs, `S_inf` recomputed and updated atomically `0.6644 → 0.6643` and coefficient `0.5644 → 0.5643` at all 5 sites (Section B 4th-bullet (a) L32, D.7 L1030/1032/1034/1036). A reader re-deriving from the pinned `r` now reproduces the canonical value.
+- **B-R19-SD-2** — G.5 SQUAD_T safe-range lower-bound rationale rewritten from "`> MAGNITUDE_FLOOR + headroom` / floor noise" to cite the **D.7 stationary-light asymptote (~0.272)** as the binding lower constraint.
+- **B-R19-SD-3** — D.1 worked-example expiry row `~116 s → ~109 s`; header annotated with a D.7 lifetime-table cross-check.
+
+**Registry hygiene (same-session-update rule):** `ecological-disturbance-forward-obligations.md` R17-I16-1 row updated `= 0.20` → `= 0.28` + narrowed-range note (the row's own "G.5 row + this entry updated together if revised" rule).
+
+**Files modified:** `design/gdd/ecological-disturbance.md` (B-CD18-1 + B-R19-SD-1/2/3 closures); `design/gdd/ecological-disturbance-forward-obligations.md` (R17-I16-1 registry row). `systems-index.md` and project memory were NOT updated this session (user deferred). NO design content beyond the four arithmetic BLOCKING was touched.
+
+**Prior verdict resolved (partial):** 4 of 5 remaining round-19 BLOCKING closed (B-CD18-1, B-R19-SD-1, B-R19-SD-2, B-R19-SD-3). **1 still open: B-R19-AI-1** (`:ReleasePredatorLock` yield-free vs pathfinding cross-GDD contract — Session C; may require a Predator AI GDD prereq). The ~24 round-18/19 IMPORTANT cluster remains deferred to Session C.
+
+**Path forward — round-20 Session C + round-21 verdict (separate fresh `/clear` sessions):** Session C resolves B-R19-AI-1 (escalate to user if Predator AI GDD authoring is required) + the ~24 IMPORTANT residual, then runs the full round-15 four-layer subagent gates. Round-21 verdict review via `/design-review` follows in a fresh session. **DO NOT predict APPROVED for round-21** — seventh-consecutive-falsified-APPROVED-prediction rule applies; empirically expected APPROVED OR NEEDS REVISION (very small tail). Systems-index ED row + project memory still need bringing current (deferred from this session).
