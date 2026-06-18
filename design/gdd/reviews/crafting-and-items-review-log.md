@@ -1323,3 +1323,44 @@ network-programmer: the chain is **AT-RISK, not BROKEN** — attribution (`beaco
 - Untouched: `design/registry/entities.yaml` (106-line PC registry batch left uncommitted for a separate decision).
 
 **User chose to BACK OUT the arbiter migration and record the focused review. The arbiter is tracked as an F.4 deferred forward-obligation, to be applied deliberately once the RunController GDD exists + the signal is registered. Branch `crafting-round2-patch`; NOT committed.**
+
+---
+
+## Review — 2026-06-18 — Verdict: RECONCILED (round-25 NARROW systems+qa gate on the round-23 B3 fix) → 3 residues fixed in-session; round-20 APPROVED-by-acceptance UNCHANGED
+
+**Scope signal:** Narrow gate (NOT a full panel, NOT a verdict on the GDD) — 2 lenses, scoped to one prior fix. Resolution work = **S** (3 single-line edits to the determinism preamble at L1295). GDD overall remains **XL**, APPROVED-by-acceptance.
+**Specialists:** systems-designer (native) + qa-lead (native). No creative-director — the two lenses converged; the orchestrator synthesized and adjudicated the one disagreement directly.
+**Review depth:** narrow / scoped — the user asked specifically to "confirm B3 is reconciled with no new stale sibling." This did NOT re-review the round-23 doc or re-open any verdict; it verified the round-23 **B3** fix (the determinism-preamble omission of H.97 + H.89) and hunted for residue.
+**Prior verdict resolved:** Round-23 B3 — **content reconciled, but the fix's own annotation text introduced 2 new stale siblings** (the exact recurring class, recurring *inside the fix*).
+
+### What the gate confirmed CLEAN (both lenses agreed)
+
+- **H.97** is correctly placed in the **bit-exact-equality** cluster; its AC (L1961–66) genuinely asserts `craftProgress == 0.50 / == 1.0` exactly at IEEE-754-representable boundaries — classification correct.
+- **H.89** is correctly placed in the **time-driven** cluster; its AC (L1900–05) is fully `_clock`/`_step`-driven (three variants via the C.16 seam, no `task.wait`) — classification correct.
+- Bit-exact cluster is **complete**: a grep of "bit-exact" / "no tolerance" / "exactly representable" across the AC section matches exactly {H.27, H.28, H.30, H.31, H.41, H.97} — no unlisted claimant, no listed non-claimant.
+- H.39 still **explicitly excluded** (a `>=` crossing test, not bit-exact). Counts unchanged (122 ACs / 32 edge cases; highest H.130).
+
+### Residues found + fixed in-session (3)
+
+- **R1 [systems — BLOCKING-class, B3-self-inflicted] — H.97 citation mislabel.** The preamble annotated the H.97 addition as "(round-23 systems **B-2**...)". Round-23 B-2 was the H.105 prose-band fix (L2024); H.97 was added under **B3**. → "(round-23 systems/qa B3: ...)".
+- **R2 [systems — BLOCKING-class, B3-self-inflicted] — H.89 citation mislabel.** The preamble annotated H.89 as "(... round-23 **qa REC-1**)". "REC-1" is a **round-10** label (the H.89 wipe-reconciliation miss); the preamble addition was **B3**. → "(... round-23 systems/qa B3)". *(R1+R2 are themselves the signature reconciliation class — a fix landing correct content but leaving a stale sibling reference, here in its own parenthetical.)*
+- **R3 [qa — IMPORTANT, pre-existing, NOT a B3 regression] — H.116 forward-maintenance omission.** H.116 asserts `timestamp == _clock()` at BCT3 activation but was absent from the time-driven enumeration. **Lens disagreement (adjudicated by orchestrator):** qa = a `_clock()` equality a live-clock author could write flaky → list it; systems = a single clock *snapshot* (payload-arity), not a lifetime/window *comparison* → defensible exclusion. **Ruling: H.116 dates to round-13, predates the forward-maintenance rule (round-21), and was not touched by B3 — so it is NOT a "new stale sibling," but the cheap, rule-faithful close is to list it.** → appended to the time-driven cluster with a snapshot-vs-comparison gloss ("round-25 qa gate"). User elected to apply all three (R1+R2+R3).
+
+### Answer to the gate's question
+
+**B3's mechanics are RECONCILED and correct. B3 was NOT clean as shipped at round-23 — it introduced 2 self-citation stale siblings (R1, R2), now fixed. One pre-existing latent omission (R3, H.116) was also closed. No other stale siblings found; the determinism enumeration is now complete for every `_clock`/`_step`/grace/lifetime/window AC.**
+
+### Process note
+
+Both gate subagents delivered natively (systems-designer + qa-lead) — no re-spawns. The build lens was deliberately NOT run (CD's round-23 ruling: reconciliation-clearance lives permanently on the content axis; build is wiring/lifecycle confirmation only, and it cannot catch a class that mutates its surface form). The standing CI-grep-hook tech-debt task (determinism-preamble enumeration + canonical band literal) remains the durable fix that would retire this author-discipline dependence.
+
+### Counts
+
+ACs unchanged (**122**, H.130 highest). Edge cases unchanged (**32**, through E.34). 2 GDD locations edited (determinism preamble L1295 ×3 string edits in one paragraph) + header Status/Last-Updated round-25 notes. No registry edit.
+
+### Files Referenced
+
+- Target: `design/gdd/crafting-and-items.md` (round-25 narrow-gate residue fixes; 122 ACs / 32 edge cases unchanged; NOT committed).
+- Systems index: `design/gdd/systems-index.md` (Crafting row 6 — round-25 note pending if the user commits).
+
+**User chose to apply all 3 residues in-session (R1+R2+R3) and keep the system APPROVED-by-acceptance (residue sweep, not a verdict change). Branch `crafting-round2-patch`; rounds 3–25 work all still NOT committed (awaiting user instruction per CLAUDE.md).**
