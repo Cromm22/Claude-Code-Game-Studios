@@ -1,8 +1,9 @@
 # HUD
 
-> **Status**: In Design
-> **Author**: chrusht + Claude Code (game-designer, ux-designer, ui-programmer, art-director, creative-director)
+> **Status**: Designed (pending review) — all 8 required sections + Visual/Audio + UI + Open Questions authored. Next: fresh-session `/design-review design/gdd/hud.md`.
+> **Author**: chrusht + Claude Code (game-designer, systems-designer, qa-lead, ux-designer, ui-programmer, art-director, audio-director, creative-director)
 > **Last Updated**: 2026-06-19
+> **Creative Director Review (CD-GDD-ALIGN)**: Skipped — Lean review mode (not a phase gate).
 > **Implements Pillar**: Pillar 2 (The Squad Is the Experience) primary — coordination without voice; Pillar 1 (Quiet Is Power) — the disturbance bar is the proactive-quiet signal; Pillar 3 (The World Watches) — makes the world's reaction legible.
 
 ## Overview
@@ -231,11 +232,128 @@ All HUD tuning knobs are **presentation constants** — they affect *feel and le
 
 ## Visual/Audio Requirements
 
-[To be designed]
+The HUD owns **no art or audio assets** outright — it renders within the **art bible's** locked UI palette (§4.5), shape grammar (§3.3), and animation-feel rules (§7.3), and triggers a thin **non-diegetic UI-audio layer** over producer-owned world audio. Across both channels the binding posture is **visual-primary, audio-secondary**: every gameplay-critical state is fully legible with device audio off (mobile-primary, iPhone-SE-class — audio-off is a normal operating condition), so audio never solely carries a decision (reinforces CR.5b/c). Values marked **[NEW — needs sign-off]** are proposals not yet locked in the bible.
+
+### Visual — governing principles (art-bible)
+
+Three bible rules bound every HUD visual choice: **(1) Reserved-Hue Exclusion (§4.2)** — no HUD element may enter hue 18°–48° at S > 50% (the predator's amber `#E8871A` lane must stay clean so peripheral amber means *only* "predator"); **(2) Shape Grammar (§3.3)** — `CornerRadius = 0` hard rectangles, **UIStroke-only at rest / fill = urgency**, UIGradient on meters only, the emote wheel the sole circle; **(3) Principle 3** — the *world* is the disturbance meter, the HUD bar is the lower-intensity **confirmation**, so the HUD never out-shouts the world (CR.6, "the world leads, the HUD follows").
+
+### VA.1 — Per-event visual feedback
+
+**Vitals.**
+- **Oxygen bar** — the §4.5 horizontal UIGradient (drains left): critical `#FF8060` (0.0) → warning `#FFD060` (0.3) → safe `#5FFFD8` (1.0); the gradient *is* the band read (no separate color event). Non-color redundancy (CR.5b): label weight steps Medium→**Bold** at Warning; at Critical the bar UIStroke throbs `1px→2px→1px` @ 0.5 s (a slow dying-pulse, **not** a flash). Empty: UIStroke throb @ 1 Hz + a one-shot `1.02×` scale punch at the zero-crossing **[NEW]**. The **coalesced simultaneous-death lurch** (CR.5a/H.26): exactly one horizontal-compression tween `1.0×→0.97×→1.0×` over 0.3 s regardless of `simultaneousCount`, magnitude = the coalesced deduction.
+- **Disturbance bar** — §4.5 UIGradient cool-grey-blue `#3A4A60` → mid-violet `#46379A` → vivid violet-blue `#6040E0` (all keypoints verified cool-side, no amber); fills right; displayed value is the 0.25 s `Sine/InOut` tween chasing `squadT` (D.2b). **Per-player contribution** (H.23): a stroke-only white `#F0F0F0` (ImageTransparency ~0.6) inverted-chevron marker riding *above* the bar at `playerT`'s x-position — position is the non-color signal **[NEW]**. No numeric/tier overlay (CR must-not).
+- **Stamina bar** — self-vital, bottom-right; flat white `#F0F0F0` fill on the cool-dark frame (a single flat color, distinct from the two gradient meters), drains left; low-stamina (<20%) UIStroke throb @ 1 Hz, lighter than oxygen-Critical (stamina regenerates) **[NEW]**.
+
+**Threat-legibility.**
+- **Predator-lock YOU vs SQUAD** (the single most important non-color distinction, CR.5b) — both are `CornerRadius=0` screen-edge rectangles in white `#F0F0F0`; they differ on **four non-color channels**: YOU = 4px stroke / **filled** (opaque `#1A1E2B`) / **Bold** "LOCK" / one-shot acquire pulse; SQUAD = 2px stroke / **unfilled** / Medium "P# LOCK" / no pulse. **[NEW — needs sign-off, verify 2px vs 4px legibility on iPhone-SE.]**
+- **Bearing chevron + distance band** — §7.2 chevron (inverted-V, white, 60° tip), screen-space, rotates to `θ_screen` (D.3); the D.4 opacity/scale steps (FAR 0.45/0.85× · NEAR 0.75/1.0× · CONTACT 1.0/1.25×, i.e. 27→32→40 px) are the non-color band cue; a 0.15 s `1.15×` scale "tick" fires on each band change so the step *feels* discrete on mobile **[NEW]**.
+- **Eye-shine / CONTACT treatment** (screen-space, off `distanceBand=="CONTACT"`, never a world position — RR-4) — a narrow (8–12px) **angular screen-edge vignette bracket** at the predator's bearing, white `#F0F0F0`, opacity tween `0→0.15→0` over 0.6 s (NOT a full-screen vignette — the death screen owns that), **plus** the YOU "LOCK" text shifting `#F0F0F0` → **warm-cream `#FFF0C8`** (hue ~50°, S ~22% — outside the 48° band edge and below the S>50% gate, evoking "the light just changed" without using amber). **[NEW — `#FFF0C8` requires AD exclusion-zone sign-off; locked fallback if it fails review: the pure-UIStroke escalation `4px→8px→4px` @ 0.4 s on the YOU indicator, zero hue risk.]**
+
+**Squad-coordination.**
+- **Spike alerts ACTIVE vs PASSIVE** (H.24) — shared: frame UIStroke punch `1px→3px→1px` @ 0.2 s + Bold alert text fade-in 0.08 s / out 0.5 s. Non-color split: **text copy** ("DISTURBANCE — CAUSED" vs "ZONE ELEVATED") + a disturbance-meter scale punch `1.04×` on ACTIVE only (your meter moved *because of you*), none on PASSIVE.
+- **World-response swell** (upward only) — deliberately **does not** share the spike's frame-flash signature (different cause, must feel different): a Banner-zone TextLabel ("WORLD STIRS") that **fades in at fixed position** (no slide — preserves the movement grammar) over a slower 1.5 s `Sine/Out`.
+- **Gather ring** (D.5, server-clock-derived) — the §7.7 radial fill arc, white, `3px→5px→3px` UIStroke on complete. **Reject reason**: short text-only ("NOT IN RANGE" / "NODE DEPLETED"), no frame (a reject informs, it doesn't alarm — no equipment-panel treatment) **[NEW]**.
+
+**Objective.**
+- **Beacon charge** — flat white `#F0F0F0` fill ("collective progress toward escape," no semantic overlap with any resource meter; in the Objective zone, label "BEACON") **[NEW]**.
+- **3-state cap-cue (A/B/C)** — three non-color channels: A = steady 1px stroke; B = 1 s-period pulse (§7.2 objective-marker spec); C = steady **3px** stroke + Bold "CAP" label **[NEW]**.
+- **Proximity pips** (`nearby`/`stationary_nearby`, `BEACON_HOLD_RADIUS = 12` studs) — small 8×8px stroke-only boxes per in-range player; **fill toggles on `stationary_nearby`** (fill = the holding-still positive signal, the §3.3 urgency convention read positively in-window) **[NEW]**.
+- **Survival-window countdown** — the dominant centre Banner during the Beacon-Window overlay: rectangular frame, 2px stroke, 80%-opaque fill, **RobotoMono** numeral + Bold "HOLD — BEACON" label; late-window escalation is by **weight, not rate** — the UIStroke pulse *intensifies* (heavier) as `timeRemaining→0` while the numeral stays authoritative; any pulse stays **< 3/s** and is subject to the D.6 combined-flash coalescing audit against coincident pulsing elements (cap-cue C, YOU-lock).
+
+**Outcome.**
+- **Roster/liveness** — §7.4 squad strip: alive = squad-color stroke, no fill; downed = same stroke + alert-red `#FF6060` fill (fill = urgency); dead = X icon, no fill. (Fully bible-specified.)
+- **Death caption** ("[Name] is down") — §7.3 step-3 caption, Medium 16px white, Banner zone. **Reconciliation-recovery** ("[Name] status confirmed: down", CR.4 #2) — **smaller (14px), no frame, no death-screen sequence** (no desaturate/vignette/freeze — it's a roster correction, not a kill), 1 s fade. Explicitly differentiated so the implementer never applies the death-screen treatment to a recovery **[NEW]**.
+- **Victory/Defeat banner** (H.18a, shape+text not color) — same near-opaque frame grammar both outcomes; differ by **text** ("ESCAPED" vs "FAILED", Bold, the largest text the HUD ever shows) + a **shape** cue: Defeat carries a 1px full-width horizontal separator line above the roster row, Victory has none; both show the survivor roster strip below. Run-End banner slide-in (from bottom, 0.5 s `Cubic/Out`) is the **one sanctioned translational HUD animation** — permissible only because input is locked and no world read competes.
+
+### VA.2 — Motion grammar (HUD mirrors the world's flora rule)
+
+Per §3.1's movement grammar (only teammates/predator translate; flora *scales in place*), the HUD's urgency vocabulary is **pulse-in-place** — UIStroke-weight and UIScale changes, never translation, during active gameplay (the chevron *rotates*/*scales*, it does not slide). Alert text **fades in at fixed position** (no sliding, which could read as a world-motion cue). All reactive animations ≤ 0.3 s (§7.3). The **sole exception** is the terminal Run-End banner slide-in (VA.1 Outcome). Fill-vs-stroke is load-bearing throughout: **fill = alarm**, stroke-only = passive readout (§3.3).
+
+### VA.3 — Reserved-hue compliance (load-bearing disambiguation)
+
+Two oxygen-meter colors sit near the predator band and **pass only by the bible's own §4.5 disambiguation triad** — documented here so future asset reviews don't wrongly fail them: warning `#FFD060` (hue ~50°, 2° outside the 48° upper bound) is disambiguated by *hue separation + much-lighter value + bottom-left meter position*; critical `#FF8060` (hue ~10°, below the 18° lower bound — explicitly red-family, not amber). The CONTACT warm-cream `#FFF0C8` is the one **new** hue-adjacent value and carries the AD-sign-off flag above (VA.1 Threat-legibility). No other HUD element approaches the band; the disturbance gradient and all banners stay cool/white.
+
+### VA.4 — Audio: ownership boundary + per-cue intent
+
+The HUD fires a **2D non-diegetic UI-audio layer** on signal receipt; it does **not** own or trigger world/diegetic audio (CR.1). Producer-owned (NOT HUD): the predator low-frequency rumble/sweep (Predator-AI world 3D audio, the §4.7 primary backup cue), the ambient stem crossfade (ED tier), gather-audio disturbance scaling (RN/ED), the first-pulse atmospheric shift (ED). HUD-owned cues:
+
+| HUD-owned cue | Trigger | Intent / character | Type |
+|---|---|---|---|
+| Oxygen state blip | `OnOxygenStateChanged` | dry clinical "threshold passed" click; stepped softer→harder Healthy→Empty; no reverb | transient |
+| Spike sting (ACTIVE/PASSIVE) | `OnDisturbanceAlert` | ACTIVE = sharp dry crack (personal); PASSIVE = low non-tonal pressure (environmental) | transient |
+| Predator-lock YOU | `OnPredatorLockChanged` (you) | tight low-freq "snap into focus," harmonically adjacent to the PA rumble; **[NEW]** optional sub-80 Hz felt component (headphones only) | transient |
+| Predator-lock SQUAD | state-change broadcast | lighter/higher sibling of YOU — "warning label," clearly secondary | transient |
+| Predator-lock lose | lock clears | **silence** (the cessation of threat audio *is* the reward — no all-clear) **[NEW]** | — |
+| Beacon countdown tick | D.7 window | dry organic mechanical tick @ **constant 1 s**, **gravity/weight increases** near zero (not rate) | persistent-periodic |
+| Gather complete / reject | D.5 / reject | complete = quiet mechanical "lock" (not celebratory); reject = flat low "no" | transient |
+| Victory / Defeat stinger | `RunEnded` | victory = short quiet organic *relief* swell (not a fanfare — surviving, not conquering); defeat = low subsidence/dimming | transient, terminal |
+| Death / recovery | `OnPlayerDied` | death = quiet low transient; **reconciliation-recovery = silent or one neutral confirm click** (never an alarm, CR.4 #2) | transient |
+| World-response swell | `OnWorldResponseCue` | low non-musical resonant "the world inhales"; **[NEW — ownership: HUD-fired 2D vs ambient-system-fired; resolve in OQ]** | transient |
+
+### VA.5 — Audio precedence (mirrors CR.4)
+
+Audio-visual desync on high-priority events erodes the trust the Player Fantasy is built on, so the audio channel **mirrors the CR.4 ladder exactly** via a small audio-gate state machine: **(1)** the Run-End stinger ducks/terminates all other audio (fade-in ≤ 0.5 s); **(2)** reconciliation-recovery audio **suppresses any coincident predator/fresh-kill sting** (mirrors CR.4 #2 — a dropped, not queued, predator cue); **(3)** own-death; **(4)** STRIKE sting; **(5)** lock-change preempts **(6)** world-response, which ducks beneath all above; **(7)** spike stings follow the **D.6 coalescing** parallel — one sting (highest-priority of the batch) fires, lower coincident stings are **dropped, not queued** (queuing would produce the very burst D.6 prevents). **[NEW — the Run-End duck of world audio (ambient/PA) is a SoundService group op the HUD must NOT own; ownership (RunController vs a dedicated AudioService) → OQ.]**
+
+### VA.6 — The "calm instrument" prohibitions (named must-not list)
+
+To keep the alarm believable ("it only ever rises — quiet is a felt reward, never a green light"), the HUD audio layer **MUST NOT**: play an all-clear/ascending chime on predator-lock lose; play a reassuring blip on oxygen restore (neutral re-anchor click at most); play a success fanfare on gather complete; play a positive "respawn ready" fanfare; or escalate the beacon tick by *rate* in a way that makes the early slow tick read as "safe." Permitted: upward severity *steps* within a cue family, and the single victory stinger (earned only because the run is over).
+
+### VA.7 — Caption parity & mobile mix
+
+Every decision-relevant audio cue has a **visual primary** (the audit confirms no audio-only carrier): predator attack/telegraph captions and the world-response cue carry **text captions** for deaf/HoH parity (CR.5c/H.27), and the audio sting must convey nothing the caption omits (no direction/intensity in audio alone). Mobile: audio latency (~50–100 ms) and OS interruptions mean **no HUD mechanic may depend on audio timing** — the beacon numeral, not the tick, is the authoritative "almost out" read; sub-bass cue components are headphone-only enhancements, fully legible without them.
+
+> **📌 Asset Spec** — Visual/Audio requirements are defined. After the art bible is approved, run `/asset-spec system:hud` to produce per-asset visual descriptions, dimensions, and generation prompts. Flagged candidates: beacon-charge icon, cap-state rendering (icon vs stroke-only), world-response icon, proximity-pip render path (Frame vs ImageLabel — ui-programmer to resolve), and the survival-window Banner frame dimensions/ratio (a §7.4 layout gap).
 
 ## UI Requirements
 
-[To be designed]
+The HUD is **passive-by-default**: the overwhelming majority of it is non-interactive readout that subscribes to server pushes and renders (CR.1). The few interactive surfaces it *shows* are **owned by their producer systems** — the HUD renders them; it never attaches input. All UI scales via the root `UIScale` + `UIAspectRatioConstraint` and respects `GuiService:GetGuiInset()` (CR.2), works on touch tap / mouse click / gamepad button with **no hover dependency** (CR.5), and is verified on iPhone-SE-class as the floor. Values marked **[NEW — needs UX sign-off]** are proposals not yet locked. This section is GDD-altitude; the per-screen pass is a later `/ux-design`.
+
+### UI.1 — Input model (passive-by-default; producer-owned interaction)
+
+Every Vitals, Threat-Edge, Banners, and proximity-pip element accepts **zero input on every platform** — touch, mouse, and gamepad all have identical (no) behavior. This is the design, not an omission. The narrow interactive surfaces the HUD renders — the **gather prompt/ring** (Resource Node), the **emote/signal wheel** and **quick-ping** triggers (Player Controller) — have their input connection in the producer layer. **Implementer rule (CR.1):** `HUDController` MUST NOT attach `InputBegan`/`Activated` to any element in its own zones; `button.Activated:Connect(...)` inside a HUD controller violates the no-echo invariant even when the downstream call looks harmless.
+
+### UI.2 — Input-parity matrix (no-hover, all three input methods)
+
+| Surface | Owner | Touch | Mouse | Gamepad |
+|---|---|---|---|---|
+| **Gather prompt + ring** | Resource Node | tap-hold on prompt (§7.7 radial arc) | left-click | A/✕ when armed |
+| **Emote/signal wheel** | Player Controller | hold-to-open trigger → drag-to-segment → release | hold LMB → drag → release | hold L1/LB (awaits PC input-map) → stick → release |
+| **Quick-ping** | Player Controller | two-finger tap (PC C.4) | G key | L1/LB (PC C.4) |
+| **Gather reject readout** | Resource Node | none (read-only) | none | none |
+| All other HUD elements | — | none | none | none (pure readout) |
+
+Interactive surfaces remain interactive in **Dead/Spectating**: the emote wheel keeps its full input contract (the dead player coordinates via emote); PC filters available slots via `OnEmoteBroadcast.renderScope = "squad-ui"` — the HUD renders what PC fires, it does not independently filter.
+
+### UI.3 — Touch tap-targets (iPhone-SE floor)
+
+Minimum touch target = **44 pt** (Apple HIG / Material floor, independently committed in game-concept; §7.4 ping/emote triggers are 48×48px, meeting it with headroom). **Hit area ≠ visual size:** in Roblox a `GuiButton`'s hit region is its `AbsoluteSize`, so a visually 12px stroke-only element uses a 44–48px transparent hit Frame. Per-element: ping trigger 48px ✓; emote trigger 48px ✓; **emote-wheel segments** — the §7.4 220px wheel diameter is the *minimum* that keeps 8 sectors ≥ 44pt arc, do **not** reduce below 220px; tap registers anywhere in the sector (not centroid-hit) **[NEW]**; emote **center cancel zone ≥ 44px diameter** **[NEW — art-bible gap, not previously sized]**; gather ring 48px hit Frame ✓. **Proximity pips (8×8px), roster tiles (12×12px), and all bars/indicators are readout-only — no hit area** (state explicitly so implementers don't add input to them). Safe-area: the bottom-right 100px trigger stack (48 ping + 4 gap + 48 emote) must clear the iPhone-SE home-indicator inset (~34pt) + §7.4's 16px clearance — verify in Studio's iPhone-SE preview **[NEW]**.
+
+### UI.4 — Layout across aspect ratios
+
+The five zones (CR.2) anchor on two bottom clusters (Squad-Vitals bottom-left/centre; Self-Vitals + PC triggers bottom-right), Threat-Edge wrapping all four edges, Banners centre, Contextual-Prompts in world-projected space.
+- **iPhone SE (375×667pt):** §7.4 non-overlap holds; the tight axis is horizontal — bottom bars (~150pt) + right stack (48pt) leave a ~177pt gap. The real risk is *vertical* crowding in Banners during the Beacon-Window overlay (UI.5).
+- **iPad / 4:3:** horizontally safe; bars at 40% Scale widen to ~307pt — a visual-register check, not a functional one.
+- **Ultrawide (21:9+):** 40%-Scale bars stretch past 1000px, breaking the equipment-readout register and hurting fill-legibility. **Cap bar width at `min(0.40 × screenWidth, 600px)` via a max-Offset pattern** (mobile layout unaffected) **[NEW — needs UX + ui-programmer sign-off → Open Question UI.OQ.1]**.
+- **Safe-area (binding implementation rule, not just an art note):** every zone anchors at Scale-0 + `GuiInset` offset + 8px padding; **all Threat-Edge screen-edge elements (incl. the eye-shine vignette bracket) clamp their rendered position to within `GuiInset` bounds, not the raw screen edge** **[NEW — Visual-section gap]**.
+- **Contextual-Prompts gather ring:** follows the node's world→screen projection (like §7.6 ping markers), **clamps to within safe-area insets** when the projection nears an edge, and must not overlap the bottom-left bar cluster or bottom-right trigger stack at minimum approach distance **[NEW — layout gap, not in §7.4 grid]**.
+
+### UI.5 — Beacon-Window overlay crowding (the highest-congestion moment)
+
+On iPhone SE the Banners zone must hold the survival-window countdown, the collapsed "ACTIVE" beacon label, and any coincident predator caption / spike text / death-recovery caption at once. **Banners priority/collapse order (small-screen):** (1) **survival-window numeral** — never preempted (it is the macro-state's primary read); (2) "HOLD — BEACON" label → collapses to "HOLD" if vertical space is critical; (3) **predator attack/telegraph captions** — never dropped (CR.5c), shift *below* the numeral if both render; (4) death/recovery caption — shifts below; (5) world-response "WORLD STIRS" — lowest, defer/drop in-overlay if it would collide with the numeral. Rule: the countdown numeral takes the top-centre Banner anchor for the overlay; all else stacks below or queues per CR.4; CR.4 #2–#4 captions are never dropped, only repositioned. **CR.5/D.6 combined-flash audit applies at overlay onset** — when the countdown pulse, cap-cue-C pulse, and YOU-lock first render together, the implementer must verify combined rate ≤ 3/s on that first tick (a pre-launch gate, not only a runtime guard).
+
+### UI.6 — OQ.14 (two-step touch friction) — HUD side CLOSED-BY-REFERRAL
+
+The HUD's Contextual-Prompts zone renders the gather prompt and ring (governed by `GatherNodeArmed`/`GatherNodeDisarmed`, CR.1) and **renders no lantern-toggle affordance** (lantern state is PC-owned input). **HUD obligation (closed here):** never require a player to touch more than **one** HUD zone to complete a single gather action. The mechanical question — whether PC auto-raises the lantern on gather-arm in a dark zone (PC C.3.6 / DC-5 arm predicate already requires `lanternRaised`) vs. manual raise, which is what creates the opposing-corner three-gesture friction on touch — **forwards to the PC GDD**, which already co-owns OQ.14 (ux-designer + game-designer, "before/alongside HUD + Resource Node"). The HUD closes its half; PC closes the input-mechanic half.
+
+### UI.7 — Reduced-motion (classification owned here; surface deferred)
+
+The HUD reads a **`reducedMotion` flag** (set by an accessibility settings system *outside* the HUD — read-only here; the surface/toggle is deferred to the accessibility pass, PC OQ.16 / art-bible §7.8–§7.9 decision F). The HUD owns only the classification of its own animations:
+- **Load-bearing (degrade to minimum functional form, never removed):** oxygen dead-reckon update, disturbance 0.25s tween (→ instant-snap allowed), bearing-chevron rotation (→ snap, never freeze — the rotation *is* the data), proximity-pip fill-toggle, survival-window decrement.
+- **Decorative (replace with static fallback):** emote-wheel open/close easing, gather-complete flash, spike frame-flash (→ static 3px for the duration), banner slide-in (→ instant-appear), world-response fade-in (→ instant-on).
+- The **D.6 combined-flash ceiling is NOT a reduced-motion feature** — it is an always-on WCAG baseline regardless of player settings; do not conflate.
+
+> **📌 UX Flag — HUD**: This system has UI requirements. In Phase 4 (Pre-Production), run `/ux-design` to create a UX spec for the HUD's screens/elements (and the emote-wheel + gather-prompt interactions) **before** writing epics. Stories that reference UI should cite `design/ux/hud.md`, not the GDD directly.
 
 ## Acceptance Criteria
 
@@ -276,4 +394,42 @@ Tags: **[L]** Logic (automated unit, BLOCKING) · **[I]** Integration (automated
 
 ## Open Questions
 
-[To be designed]
+Each item has an owner and a target resolution point. None blocks the GDD's internal completeness — they are cross-GDD seams, deferred design forks, and sign-off items. Grouped by kind. **OQ.3 (Camera)** and **UI.OQ.1/UI.OQ.2** are referenced by id elsewhere in this document.
+
+### A. Cross-GDD forward-obligations (a producer must honor these for the HUD's contracts to bind)
+
+| ID | Question | Owner | Target |
+|---|---|---|---|
+| **OQ.1** | The single `RunEnded(outcome)` broadcaster + run-end input-lock arbiter is the **unauthored RunController** (PC F.4). The victory/defeat banner, the defeat-hold "no provisional banner" rule (H.18b), and the input-lock are **provisional** against PC's caller-side `RunEndConditionRaised`/`RunEnded` contract until it exists. | RunController GDD (unauthored) | Reverse-cite when RunController is authored |
+| **OQ.2** | **`survivalWindowDuration` source + shape** — the D.7 upper-clamp and the beacon-countdown design need this value, pushed with `windowEndTimestamp` at BCT3. Is it a fixed scalar or variable (per squad-size/difficulty)? This also gates the beacon-tick escalation (OQ-Audio). | Crafting / RunController | Before HUD implementation; confirm against Crafting BCT3 |
+| **OQ.4** | **`bearing` reference convention** (D.3) — the HUD assumes clockwise-from-north for `θ_screen`; confirm PA emits the same convention on `OnPredatorLockChanged`. | Predator AI | Quick confirm with PA (a one-line contract check) |
+| **OQ.10** | **D.1 re-anchor payload** — `OnOxygenDeducted`/`OnOxygenRestored` must carry `{P, drainRate, serverSendTime}` so the dead-reckon re-anchors correctly (H.29). RM specifies these on `OnOxygenChanged`; confirm the deduct/restore variants carry them too. | Resource Management | Reverse-cite into RM (already APPROVED — a non-reopening contract note) |
+
+### B. Deferred design forks (need a decision before the relevant asset/system is built)
+
+| ID | Question | Standing recommendation | Owner | Target |
+|---|---|---|---|---|
+| **OQ.5** | **Diegetic world-space eye-shine** — should a supplementary world VFX (PointLight/particle) accompany the predator's Neon eye Parts (art-bible §5.2) at CONTACT range, alongside the HUD's screen-space treatment? | **No** (AD): the §5.2 Neon Parts *are* the diegetic eye-shine; a glow inside the lantern pool risks Principle 1, and a visible VFX only fires when the predator is seen — undercutting the HUD cue's "it's on you even when you can't see it" dread. | creative-director (tone) + technical-artist (feasibility) | Before predator VFX production |
+| **OQ-Audio** | **Beacon-countdown tick escalation** — locked to **weight-not-rate** (constant 1s tick, gravity increases). Final lock depends on OQ.2 (`survivalWindowDuration` scalar vs variable). | Weight/volume escalation, steady rate (honors the "alarm only ever rises" calm-instrument rule) | audio-director | Confirm once OQ.2 resolves |
+
+### C. Sign-off items (proposed values/conventions awaiting their authority)
+
+| ID | Question | Owner | Target |
+|---|---|---|---|
+| **OQ.6** | **`#FFF0C8` warm-cream CONTACT text** (VA.1) sits hue-adjacent to the reserved amber band (hue ~50°, below the S>50% gate). Needs explicit exclusion-zone sign-off. **Locked fallback if it fails:** pure-UIStroke escalation `4px→8px→4px`. | art-director | Art-bible approval / asset-spec pass |
+| **OQ.7** | **World-response-swell audio ownership** — HUD-fired 2D non-diegetic UI sound vs. ambient-system-fired world audio (the HUD always renders the visual banner regardless). | audio-director + producer (cross-system) | Audio architecture pass |
+| **OQ.8** | **Run-End audio-duck ownership** — ducking world audio (ambient/PA) under the run-end stinger is a SoundService group op the **HUD must not own**; assign to RunController or a dedicated AudioService. | technical-director / RunController | When RunController + audio architecture are authored |
+| **OQ.9** | **Predator-lock YOU vs SQUAD stroke legibility** — 4px (YOU) vs 2px (SQUAD) is a 2-logical-pixel delta; verify it reads at render size on iPhone-SE before locking. | ux-designer + ui-programmer | Studio iPhone-SE preview, pre-implementation |
+
+### D. Provisional dependency (unauthored system)
+
+| ID | Question | Owner | Target |
+|---|---|---|---|
+| **OQ.3** | **Camera GDD (unauthored)** — the S4 Dead/Spectating macro-state and its spectator camera-feed (which character to follow, framing) are Camera-owned. The HUD's S4 overlay (respawn timer, roster, squad-ui emote) is a flat layer that renders over whatever the camera shows — *enhanced by* but not *blocked on* the Camera GDD (H.17 is marked PROVISIONAL). | Camera GDD (unauthored) | Reverse-cite when Camera GDD is authored |
+
+### E. UI/UX open questions
+
+| ID | Question | Owner | Target |
+|---|---|---|---|
+| **UI.OQ.1** | **Ultrawide bar-width cap** — at 21:9+, 40%-Scale bars exceed 1000px, breaking the equipment-readout register and fill-legibility. Proposed cap `min(0.40 × screenWidth, 600px)`. | ux-designer + ui-programmer | Before implementation |
+| **UI.OQ.2** | **Lantern-toggle touch location (OQ.14 PC-side closure)** — the HUD closed its half of OQ.14 (one gather prompt, no HUD-rendered lantern toggle, UI.6). The remaining question — where on touch the lantern raises/lowers, and whether PC auto-raises on gather-arm — is PC-owned. | ux-designer + game-designer (PC GDD) | Alongside PC + Resource Node implementation |

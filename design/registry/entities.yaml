@@ -298,7 +298,7 @@ constants:
     value: 100
     unit: dimensionless (units)
     source: design/gdd/player-controller.md (C.2, G.2)
-    referenced_by: []
+    referenced_by: [design/gdd/hud.md]
     notes: "Maximum stamina. Abstract units, not seconds, preserve drain/regen tuning independence. Range: 60-200. Config-validation gate (round-28 T-4, systems NEW-1, H.12a clause (v)): rejected at <= 0 (and below the 60 range floor). A negative STAMINA_MAX makes the D.1/D.2 math.clamp(x, 0, STAMINA_MAX) evaluate min > max and THROW on every Heartbeat tick — a hard per-frame crash; STAMINA_MAX = 0 is a permanent forced-walk degenerate. Previously only STAMINA_DRAIN_RATE was sign-gated."
 
   - name: STAMINA_DRAIN_RATE
@@ -418,7 +418,7 @@ constants:
     value: 30
     unit: seconds
     source: design/gdd/player-controller.md (C.5, G.6)
-    referenced_by: [design/gdd/resource-management.md]
+    referenced_by: [design/gdd/resource-management.md, design/gdd/hud.md]
     notes: "Server-authoritative respawn timer. Locked at game-concept level. Range: 10-60s. Validate by playtest (PC OQ.6). RM CR.5 cites it: respawn after this delay is free (no separate oxygen cost beyond DEATH_OXYGEN_COST)."
 
   - name: RECONCILIATION_TICK_INTERVAL
@@ -491,7 +491,7 @@ constants:
     value: 3.5
     unit: seconds
     source: design/gdd/resource-node.md (CR.2, D.1, G)
-    referenced_by: [design/gdd/resource-management.md]
+    referenced_by: [design/gdd/resource-management.md, design/gdd/hud.md]
     notes: "Server-side extraction timer for Light nodes (phase 2 of the two-phase gather). LOAD-BEARING: backs the canisterCycleTime HARD floor — 2 x (TAP_HOLD_COMMIT_DURATION + this) + CRAFT_TIME_CANISTER must be > 9.09 s (RN D.1/H.12). At 3.5 s cycle = 10.0 s (+0.91 s margin). Range: 3.1-8.0 (G); <3.05 violates the floor."
 
   - name: NODE_EXTRACT_TIME_MEDIUM
@@ -499,7 +499,7 @@ constants:
     value: 5.0
     unit: seconds
     source: design/gdd/resource-node.md (CR.2, G)
-    referenced_by: []
+    referenced_by: [design/gdd/hud.md]
     notes: "Server-side extraction timer for Medium nodes. Range: 3.5-10.0 (G)."
 
   - name: NODE_EXTRACT_TIME_HEAVY
@@ -507,7 +507,7 @@ constants:
     value: 8.0
     unit: seconds
     source: design/gdd/resource-node.md (CR.2, G)
-    referenced_by: []
+    referenced_by: [design/gdd/hud.md]
     notes: "Server-side extraction timer for Heavy (RESONANT) nodes. Preferred lever for RESONANT scarcity (raise this, not node count). Range: 6.0-15.0 (G)."
 
   - name: NODE_RESPAWN_TIME_LIGHT
@@ -895,7 +895,7 @@ constants:
     value: 12
     unit: studs
     source: design/gdd/crafting-and-items.md (C.5.6a, C.9, G.6)
-    referenced_by: []
+    referenced_by: [design/gdd/hud.md]
     notes: "Round-3 (B1); CONTINUOUS-HOLD round-13 (fail-fast); TIGHTENED 30=>12 round-15 (2026-06-05, SENTRY fix). Proximity radius around the placed/activated beacon within which at least requiredHolders (= ceil(#aliveMembers/2), round-15) squad members must be ALIVE AND present CONTINUOUSLY through the survival window for victory (BCT4). Round-13 reversed the round-3/9 window-end-only check; round-15 raised the threshold from >=1 to ceil(#aliveMembers/2) (the SENTRY fix — one of four can no longer hold for the rest) and shrank the radius 30=>12 so 'in-radius' == 'on the beacon' AND the 3s line-break grace is mobile-traversable. The instant fewer than requiredHolders are within radius the squad enters a line-break; if the snapshot stays below threshold for BEACON_LINE_BREAK_GRACE (members alive) => scatter-defeat (E.27); if aliveMembers empty => immediate wipe-defeat (precedence over scatter, B-1). Victory = window elapses while held (>= requiredHolders). Range: 8-20 (G.6). Server tests dist3D(member.HRP, beaconWorldPosition) <= 12 EVERY BC4 Heartbeat (STRICT <=, no hysteresis — BEACON_HOLD_HYSTERESIS applies only to the presentation OnBeaconHoldStateChanged signal, never the win snapshot)."
 
   - name: BEACON_HOLD_MIN_HOLDERS
@@ -1180,7 +1180,7 @@ enums:
     value: 600
     unit: oxygen units (1 unit = 1 s of BC1 drain)
     source: design/gdd/resource-management.md (CR.1, D.1, G)
-    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md]
+    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md, design/gdd/hud.md]
     notes: "Single squad-shared oxygen pool ceiling = run-start value. PC reads it for the DP-2 config gate (DEATH_OXYGEN_COST/pool in [0.10,0.15]); Crafting H.106 economy references the pool. ~10 min at BC1 baseline; primary run-length knob. Range: 300-900 (G)."
 
   - name: OXYGEN_DRAIN_BC1
@@ -1188,7 +1188,7 @@ enums:
     value: 1.0
     unit: oxygen units/second
     source: design/gdd/resource-management.md (CR.2, D.1, G)
-    referenced_by: []
+    referenced_by: [design/gdd/hud.md]
     notes: "Baseline (Beacon Charge Tier 1) drain rate. UNIT ANCHOR — 1 oxygen unit is defined as 1 second of BC1 drain, so this is 1.0 by definition. Do not retune freely (rescales every oxygen value). Flat within band, flat headcount."
 
   - name: OXYGEN_DRAIN_BC2
@@ -1196,7 +1196,7 @@ enums:
     value: 1.5
     unit: oxygen units/second
     source: design/gdd/resource-management.md (CR.2, D.1, G)
-    referenced_by: []
+    referenced_by: [design/gdd/hud.md]
     notes: "BC2 drain rate. Must keep BC1 < BC2 < BC3 < BC4. Range: 1.1-1.8 (G)."
 
   - name: OXYGEN_DRAIN_BC3
@@ -1204,7 +1204,7 @@ enums:
     value: 2.2
     unit: oxygen units/second
     source: design/gdd/resource-management.md (CR.2, D.1, G)
-    referenced_by: []
+    referenced_by: [design/gdd/hud.md]
     notes: "BC3 drain rate. Monotonic band order. Range: 1.8-2.8 (G)."
 
   - name: OXYGEN_DRAIN_BC4_FLOOR
