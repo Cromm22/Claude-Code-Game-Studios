@@ -4,6 +4,26 @@ Revision history for `design/gdd/player-controller.md`. Each entry records the v
 
 ---
 
+## Design-axis re-review (round-32 deferred-fork follow-up) — 2026-06-19 — Disposition: forks CLOSED, no APPROVED GDD reopened
+**Scope signal:** S (cross-GDD reconciliation, NOT a full panel). Build-completeness APPROVED (round-31) + network spine PROTECTED — not re-reviewed; C.12 hook GREEN throughout.
+**Gates:** ai-programmer (OQ.12/DP-1/H.85 vs Predator AI), economy-designer (OQ.15/DP-2/DEG-1/H.87 vs RM), game-designer (OQ.13/DC-5/H.84 vs Resource Node + loop synthesis). Read-only reconciliation; findings → 2 user rulings → this authoring pass.
+**Trigger:** round-32 deferred OQ.12/OQ.13/OQ.15 + the "borrowed against unauthored systems" conditional closures (DEG-1/H.84/H.85/H.87) to a re-review once Predator AI / RM / Resource Node were authored. PA APPROVED `8d70c3a`; RM APPROVED `75cf2cf`; RN round-4 committed `ab325f7`.
+
+**Convergent headline (ai + game both flagged):** "sprint = escape" was mechanically imprecise — PA's only Disengage path is QUIET (sustained low disturbance + broken lock), but sprinting is LOUD, and PA's distance-based lock-release at `PREDATOR_LOCK_RELEASE_RANGE` (60) is conditional (needs a competing louder hotspot). So a loud solo sprinter is never dropped by distance alone.
+
+**Reconciliation results:**
+- **ai-programmer:** PA authored `PREDATOR_HUNT_APPROACH_SPEED = 16` (strict `12 < 16 < 20`, config-gated, PA D.1) ✓ exactly as PC's F.4 row required. PA's RD-8 already bounds the loud-kiter co-op exploit. No standalone distance-only deag exists — escape is two-phase (sprint-for-distance → squad-quiet earns Disengage).
+- **economy-designer:** RM authored `OXYGEN_POOL_START = 600`, `DEATH_OXYGEN_COST = 72` (ratio `0.12 ∈ [0.10,0.15]` ✓, fail-fast RM:H.24/D.4); `CANISTER_RESTORE_OXYGEN 10 < 72` (RM:H.25); always-on per-band drain makes hiding net-negative at every band (RM:CR.2/CR.8/H.22) → DEG-1 anti-idle CLOSES (no longer conditional). Joint feasibility with Crafting BC4 = non-empty (disjoint variables). Squad-size scaling = RM:OQ.3 (MVP flat, user-ruled, validate at playtest).
+- **game-designer:** RN authored the lit-condition arm scan (RN:CR.4) + server reject (RN:CR.5) + RN:H.28 → H.84 Part 2 contract DESIGN-CLOSED (residual: `isDarkZone` runtime accessor is a level-design tagging obligation, not a design gap). OQ.13(a) lantern-bearer = non-degenerate (spatial-sum field, brighter bearer hotspot). OQ.13(b) hoard-gather: Light cost is per lantern-hold, time-proportionate; accept-as-designed + ~10-stud node-spacing floor.
+
+**2 user rulings (2026-06-19, both recommended/governance-safe):** (1) **escape model = two-phase reframe** — keep APPROVED PA as-is, reframe PC's DP-1/H.85/DEG-1 prose; (2) **hoard-gather = accept + clarify DC-5 prose + ~10-stud spacing note to RN.**
+
+**Authoring pass applied (PC-editorial + 1 RN note; NO new signals — C.12 hook re-runs GREEN, self-test still RED-on-leak):** OQ.12 CLOSED (two-phase); OQ.13(a)/(b) CLOSED; OQ.15 cross-linked to RM:OQ.3; H.84 design-closed + isDarkZone production flag; H.85 reverse-cited to PA + reframed two-phase, NOW EXECUTABLE; H.87 CLOSED/reverse-cited to RM:H.24/D.4/H.25; DEG-1 CONDITIONAL→CLOSED; DC-5 cost prose clarified (C.3.6 + Player Fantasy); F.4 rows (PA/RN/RM) reverse-cited; status header updated; RN CR.7 dark-zone spacing floor added.
+
+**Still deferred (blocked on unauthored specs, NOT reviewed):** OQ.14 two-step touch friction (HUD GDD), OQ.16 ambient-light floor value (accessibility/UX spec). **No APPROVED GDD reopened** (PA, RM untouched; the escape "lose-lock-on-evasion" wish is satisfied by sprint+quiet, not a new PA mechanism). Committed this session (branch `crafting-round2-patch`).
+
+---
+
 ## Review — 2026-05-01 — Verdict: MAJOR REVISION NEEDED
 
 **Scope signal:** L+ (foundational, not targeted; producer should verify before sprint planning). Heavier than crafting-and-items round-2 — multi-section rewrites required, not surgical fixes. Estimated round-2 effort: 1.5–2× round-1 effort.
