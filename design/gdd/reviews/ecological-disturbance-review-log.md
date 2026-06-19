@@ -802,3 +802,24 @@ Type: Triage + partial closure (NOT a verdict). A qa-lead read-only pass enumera
 - **Implementation/producer sprint:** T1–T6 (test-fixture tasks) + T7 (15-prereq sprint-backlog escalation, producer-owned).
 
 **Net for round-21:** the open ED-internal work is just the `OnDisturbanceBandCrossed` AC + the 4 batched FIX-IN-DOC items above (2 of which are likely redundant) + the deferred AC-extraction; everything else is closed or owned by HUD/ADR/sprint. **DO NOT predict APPROVED for round-21.** Committed this session (branch `crafting-round2-patch`).
+
+---
+
+## Round-21 close-out — 2026-06-19 — the batched ED-internal items APPLIED (NOT a verdict)
+Type: Authoring close-out (NOT a verdict). Applies the small ED-internal set the 2026-06-19 triage batched for round-21, so the GDD is ready for a fresh-session `/design-review`. ED status stays **NEEDS REVISION** until that verdict. **DO NOT predict APPROVED for round-21.**
+
+**4 GDD edits applied (`ecological-disturbance.md`):**
+- **`OnDisturbanceBandCrossed` AC LANDED as H.28d** (Acceptance Criteria → Cross-System Wiring, after H.28c — the squad-aggregate sibling of the position-keyed `TierCrossedEvent` ACs H.28/H.28b). Verifies the C.3.3 Session-C contract: **(a)** exactly one fire per field-update pass per squad-tier transition with correct `direction` (up on escalation e.g. Calm→Tense@0.30, down on de-escalation), zero fire on an unchanged-tier pass; **(b)** ±0.03 hysteresis suppresses within-band chatter (same D.4 mechanism as `TierCrossedEvent`); **(c)** no `DisturbanceService.Client` surface and no client-forge path (server-internal signal; `squadT` server-authoritative). PC's consume-side `direction=="up"` filter is left as a PC GDD AC obligation. C.3.3's "AC owed (round-21)" note flipped to "AC LANDED (round-21, H.28d)" (same-session-update). **AC-count reconciliation:** ED tracks no canonical AC tally (systems-index ED row carries none, unlike PA "76 ACs"/Crafting "122/32"), so reconciliation is satisfied by the unique non-colliding `H.28d` id.
+- **I-GD18-1** — D.6 `GetHottestHotspot` pseudocode: defense-in-depth non-finite guard added after the candidate-scoring loop — `if bestScore ~= bestScore or bestScore == math.huge then bestScore = 0.0 end` (the triage's "bestValue" = D.6's `bestScore`), parallel to E.16's Emit-layer NaN/Infinity rejection. Comment notes -Inf/NaN cannot reach `bestScore` via the `>= tierFloor` gate; the guard is belt-and-braces for the +Inf path + future refactors. Closes the single-link-defence watch flagged at the D.5 NaN-guard-delegation note.
+- **R16-I-8** — Pillar-4 note: one sentence appended to the Overview — the disturbance field is **session-scoped** (created at run start, discarded at run-end, no cross-run persistence), serving Pillar 4 (Rounds Not Saves).
+
+**2 batched FIX-IN-DOC items adjudicated CLOSED-REDUNDANT (no edit — qa-lead-deemed redundant per the triage's "may add … if not redundant" clause):**
+- **R16-I-7** (H.36 workload-6 grid note) — already covered at C.1.6 ("the grid MUST also back `GetHottestHotspot` candidate enumeration … without this, hotspot search remains O(N)"). No workload-6-specific pointer added; redundant.
+- **R16-I-11** (F.4 Humanoid.Died/OnPlayerDied engine-dep rows) — F.4 **already carries both rows**: line ~1247 `Roblox Humanoid.Died subscription chain` + line ~1248 `Roblox BindableEvent (server-internal) for OnPlayerDied fan-out`. No new rows needed; redundant.
+
+**Self-check (static-analysis on the 3 deltas):** H.28d id is unique (no prior H.28d); its (a)/(b)/(c) clauses map 1:1 to C.3.3's owed (i)/(ii)/(iii); direction examples (Calm→Tense@0.30 = up) consistent with D.4 thresholds. The D.6 guard variable `bestScore` matches the actual D.6 pseudocode local (lines ~898–919). Overview sentence does not alter any formula/threshold.
+
+**Subagent gates (round-15 four-layer + round-17/19 refinements): NOT run this session** — these remain a pre-verdict obligation. The deltas are tiny and self-contained (one AC, one pseudocode guard, one prose sentence); the fresh-session `/design-review` panel will independently scrutinize them. If the user prefers, a focused red-team + cross-section pass can run before the verdict.
+
+**Files modified:** `design/gdd/ecological-disturbance.md` (4 edits); `design/gdd/systems-index.md` (ED row "Open" note); `design/gdd/reviews/ecological-disturbance-review-log.md` (this entry).
+**Still open for the round-21 verdict:** the deferred **AC-extraction pass** (embedded CI-YAML gates / fixtures / evidence templates still interleaved in the AC section, per the 2026-05-30 decomposition plan) + the fresh-session `/design-review` verdict itself. **DO NOT predict APPROVED for round-21.**
