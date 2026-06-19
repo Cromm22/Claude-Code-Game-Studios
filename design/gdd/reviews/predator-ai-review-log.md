@@ -4,6 +4,26 @@ Revision history for `design/gdd/predator-ai.md`. Most recent entry first.
 
 ---
 
+## Round-6 full panel + authoring pass — 2026-06-19 — Verdict: NEEDS REVISION (bounded, converging)
+Scope signal: XL
+Specialists: game-designer, systems-designer, ai-programmer, network-programmer, performance-analyst, ux-designer, qa-lead, creative-director (senior synthesis)
+Blocking items: 11 (after dedup; 1 new correctness + a convergent mechanism cluster + perf + AC sub-cases + 8 ux completeness) | Recommended: ~20 | Nice-to-have: ~6
+Prior verdict resolved: Yes — round-5 patch (committed `98cb926`) was the prior state; this is the round-6 binding closure gate.
+
+**Process:** all 7 specialists delivered natively (no re-spawns). ALL 7 returned NEEDS REVISION. The two historically-fragile axes came back CLEAN: **systems independently re-verified the reconciliation-drift class is CLOSED** (`0.85` at every D.4 gate site; surviving `0.75` are legitimate worked-examples), and **qa independently re-counted AC = 74 exact** (no dupes/gaps/orphans). **Network re-affirmed the authority spine SOUND on all 7 previously-reviewed surfaces (a 6th-round PROTECT).**
+
+**Headline — the only genuinely-NEW correctness defect:** **NET-C-1** — Roblox auto-assigns NPC `NetworkOwnership` to a proximate client unless the server calls `SetNetworkOwner(nil)`. CR1 claimed server-authority but never asserted this; a proximate exploiter could reposition the predator, corrupting contact/lock/LOS. Not interrogated in 7 prior rounds (a real new surface, not residue). This single item is what earns the verdict.
+
+**Convergent "mechanism-implicit" cluster (ai + qa + perf hit the same gaps — authored as ONE sub-section):** FIX 25 stale-token contract unspecified (storage/increment/comparison); FIX 24 handshake storage form (fields-on-table vs upvalue) not mandated; FSM Hunt-exit doesn't enumerate which 3 timers cancel; debounce counter reset-at-boundary ambiguous. Plus perf H.64 self-consistency (per-client bearing budget ambiguous → could breach 2 ms; protocol undersamples the transition-burst spike), OQ.5 either/or → unconditional reservation; qa AC sub-cases (H.25 RD-6, H.33 truism); 8 ux HUD-brief completeness lines.
+
+**Governance call (CD) — the 3 game-designer "design BLOCKINGs" all RE-ARGUE settled user rulings; NO new ruling taken:** F1 (n=2 quiet-lever prototype-contingent) already governed by RD-9 + H.66 + OQ.12; F2 (loud-kiter dominant at n≥3) already governed by RD-8 + OQ.15; F3 (BC4 predator-as-non-threat) — the no-one-shot keystone is PROTECTED (RR-3/RD-4, ruled), legitimate residue is a one-paragraph Player-Fantasy prose-honesty fix only. Per precedent a panel CANNOT overturn a user-accepted ruling. **One qa "blocking" (H.31 missing `[FWD: OQ.1]`) was a FALSE POSITIVE — H.31 already carries the tag.**
+
+**Authoring pass (ONE pass, this session):** all 11 blocking + recommended folded with reconciliation-fanout. New constants/fixes: H.68 (NET-C-1), H.69 (`PREDATOR_PATH_REQUEST_TIMEOUT` config-gate), FIX 24-b/25-b/26/27, `INVESTIGATE_MIN_DWELL_DURATION` named. **AC 74 → 76** (header accounting + coverage map + [FWD]/[PROTO] lines reconciled; grep-verified 76 definitions; reconciliation drift NOT recurred). Spine + network authority + formulas + AC count all clean.
+
+**CD-prescribed closing path:** round-7 = a NARROW gate (network re-confirm — PROTECT, do not re-panel; + ai/qa/systems anchor on the mechanism cluster + new ACs), NOT a full 7-spec panel. **PROTECT (do not re-open):** the 7 network surfaces, all formulas + the closed drift class, the no-one-shot BC4 keystone, and RD-7..RD-10 as ruled. **DO NOT predict APPROVED for round-7.** Registry/`entities.yaml` registration still DEFERRED. Committed this session (branch `crafting-round2-patch`).
+
+---
+
 ## Round-5 full panel + ruling session (RD-7..RD-10) + authoring pass — 2026-06-19 — Verdict: NEEDS REVISION (bounded)
 Scope signal: XL
 Specialists: game-designer, systems-designer, ai-programmer, network-programmer, performance-analyst, qa-lead, ux-designer, creative-director (senior synthesis)
