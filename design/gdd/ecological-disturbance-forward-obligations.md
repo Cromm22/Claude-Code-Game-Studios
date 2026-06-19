@@ -2,9 +2,9 @@
 
 > Companion to `design/gdd/ecological-disturbance.md`. Decomposed by content type on 2026-05-30 (relocation only — **no design content changed, no BLOCKING item resolved or introduced**). Holds cross-GDD coordination tracking (project-tracking, not design) relocated out of the GDD's Dependencies section: F.2a, F.2a-IMPORTANT, and F.2b.
 >
-> **Still-open round-20 BLOCKING items** (NOT resolved by this decomposition — preserved here so they survive the move; to be worked against the slimmed GDD, then a round-21 `/design-review`):
-> - **Session B (arithmetic):** `B-CD18-1` SQUAD_T safe-range → `(0.272, 0.30)`; `B-R19-SD-1` `S_inf` pinning to `r = 2^(-1/15)`; `B-R19-SD-2` G.5 lower-bound rationale; `B-R19-SD-3` D.1 worked-example fix.
-> - **Session C (cross-GDD + IMPORTANT):** `B-R19-AI-1` `:ReleasePredatorLock` yield-free vs pathfinding contract; ~24 IMPORTANT residual.
+> **Session B/C status (UPDATED 2026-06-19):**
+> - **Session B (arithmetic) — LANDED (round-20, 2026-06-09):** `B-CD18-1` SQUAD_T safe-range → `(0.272, 0.30)`; `B-R19-SD-1` `S_inf` pinning to `r = 2^(-1/15)`; `B-R19-SD-2` G.5 lower-bound rationale; `B-R19-SD-3` D.1 worked-example fix. **PLUS the D.7 stationary-sprint design-intent conflict RESOLVED 2026-06-19** (user ruling: ED yields — PC's `SPRINT_HOLD_FLOOR 0.09` stands; D.7 re-derived Retreat-ward: ~15 s to Hunt, ~28 s to Retreat; H.5b value 0.030→0.09; perf lower-bound ~40→~138, budget unaffected). See the 2026-06-19 review-log entry.
+> - **Session C (cross-GDD + IMPORTANT) — OPEN, now largely reconcilable** (PA/PC/RM/RN all authored): `B-R19-AI-1` `:ReleasePredatorLock` yield-free vs pathfinding (PA authored its `FindPathAsync` + `PREDATOR_PATH_REQUEST_TIMEOUT` + handshake — now resolvable); the beacon-cap sub-mode (i) ambient re-derivation flagged in the 2026-06-19 D.7 pass; the F.2a deferred Predator-AI contracts (rows 1/2/3/6/7 — now authorable against the APPROVED PA); RM BCT accessor; PC `OnDisturbanceBandCrossed` producer cadence + band thresholds; ~24 IMPORTANT residual. Then a round-21 `/design-review`.
 
 > Inline cites within the relocated content below to `C.x` / `D.x` / `E.x` / `F.x` / `G.x` / `H.x` anchors refer to the companion GDD `ecological-disturbance.md`. Inline cites to the **Test Infrastructure Prerequisites** table or **Testability Flags** resolve to `ecological-disturbance-verification.md`.
 
