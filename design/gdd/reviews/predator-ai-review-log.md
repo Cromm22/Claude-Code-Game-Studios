@@ -4,6 +4,38 @@ Revision history for `design/gdd/predator-ai.md`. Most recent entry first.
 
 ---
 
+## Round-5 full panel + ruling session (RD-7..RD-10) + authoring pass — 2026-06-19 — Verdict: NEEDS REVISION (bounded)
+Scope signal: XL
+Specialists: game-designer, systems-designer, ai-programmer, network-programmer, performance-analyst, qa-lead, ux-designer, creative-director (senior synthesis)
+Blocking items: 12 (4 design forks RD-7..RD-10 + ~8 mechanical/spec/testability) | Recommended: ~15 | Nice-to-have: ~9
+Prior verdict resolved: Yes — round-4 NEEDS REVISION (bounded) patch is superseded; this is the round-5 binding closure gate.
+
+**Process:** all 7 specialists delivered natively (no re-spawns). ALL 7 returned NEEDS REVISION from their domain. **Network re-affirmed the authority + attribution chain SOUND a 6th consecutive round (PROTECT).** qa-lead independently re-counted AC = 70 exact pre-pass (no dupes/gaps/orphans; the letter-insert class did NOT recur in the AC IDs).
+
+**Headline (the recurring reconciliation class, 4th recurrence — DE-ESCALATES not escalates):** stale D.4 grace-floor arithmetic — round-4 corrected H.22a to `8/20 + 0.30 + 0.15 = 0.85` (gate-max constants) but left **H.42 "≈0.75 at defaults"** and the **Crafting-interaction note (line 66) "8/20 + 0.35 ≈ 0.75"** (a 3rd, differently-wrong derivation omitting `t_latency`). systems+qa convergent, BLOCKING. CD verified directly that the gate FORMULA is correct at every live site (line 128/233) — only worked-example/prose figures are stale, and round-5 was a ruling+authoring round (not a sweep claiming this class closed) — so the recurrence is the panel finding what narrow gates structurally cannot see, hence NEEDS REVISION not MAJOR.
+
+**Other convergent findings:** D.5 no-one-shot atomic-read race is inter-callback not intra (game+ai+qa); RD-1/OQ.12 Pillar-1 "quiet is a lever" prototype-contingent + H.53 mislabeled [P0] (game+qa); CONTACT distanceBand leaks sub-visual position before LOS (network+ux); ≤2 ms ceiling has no sub-budget/measurement protocol + ED-freeze gate (perf+qa); HUD forward-reference losses ×3 (ux); handshake lazy-read not Luau-prescriptive (ai+network).
+
+**4 user rulings (all = CD recommendation):**
+- **RD-7** — CONTACT distanceBand re-tied to `PREDATOR_VISUAL_RANGE` (not `PREDATOR_MELEE_RANGE`): CONTACT means "within LOS/visual range," so no sub-visual position is inferable before LOS. Band def + H.48a anti-leak assertion updated.
+- **RD-8** — loud-kiter-at-range (~55 studs, just inside `PREDATOR_LOCK_RELEASE_RANGE`) accepted as a **bounded division-of-labor tradeoff** (costs one whole player; RD-1 cost at n=2, 25–33% throughput at n≥3). Documented in the kiting edge case + new **OQ.15** (prototype-balance sufficiency at n≥3).
+- **RD-9** — "quiet is always a lever" marked **prototype-contingent at the n=2 primary squad in the Player Fantasy** (structurally guaranteed only at n≥3); H.53 scoped to threshold-comparison-logic-only; new **H.66 [PROTO][BLOCKING]** for the RD-1 n=2 structural bound (real gather-cadence T vs threshold).
+- **RD-10** — ≤2 ms server-frame ceiling given a per-component **sub-budget** (raycasts ≤1.0 / ED accessors ≤0.4 / lock+waypoint-ingestion ≤0.4 / per-client bearing ≤0.2) + a **p95 measurement protocol** in H.64 + an **ED pre-freeze BLOCKING gate** on the OQ.5 push-cache reservation.
+
+**Authoring pass (ONE pass, reconciliation-fanout):** the decisive `0.75`→`0.85` propagation; D.5 inter-callback `Health>1` guard (FIX 23, new H.65); FSM-table Hunt→Patrol 5 s direct-locomotion-cap row (was Edge-Cases-only); handshake lazy-read storage prescription (FIX 24); `PREDATOR_PATH_REQUEST_TIMEOUT` separate in-flight timeout + stale-token discard (FIX 25); `DISENGAGE_SPEED ≤ Patrol` config-gate (FIX 22, range 4–8→4–6, folded into H.14 + D.1); ReleasePredatorLock nil-target no-op guard (B-3); HUD closes — `attackCaption` wire field + new H.67, `telegraphCaption` enumerated string table, Patrol `PRESENCE ABSENT` baseline cue, eye-shine one-way gate stated FIRST as mandatory, ux I-3 caption-preempt + network I-2 Channel-B precedence; H.61 split → H.61a/H.61b, H.31 → [P0][FWD]. **AC 70 → 74** (header accounting + coverage map + [FWD]/[PROTO] lines all reconciled; count grep-verified at 74, all stale-arithmetic patterns at 0 occurrences).
+
+**CD-prescribed closing path:** TWO-to-THREE narrow fresh-agent gates (systems+qa anchor on the reconciliation/AC fixes; network re-confirm only — PROTECT, do not re-panel; ai-programmer recommended on FIX 24/25 + the 5 s-cap row) → reserve the full 7-spec panel for **round-6** (binding gate). **DO NOT predict APPROVED for round-6.** NOT committed (branch `crafting-round2-patch`). Registry/`entities.yaml` registration still DEFERRED.
+
+**Narrow gates RUN — 2026-06-19 — ALL THREE CLEAN (round-5 pass VERIFIED):**
+- **systems-designer → GATE: PASS.** The DECISIVE D.4 grace-floor reconciliation class is **CLOSED** — `0.85` present at every gate-assertion site (D.4 config-gate, H.22a, H.42, Crafting note); the 3 surviving `0.75` occurrences are all legitimate (budget-case worked example + history); the differently-wrong `8/20 + 0.35 ≈ 0.75` derivation is gone (grep `0.35` = 0). FIX 22 (`DISENGAGE_SPEED ≤ Patrol`, range 4–6) consistent at D.1/H.14/Tuning; FIX 25 (`PREDATOR_PATH_REQUEST_TIMEOUT`) in Tuning + Edge-Cases; D.5↔H.65 inter-callback `Health>1` guard consistent; FSM Hunt row carries the 5 s direct-loco-cap→Patrol exit. No other numeric contradiction.
+- **qa-lead → GATE: PASS.** Independent re-count = **74 exact** (67 ints − 5 split standalones + 10 a/b + 2 letter-inserts). No dupes/gaps/orphans H.1–H.67. H.61a/H.61b/H.65/H.66/H.67 present, testable, correctly tagged ([P0]/[P0][FWD]/[P0]/[PROTO][BLOCKING]/[U]); H.31 = [P0][FWD: OQ.1]. Header accounting + [FWD]/[PROTO] summary lines + coverage map all reconcile; no phantom IDs.
+- **network-programmer → AUTHORITY SPINE: SOUND (7th round).** RD-7 distanceBand re-tie to `PREDATOR_VISUAL_RANGE` + H.48a anti-leak assertion CLOSE the pre-LOS sub-visual position leak with no new leak (CONTACT never resolves without LOS-precondition range). Zero `worldPosition` on either broadcast channel (all 8 doc occurrences are negations/history). Split-channel A(server-internal)/B(client) intact after the HUD wire-up; Channel-B lock-status precedence correct. FIX 23/24/25 + HUD changes introduce zero client-trusted gameplay value.
+- ai-programmer gate on FIX 24/25 was OPTIONAL (CD-recommended, not user-requested) — NOT run; deferred to the round-6 panel's ai-programmer.
+
+**NEXT = round-6 full 7-spec panel (binding closure gate, fresh session). DO NOT predict APPROVED.** Committed this session.
+
+---
+
 ## Round-4 ruling session + authoring pass + two narrow gates — 2026-06-18 — (a PATCH, NOT a verdict)
 
 Executed the CD-prescribed path after the round-4 full panel: ruling session (RD-1..RD-6) → one reconciliation-fanout authoring pass → two narrow fresh-agent gates. The round-5 full panel is the next binding gate. NOT committed. **DO NOT predict APPROVED for round 5.**
