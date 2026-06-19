@@ -4,6 +4,23 @@ Revision history for `design/gdd/predator-ai.md`. Most recent entry first.
 
 ---
 
+## Round-7 NARROW gate + micro-polish — 2026-06-19 — Disposition: APPROVED (by acceptance)
+Scope signal: S (narrow gate, not a full panel — per the round-6 CD prescription)
+Gates: network-programmer, ai-programmer, qa-lead, systems-designer (4 targeted, read-only). game-designer / performance-analyst / ux-designer NOT re-spawned (PROTECT — settled surfaces, do not re-panel).
+Prior verdict resolved: Yes — verifies the round-6 patch (committed `e941f4b`).
+
+**All four narrow gates returned CLEAN — no blocking findings:**
+- **network-programmer → SOUND-WITH-NITS (authority spine SOUND an 8th round).** H.68 / NET-C-1 correctly authored: `SetNetworkOwner(nil)` mandated at spawn (Core Rule 1 + H.68), server-authoritative, `[P0]`, testable. Zero `worldPosition` on either channel; CONTACT still tied to `PREDATOR_VISUAL_RANGE` (RD-7); FIX 24-b/25-b/26/27 + H.69 introduce zero client-trusted value. Nit (actionable): `SetNetworkOwner(nil)` errors on an anchored assembly root.
+- **ai-programmer → CLEAN-WITH-NITS.** All 5 mechanism-cluster items implementable from text alone: FIX 25-b stale-token contract (storage/increment/comparison), FIX 24-b fields-on-stable-table storage (upvalue forbidden), FIX 26 debounce reset-at-boundary explicit (persists across boundaries; resets only on challenger-change or failed-margin tick), FIX 27 all 3 Hunt-exit timers named + cancel mandated on every exit path, H.69 config-gate consistent.
+- **qa-lead → PASS.** Independent re-count = **76 exact** (69 − 5 split standalones + 10 a/b + 2 letter-inserts; header arithmetic reconciles). H.68/H.69 present, testable, `[P0]`-tagged. H.25 (RD-6 n-change) + H.33 (timer-precedence) both non-vacuous + falsifiable. No dupes/gaps/orphans H.1–H.69; the coverage-map letter-insert class did NOT recur.
+- **systems-designer → PASS-WITH-NITS.** Reconciliation-drift class confirmed CLOSED — `0.85` at all 4 D.4 gate sites; all 6 surviving `0.75` are legitimate budget-examples/unrelated caption-min; the `8/20+0.35` derivation is gone (sole `0.35` hit is the unrelated `PREDATOR_T_REACT_MAX` range). `PREDATOR_PATH_REQUEST_TIMEOUT` (1.0 s / [0.5, 2.0]) consistent at all 4 sites; `INVESTIGATE_MIN_DWELL_DURATION` (8 s, ED-owned) consistent; H.64 sub-budget sums to exactly 2.0 ms; FIX 22 / no-one-shot keystone intact. Nit: H.64 has zero headroom (producer callout for the ED push-cache reservation).
+
+**Micro-polish applied (this session — no new ACs; count stays 76):** (1) H.68 + Core Rule 1 anchored-part guard — `SetNetworkOwner(nil)` must run while the assembly root is unanchored (the call errors on an anchored part), re-asserted on any later un-anchor; (2) `INVESTIGATE_MIN_DWELL_DURATION` footnote now points to ED's tuning table as range owner. The H.64 zero-headroom nit is a producer obligation (ED push-cache reservation), NOT a GDD edit.
+
+**Disposition (user, 2026-06-19): APPROVED by acceptance.** The arc has converged — spine SOUND 8 rounds, AC count exact, drift class closed, the one genuinely-new round-6 defect (NET-C-1) fixed and verified. Per the Crafting precedent, NO further same-day full panel was run (they self-perpetuate via their own edits on a clean spine). **PROTECT (do not re-open on any future touch):** the 7+ network surfaces, all formulas + the closed drift class, the no-one-shot BC4 keystone, RD-7..RD-10 as ruled, and the F1/F2/F3 governance dispositions (a panel cannot overturn a user-accepted ruling). Open cross-GDD obligations (ED push-cache pre-freeze + `GetSquadAggregateT(exclude)` max semantics; Crafting/RM BC4 loseability + grace floor; PC `PLAYER_MAX_HP` / strict `< SPRINT`) remain producer-tracked; HUD + RunController GDDs still do not exist (PA forward-references both). Registry/`entities.yaml` registration of the ~24 PREDATOR_* constants still DEFERRED. Committed this session (branch `crafting-round2-patch`).
+
+---
+
 ## Round-6 full panel + authoring pass — 2026-06-19 — Verdict: NEEDS REVISION (bounded, converging)
 Scope signal: XL
 Specialists: game-designer, systems-designer, ai-programmer, network-programmer, performance-analyst, ux-designer, qa-lead, creative-director (senior synthesis)
