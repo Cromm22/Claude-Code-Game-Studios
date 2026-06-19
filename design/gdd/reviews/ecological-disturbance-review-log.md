@@ -773,3 +773,32 @@ Type: Reconciliation + authoring pass (NOT a verdict). Two read-only mapper suba
 **Beacon-cap sub-mode RESOLVED:** realistic stationary-squad ambient at 0.09 ≈ 0.88 (4 players at d=16, falloff 0.111, per-player ≈0.221) — exceeds the 0.65 cap → representative case is **sub-mode (ii)** ambient-dominant; `0.10` retained as the fixed value-agnostic H.41 anchor.
 
 **Files modified:** `ecological-disturbance.md` (C.3.3 new signal + F.2 PC-subscriber row + RM disclaimer + beacon-cap note), `ecological-disturbance-forward-obligations.md` (Session C status). **STILL OPEN for round-21:** the `OnDisturbanceBandCrossed` AC + the ~24 IMPORTANT residual → then a round-21 `/design-review`. **DO NOT predict APPROVED for round-21.** Committed this session (branch `crafting-round2-patch`).
+
+---
+
+## Triage — 2026-06-19 — the ~24 IMPORTANT residual classified for round-21
+Type: Triage + partial closure (NOT a verdict). A qa-lead read-only pass enumerated every still-open IMPORTANT across rounds 16/18/19 and classified each. Net: the "~24" is largely already closed or owned elsewhere; the genuinely-open ED-internal set is small.
+
+**ALREADY-CLOSED (4) — no action:** I-GP18-1 (`DisturbanceServiceType` module-scope alias), I-18-1 (R13-I3/H.36c T7 cross-ref), I-18-2 (H.PB1-BETA seam invocation), I-18-3 (H.39c (b-vi) multi-statement-line) — all closed in round-20 Session A.
+
+**CLOSE-NOW (5) — resolved against the now-authored siblings (reverse-cite; no ED design work):**
+- **I-AI18-1** RegistrationHandshake nil-slot retention — PA (APPROVED `e941f4b`) Core Rule 8 authored the pending-invocation queue + lazy-read (FIX 24/24-b) + never-installed safety. Reverse-cite.
+- **I-AI18-2** `OnPredatorLockChanged` nil-guard fire semantics — PA Core Rule 4(c) (`if player and player.Parent` guard + no-op when already nil). Reverse-cite.
+- **I-AI18-3** `OnPredatorStateChangedPayload` type contract — PA Core Rule 8 defines `{predatorId, fromState, toState, timestamp}`. Reverse-cite (ED's subscriber-side type alias cites PA as owner).
+- **R16-I-9** D.6 `callerPosition` / `PrimaryPart` nil-guard at the PA call site — PA APPROVED; Core Rule 2 makes the 4 Hz decision tick the authoritative call site; the `PrimaryPart` nil-guard converts to a PA implementation-epic note (F.2b row R17-I-RT17-2 → CLOSED-with-forward-note).
+- **PC1** sprint-state-transition debounce — PC GDD (authored, round-32) owns the `FIRST_PULSE_GRACE_WINDOW` debounce; F.2a-IMPORTANT PC1 → IN-FLIGHT-on-PC confirmed.
+
+**FIX-IN-DOC (6):**
+- **APPLIED this session (2):** R16-I-12 (C.1.7 "every position" → "at any *queried* position P" clarity fix); I18-4 (C.3.4 step 2 `scaleFactor` write-discipline note — set `cap_engaged=false, scaleFactor=0.0` when the cap didn't run; read-with-`cap_engaged`-check is the R15-I3-grep-caught defect).
+- **BATCHED to the round-21 authoring pass (4) — folded with the `OnDisturbanceBandCrossed` AC so all new/edited ACs land under one AC-count reconciliation (ED's AC-integrity discipline; exact instructions recorded here):**
+  - **I-GD18-1** D.6 non-finite guard: after the `bestValue` accumulation in the D.6 query loop add `if bestValue ~= bestValue or bestValue == math.huge then bestValue = 0.0 end` (NaN+Inf guard, parallel to E.16's Emit-input guard).
+  - **R16-I-8** Pillar-4 note: one sentence (Overview or Dependencies) — the disturbance field is session-scoped (reset on run-end), serving Pillar 4 (Rounds Not Saves).
+  - **R16-I-7** H.36 workload-6 grid note: LARGELY COVERED already at C.1.6 line 93 ("the grid MUST also back `GetHottestHotspot` candidate enumeration … without this, hotspot search remains O(N)"); round-21 may add a one-line workload-6-specific pointer if the qa-lead deems it not redundant.
+  - **R16-I-11** F.4 Humanoid.Died/OnPlayerDied rows: LARGELY COVERED already in C.1.11 (lines 141–202, the subscription-monopoly + BindableEvent dispatch); round-21 may add the two F.4 engine-dep table rows for completeness if not redundant.
+
+**DEFER (~18) — correctly owned elsewhere, already tracked as forward obligations:**
+- **HUD GDD (5):** I-GD18-2 (three-state cap-cue visual rule), I-GD18-3 (per-player squad-exposure indicator), H1 (per-player contribution display), H2 (INCONCLUSIVE owner naming), R16-I-10 (Pillar-2 FELLOWSHIP/BLAME — mitigated by H1).
+- **DisturbanceService ADR (≈12):** I-NP18-1 (H.30c YAML alias-resolution), N1–N9 (the round-7 ADR cluster), R16-I-6 (`loadedChunks` safe-API), R16-I-13 (`_cachedPredatorState` staleness bound).
+- **Implementation/producer sprint:** T1–T6 (test-fixture tasks) + T7 (15-prereq sprint-backlog escalation, producer-owned).
+
+**Net for round-21:** the open ED-internal work is just the `OnDisturbanceBandCrossed` AC + the 4 batched FIX-IN-DOC items above (2 of which are likely redundant) + the deferred AC-extraction; everything else is closed or owned by HUD/ADR/sprint. **DO NOT predict APPROVED for round-21.** Committed this session (branch `crafting-round2-patch`).
