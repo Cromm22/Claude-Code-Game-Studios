@@ -4,6 +4,18 @@ Revision history for `design/gdd/resource-node.md`. Most recent entry first.
 
 ---
 
+## Closing narrow gate — 2026-06-19 — Disposition: APPROVED (by acceptance)
+**Scope signal:** S (closing confirmation gate, NOT a full panel — the CD round-5 prescription explicitly forbade a 6th full panel against a spine-clean doc).
+**Gates:** systems-designer (B3 reconciliation + core math + new CR.7 note), qa-lead (AC integrity). network spine NOT re-run — re-confirmed SOUND a 5th round in the round-5 panel itself (PROTECT).
+
+**Both gates PASS — no blocking findings:**
+- **systems-designer → PASS.** The decisive B3 two-record decoupling (`positionAtArm` refreshed/pre-commit-evicted vs `firstArmTimestamp` frozen anchor / post-commit-evicted) is consistent across ALL sibling sites (CR.4 step 1, T3 row, line 121 PC-interaction note, H.24, H.32, CR.5 nil-guard) — no new stale sibling, the recurring reconciliation class did not recur. H.32 self-contradiction GONE (instant-fire rejection correctly attributed to H.6). Punch-list (T3/T4 state-guard, H.37 case-C terminal states, ResetAllNodes token-claim correction, E.5 order-precision, OQ.2/H.12 headroom) all landed coherently. Core math holds: `canisterCycleTime 2×(0.5+3.5)+2 = 10.0 s > 9.09 s` RM floor; `CRAFT_CONCURRENCY_CAP = min(2, ceil(squad/2))` with H.12 pinning cap=2. The new CR.7 ~10-stud dark-zone node-spacing note (added 2026-06-19 for PC DC-5 / OQ.13(b)) is consistent — 10 > GATHER_PROXIMITY_RADIUS 4 + 4, so adjacent arm radii don't overlap; no contradiction with CR.4/CR.5/H.28.
+- **qa-lead → PASS.** Independent re-count = **42 = 38 BLOCKING + 4 ADVISORY** exact (H.18 redirect-stub correctly uncounted; ADVISORY = H.26/H.27/H.36/H.39). No dupes/gaps/orphans H.1–H.39. H.24/H.32/H.37 reworded-only (no IDs added/removed), well-formed + non-vacuous + testable. Preamble literal-vs-constant note consistent with H.12/H.27 bodies.
+
+**Disposition (user, 2026-06-19): APPROVED by acceptance** — on RN's own design/contracts. Defect trajectory collapsed exactly as the CD forecast: round-1 structural → round-2 calibration → round-3/4/5 reconciliation residue → one decisive contradiction (B3) → fixed + confirmed. Network spine SOUND 5 rounds; AC count exact; no design failure (reconciliation/propagation residue only). Per the Crafting/RM/Predator-AI precedent, no 6th full panel was run. **Completability gate STANDS (open, non-blocking to acceptance):** RN ≠ implementable-Done until ED's `Emit` API (ED Session B/C), PC's death-signal + lantern/dark-zone `isDarkZone` accessor (PC authored; the `isDarkZone` runtime classification is a level-design tagging obligation), RunEnded (RunController unauthored), and the HUD render obligations (OnNodeStateChanged + timer + reject reasons) land. Committed this session (branch `crafting-round2-patch`).
+
+---
+
 ## Revision — 2026-06-18 — Round-5 narrow fix-pass (CD prescription: one authoring pass, NO full panel)
 Applied the round-5 BLOCKING + RECOMMENDED punch list in one pass with a mandatory reconciliation-fanout checklist (the recurring defect class).
 
