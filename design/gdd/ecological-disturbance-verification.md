@@ -2,7 +2,7 @@
 
 > Companion to `design/gdd/ecological-disturbance.md`. Decomposed by content type on 2026-05-30 (relocation only — **no contract text changed**; behavioural Acceptance-Criteria contracts remain in the GDD). Holds the *how-it's-tested* mechanics: test-infrastructure prerequisites and testability flags.
 >
-> **Deferred to a later pass:** the embedded CI YAML gates, fixture/mock specs, evidence templates, and call-graph review templates currently still interleaved inside the GDD's Acceptance Criteria section (H.30c, H.39d, H.39e, H.41m). Those will be extracted here in a separate, carefully-reviewed pass per the decomposition plan's AC-extraction rule.
+> **Round-22 AC-extraction pass (2026-07-04) — EXECUTED.** The embedded CI YAML gates (`h30c-i-evidence-gate.yml`, `h39d-evidence-gate.yml`), the H.30c call-stack nesting diagram, the evidence/review templates (H.30c-i, H.41m-g, H.39d), and the H.39e deferred-queue reference implementation are now extracted here — see **"Relocated from the GDD's Acceptance Criteria section"** below. Relocation only; one-line pointers remain at each original GDD site. H.31b/H.31c were additionally regrouped inside the GDD to follow H.31 (ids unchanged).
 
 > Inline cites within the relocated content below to `C.x` / `D.x` / `H.x` anchors refer to the companion GDD `ecological-disturbance.md`. Inline cites to `F.2a` / `F.2a-IMPORTANT` / `F.2b` resolve to `ecological-disturbance-forward-obligations.md`.
 
@@ -15,7 +15,7 @@ These blocking infrastructure dependencies must exist before PERF-DEVICE and sev
 | iPhone SE-class physical test device (or accurate ARM simulator with iPhone SE perf profile) | H.36, H.37, H.38, H.38b | Producer + DevOps | Roblox Studio simulator on a dev machine does NOT reproduce the ARM CPU/GPU profile of a physical device. A simulator-only run is invalid evidence for these ACs. |
 | MicroProfiler capture workflow (Studio local-server only — production deploy MicroProfiler is not available) | H.36, H.37, H.38, H.38b | DevOps + gameplay-programmer | Per H.36a, implementation must wrap update loop and hotspot query in named profilebegin tags. Captures cannot be exported headlessly; tester must save MicroProfiler frames manually for evidence. PERF-DEVICE tests run in Studio local-server mode on the physical device, not on deployed Roblox servers. H.37 bandwidth measurement also requires this workflow — outbound packet sampling depends on the same Studio session. |
 | 4-simulated-client harness (scripted reproducible 4-player stress scenario) | H.29, H.29b, H.30, H.31, H.36, H.37 | DevOps + qa-lead | Roblox local-server multi-client test mode supports this but requires test scripting that does not exist yet. |
-| `MockRemoteSignalRecorder` test fixture (`tests/helpers/network_recorder.luau`) — public API: per-player install, payload capture, FireClient-vs-FireAllClients distinction, key-presence assertion, routing assertion (per-player counts) | H.29, H.29b, H.29c, H.30 | qa-lead + gameplay-programmer | Wraps Knit `RemoteSignal:FireClient` AND `RemoteSignal:FireAllClients` to capture wire payloads AND routing for assertion. The fixture's API is canonical at the level of these capabilities; concrete signatures live in the helper file itself. |
+| `MockRemoteSignalRecorder` test fixture (`tests/helpers/network_recorder.luau`) — public API: per-player install, payload capture, Fire-vs-FireAll routing distinction, key-presence assertion, routing assertion (per-player counts) | H.29, H.29b, H.29c, H.30 | qa-lead + gameplay-programmer | Wraps Knit `RemoteSignal:Fire` AND `RemoteSignal:FireAll` to capture wire payloads AND routing for assertion (round-22 B2 fanout correction, applied 2026-07-04: the prior row named `:FireClient`/`:FireAllClients`, which per the GDD C.3.4 round-5 API note are raw-RemoteEvent methods that do NOT exist on Knit RemoteSignal handles — a recorder wrapping those names would intercept nothing and silently pass every privacy assertion). The fixture's API is canonical at the level of these capabilities; concrete signatures live in the helper file itself. |
 | `MockTweenService` test fixture (`tests/helpers/tween_recorder.luau`) — records every `TweenService:Create` call with its target Instance, properties, and TweenInfo | H.31 | qa-lead + gameplay-programmer | Required for asserting state-before-tween in the H.31 deterministic check. |
 | Test-clock injection seam on `DisturbanceService` (`_setTestClock(fn: (() -> number) -> ())` + `_advanceTestClock(seconds: number)` — declared on the service-internal table, NEVER on `DisturbanceService.Client`) | H.5, H.5b, H.34 | gameplay-programmer | Production code uses `workspace:GetServerTimeNow()` per D.1; the seam exists for deterministic time-dependent tests. H.39c verifies non-Client declaration. |
 | Math-fn injection seam on `DisturbanceService` (`_setExpFn(fn: (number) -> number)` — server-internal only) | H.9b | gameplay-programmer | Test-time replacement for `math.exp` to enable the per-pass call counter without monkey-patching the global `math` table (which `--!strict` does not permit cleanly and can pollute concurrent tests). |
@@ -38,3 +38,297 @@ These blocking infrastructure dependencies must exist before PERF-DEVICE and sev
 - **C.1.11 attribution archive** — Behaviour verified by H.30 (resolution against archive entries) and H.35c (incomplete-attribution flag). Archive TTL purge behaviour (`ATTRIBUTION_ARCHIVE_TTL` expiry) is not directly tested in this GDD's ACs; defer a TTL-purge unit test to the DisturbanceService ADR.
 - **`tierAt()` purity** — `tierAt(P, previousTier)` is a PURE function — callers always supply `previousTier`; the function holds no internal state. H.18–H.21 test setup calls the function directly with the desired `previousTier` parameter. No state-driving setup sequence is required.
 
+---
+
+## Relocated from the GDD's Acceptance Criteria section (round-22 AC-extraction pass, 2026-07-04 — relocation only, no contract text changed)
+
+> Each block below was moved verbatim from `ecological-disturbance.md` § Acceptance Criteria; a one-line pointer remains at each original site. The behavioural GIVEN/WHEN/THEN contracts, PASS criteria, and binding “epic BLOCKED on gate presence” rules remain in the GDD.
+
+### H.30c — call-stack nesting diagram (sub-AC (e))
+
+> Cited from GDD H.30c sub-AC (e): “the recorder captures the in-frame instruction-sequence ordering as the following call-stack nesting”. The normative ordering predicate remains in the GDD.
+
+```
+t_i        — _captureDeathLockSnapshot completion at sub-step (5a)
+t_i.5      — sub-step (5b) BindableEvent payload construction completion
+t_i.75     — sub-step (5c) _OnPlayerDied:Fire(payload) invocation entry
+  ├── t_iii — Predator AI's OnPlayerDied:Connect callback entry  (synchronous BindableEvent dispatch — runs INSIDE :Fire's lexical scope; :Fire has not yet returned)
+  │   └── t_iv — :ReleasePredatorLock(predatorId) invocation entry  (called from inside Predator AI's callback body)
+  │       ├── t_v   — sub-step (4a) pre_purge_targets computation completion
+  │       ├── t_vi  — sub-step (4b) OnPredatorLockChanged:Fire(targetedPlayer, {locked = false}) invocation, per-target loop
+  │       └── t_vii — sub-step (4c) atomic registry purge completion
+  │       (t_iv returns to t_iii after t_vii completes; the indented block above is t_iv's lexical scope)
+  │   (t_iii returns to t_i.75 after t_iv returns; if other OnPlayerDied:Connect callbacks are registered, they run after t_iii's block completes — also INSIDE t_i.75's :Fire call)
+  └── (t_i.75's :Fire returns to its caller — DisturbanceService's Humanoid.Died handler — after all OnPlayerDied:Connect callbacks complete)
+```
+
+### H.30c-i evidence gate — normative CI YAML + evidence-file template + required-check clauses
+
+> Cited from GDD H.30c sub-AC (i). The binding requirement (two-engineer yield-free review; recursive path filter; epic BLOCKED on gate presence) remains stated in the GDD.
+
+**Normative YAML block (round-17 B16-3 closure of round-16 BLOCKING; CD-elevated to BLOCKING per `feedback_severity_floor_for_server_authoritative_seams.md` — round-15 R14-B10 specified the gate in prose only, leaving the "implementation epic is BLOCKED on this CI gate's presence" clause unenforceable on a server-authoritative primary write seam).** The CI gate's structure mirrors H.39d's evidence-gate workflow with an additional grep-narrowing step (the H.30c sub-AC (i) review is required only when modified DisturbanceService files contain protected references; an editor-only doc-string change to a tangential file does not trigger review):
+
+```yaml
+# .github/workflows/h30c-i-evidence-gate.yml (round-17 B16-3 normative spec — closes round-16 BLOCKING B16-3 of round-15 R14-B10 prose-only specification; CD-elevated to BLOCKING per the severity-floor rule for server-authoritative primary write seams)
+name: H.30c sub-AC (i) Evidence Gate
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # Mirrors H.39d's round-9 B-NS4 trigger expansion: gate fires on BOTH PR and
+  # direct-to-main push so admin or branch-protection-bypass force-pushes cannot
+  # evade the gate. Branch-protection rules are non-normative; this CI gate is
+  # the authoritative enforcement.
+jobs:
+  detect-touched-paths:
+    runs-on: ubuntu-latest
+    outputs:
+      disturbance-touched: ${{ steps.filter.outputs.disturbance }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Detect changed files via paths-filter (recursive over DisturbanceService source tree per round-15 R14-B10)
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            disturbance:
+              - 'src/server/services/DisturbanceService/**/*.luau'
+  check-h30c-i-trigger-narrowing:
+    needs: detect-touched-paths
+    if: needs.detect-touched-paths.outputs.disturbance-touched == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      narrowing-matched: ${{ steps.grep.outputs.matched }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Grep changed files for H.30c sub-AC (i) protected-reference trigger patterns
+        id: grep
+        run: |
+          # Trigger conditions: changed file modified AND contains any of the
+          # protected server-authoritative-write references. The grep narrowing
+          # avoids requiring the evidence file on tangential edits to
+          # DisturbanceService source files that do NOT touch the predator-lock
+          # registry purge path.
+          # Protected references (per the H.30c sub-AC (i) prose specification):
+          #   :ReleasePredatorLock, _OnPlayerDied:Fire, _predatorLockRegistry,
+          #   _captureDeathLockSnapshot, OR any function declaration whose body
+          #   lexically contains _OnPlayerDied:Fire (approximation: file
+          #   contains _OnPlayerDied:Fire).
+          # Round-17 B-RT17-3 closure (red-team finding — first-push portability).
+          # On first-push events, github.event.before is the zero SHA; on PRs,
+          # github.event.pull_request.base.sha is the PR's base. Compute BASE_SHA
+          # safely; if neither is available (initial repo push), fall back to
+          # treating ALL DisturbanceService source files as touched
+          # (conservative-default: first-push of protected code MUST require
+          # evidence rather than fail-open).
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$BASE_SHA" ]; then
+            BASE_SHA="${{ github.event.before }}"
+          fi
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "::warning::BASE_SHA unavailable (first-push or empty before-SHA); treating ALL DisturbanceService .luau files as touched per round-17 B-RT17-3 conservative-default rule"
+            CHANGED_FILES=$(find src/server/services/DisturbanceService -name "*.luau" -type f 2>/dev/null)
+          else
+            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "${{ github.sha }}" \
+              | grep -E '^src/server/services/DisturbanceService/.*\.luau$' || true)
+          fi
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "matched=false" >> $GITHUB_OUTPUT
+          else
+            MATCHED=$(echo "$CHANGED_FILES" \
+              | xargs -r grep -lE ':ReleasePredatorLock|_OnPlayerDied:Fire|_predatorLockRegistry|_captureDeathLockSnapshot' 2>/dev/null \
+              | wc -l)
+            if [ "$MATCHED" -gt 0 ]; then
+              echo "matched=true" >> $GITHUB_OUTPUT
+            else
+              echo "matched=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+  check-h30c-i-evidence:
+    needs: check-h30c-i-trigger-narrowing
+    if: needs.check-h30c-i-trigger-narrowing.outputs.narrowing-matched == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Find current sprint id
+        id: sprint
+        run: echo "sprint_id=$(cat production/sprints/current.txt)" >> $GITHUB_OUTPUT
+      - name: Assert H.30c sub-AC (i) evidence file exists for current sprint
+        run: |
+          FILE="production/qa/evidence/H30c-i-yield-free-review-${{ steps.sprint.outputs.sprint_id }}.md"
+          if [ ! -f "$FILE" ]; then
+            echo "::error::H.30c sub-AC (i) evidence file missing: $FILE"
+            exit 1
+          fi
+      - name: Assert evidence file lists two distinct GitHub reviewers
+        run: |
+          FILE="production/qa/evidence/H30c-i-yield-free-review-${{ steps.sprint.outputs.sprint_id }}.md"
+          REVIEWER_COUNT=$(grep -c '^- @[A-Za-z0-9_-]\+$' "$FILE")
+          if [ "$REVIEWER_COUNT" -lt 2 ]; then
+            echo "::error::H.30c sub-AC (i) evidence file at $FILE lists fewer than 2 reviewers"
+            exit 1
+          fi
+          REVIEWERS=$(grep '^- @[A-Za-z0-9_-]\+$' "$FILE" | sort -u | wc -l)
+          if [ "$REVIEWERS" -lt 2 ]; then
+            echo "::error::H.30c sub-AC (i) evidence file lists duplicate reviewer accounts"
+            exit 1
+          fi
+      - name: Assert each reviewer's yield-free attestation line is present
+        run: |
+          FILE="production/qa/evidence/H30c-i-yield-free-review-${{ steps.sprint.outputs.sprint_id }}.md"
+          ATTESTATION_COUNT=$(grep -c '^- attestation:' "$FILE")
+          if [ "$ATTESTATION_COUNT" -lt 2 ]; then
+            echo "::error::H.30c sub-AC (i) evidence file lacks two attestation: lines (one per reviewer)"
+            exit 1
+          fi
+```
+
+The evidence file's required structure to satisfy the CI gate:
+
+```markdown
+# H.30c sub-AC (i) Yield-Free Review — Sprint [sprint-id]
+- date: 2026-MM-DD
+- @reviewer-one
+- @reviewer-two
+- attestation: @reviewer-one — sub-steps (4a)–(4c) of `:ReleasePredatorLock` AND sub-steps (5a)–(5c) of `_OnPlayerDied:Fire` dispatch path AND any code path lexically nested in those bodies are yield-free; ZERO occurrences of task.wait, task.spawn, task.delay, coroutine.yield, :InvokeServer, :InvokeClient, RunService.Heartbeat:Wait, .Stepped:Wait, .RenderStepped:Wait, or any other yield primitive that surrenders control to a Heartbeat boundary. Traversal: [one-paragraph summary of the call-graph traversal performed across the modified files].
+- attestation: @reviewer-two — sub-steps (4a)–(4c) AND (5a)–(5c) of the protected paths are yield-free per the canonical forbidden-primitive list. ZERO violations observed. Traversal: [one-paragraph summary; independent traversal, NOT copy-paste from reviewer-one's narrative].
+- flagged_paths: [none / list]
+```
+
+**The CI gate MUST be a required check on PRs that touch `src/server/services/DisturbanceService/**/*.luau` AND whose changed files contain any of the protected references (`:ReleasePredatorLock`, `_OnPlayerDied:Fire`, `_predatorLockRegistry`, `_captureDeathLockSnapshot`).** The PR template still includes a checklist item for human reviewer-awareness, but the CI gate is the mechanical enforcement. CODEOWNERS rules on `src/server/services/DisturbanceService/**` requiring two-reviewer approval are a recommended additional defense; CODEOWNERS may be relaxed under sprint pressure but the CI gate **cannot** be relaxed without a force-push (which is recorded). The structural enforcement is parallel to H.39d's CI gate model and to H.39e/H.39f's CI gate models — the four CI gates together cover the project's complete server-authoritative seam set. **The DevOps Engineer MUST land this CI gate before any PR touches `:ReleasePredatorLock`'s body or the `_OnPlayerDied:Fire` dispatch path — the implementation epic is BLOCKED on the gate's presence per round-15 R14-B10 binding ruling AND now structurally enforceable per round-17 B16-3 closure.** Without this YAML being landed, the round-15 R14-B10 prose-only specification was honor-system on a server-authoritative primary write seam; round-17 closes the gap.
+
+**R13-I4 + R16-B16-3 closure status:** R13-I4 was closed inline at the CI gate trigger path-filter mandate at round-15 R14-B10; the round-16 verdict re-elevated as B16-3 because the actual normative YAML did not exist (the round-15 closure was prose-only — "MUST author a CI gate" — without the YAML schema parallel to H.39d's). Round-17 B16-3 authors the YAML inline above, closing the round-16 elevation. The R13-I forward obligation tracking entry remains CLOSED (see F.2a-IMPORTANT round-13 cluster).
+
+### H.41m-g bandwidth review — evidence-file template + gate-parse rules + optional MockSerializer upgrade
+
+> Cited from GDD H.41m sub-AC (g). The MANUAL-REVIEW contract (per-payload increment ≤ 25 bytes; ≤ 25 × FIELD_UPDATE_HZ bytes/s per player; two independent attestations) remains in the GDD.
+
+```markdown
+# H.41m sub-AC (g) Bandwidth Increment Review — Sprint [sprint-id]
+- date: 2026-MM-DD
+- @reviewer-one
+- @reviewer-two
+- measurement-method: [JSONEncode-byte-count-approximation | MockSerializer-proxy | other-explicit]
+- per-payload-increment-bytes-populated: [observed integer ≤ 25]
+- per-payload-increment-bytes-nil: [observed integer; baseline]
+- per-payload-increment-delta-bytes: [populated minus nil; ≤ 25 to PASS]
+- per-second-per-player-incoming-bytes-at-default-5-hz: [observed; ≤ 125 to PASS]
+- per-second-per-player-incoming-bytes-at-2-hz: [observed; ≤ 50 to PASS]
+- per-second-per-player-incoming-bytes-at-10-hz: [observed; ≤ 250 to PASS]
+- attestation: @reviewer-one — both byte-budget criteria PASS at all three cadences. Measurement notes: [one-paragraph summary of the measurement methodology and any observed variance].
+- attestation: @reviewer-two — both byte-budget criteria PASS at all three cadences. Measurement notes: [one-paragraph summary; independent measurement, NOT copy-paste from reviewer-one].
+- flagged_observations: [none / list]
+```
+
+The H.39d format (call-graph traversal narrative) is wrong-shape because bandwidth attestation requires NUMERIC OBSERVED VALUES, not free-text traversal summaries. The CI gate's grep pattern for H.41m sub-AC (g) MUST verify the presence of all numeric fields AND that the observed-value fields parse as integers AND that the parsed integers are within the PASS bounds (`per-payload-increment-delta-bytes <= 25`, `per-second-per-player-incoming-bytes-at-X-hz <= 25 * X`). **Optional MockSerializer proxy mechanism for AUTO-INTEGRATION upgrade (round-11 forward obligation; not blocking):** the test harness MAY install a `MockSerializer` proxy on `Knit.RemoteSignal` that intercepts `:Fire(player, payload)` calls, serialises the payload using a `HttpService:JSONEncode(payload)` byte-count approximation (NOT exact wire-format; Roblox uses a binary protocol with type-prefix encoding that is not exposed via Luau, so JSON byte-count is a conservative-upper-bound proxy), and exposes a per-player byte-counter via `recorder:GetPayloadIncrement(player): number`. If a future Roblox release exposes the actual wire-serialised byte count via a server-side API, the AUTO-INTEGRATION upgrade becomes viable; until then, the MANUAL-REVIEW with MockSerializer-attested approximation is the sound formulation. **Round-10 IMPORTANT cluster sources:** network-programmer F1 + systems-designer F5 + qa-lead F3 + performance-analyst F3 (4-spec convergent finding — "total" should be "increment"; per-player vs server-aggregated ambiguous; no Lemur-viable measurement mechanism).
+
+### H.39d evidence gate — normative CI YAML + evidence-file template + required-check clause
+
+> Cited from GDD H.39d. The two-reviewer call-graph review contract and evidence-file content requirements (a)–(e) remain in the GDD.
+
+```yaml
+# .github/workflows/h39d-evidence-gate.yml (round-7a R7-B16 normative spec; round-7c I-7b-8 corrected: changed_files API replaced with paths-filter / git diff because the GitHub Actions `github.event.pull_request.changed_files` field is a paginated URL, not a usable inline file list — using it under `if: contains(...)` evaluates the URL string itself, never matching, and silently disables the gate; round-9 B-NS4 — trigger expanded to include direct pushes to main + protected branches because the round-7c `pull_request`-only trigger could be bypassed entirely by force-pushing or admin-pushing directly to main, leaving the gate enforced only on the PR path)
+name: H.39d Evidence Gate
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # Round-9 B-NS4 closure: the gate fires on BOTH PR and direct-to-main push.
+  # The original round-7c trigger was `on: pull_request` only — admins or anyone
+  # with branch-protection-bypass privileges could push directly to main and
+  # bypass the gate entirely. Branch-protection rules are non-normative (they
+  # rely on GitHub admin configuration that lives outside this repo's source
+  # of truth). Adding `push: branches: [main]` makes the CI gate the
+  # authoritative enforcement, independent of branch-protection settings.
+jobs:
+  detect-touched-paths:
+    runs-on: ubuntu-latest
+    outputs:
+      client-touched: ${{ steps.filter.outputs.client }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Detect changed files via paths-filter (round-7c I-7b-8 fix)
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            client:
+              - 'src/server/services/DisturbanceService/Client/**'
+              - 'src/server/services/DisturbanceService.Client.luau'
+  check-h39d-evidence:
+    needs: detect-touched-paths
+    if: needs.detect-touched-paths.outputs.client-touched == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Find current sprint id
+        id: sprint
+        run: echo "sprint_id=$(cat production/sprints/current.txt)" >> $GITHUB_OUTPUT
+      - name: Assert H.39d evidence file exists for current sprint
+        run: |
+          FILE="production/qa/evidence/H39d-${{ steps.sprint.outputs.sprint_id }}-call-graph-review.md"
+          if [ ! -f "$FILE" ]; then
+            echo "::error::H.39d evidence file missing: $FILE"
+            exit 1
+          fi
+      - name: Assert evidence file lists two distinct GitHub reviewers
+        run: |
+          FILE="production/qa/evidence/H39d-${{ steps.sprint.outputs.sprint_id }}-call-graph-review.md"
+          REVIEWER_COUNT=$(grep -c '^- @[A-Za-z0-9_-]\+$' "$FILE")
+          if [ "$REVIEWER_COUNT" -lt 2 ]; then
+            echo "::error::H.39d evidence file at $FILE lists fewer than 2 reviewers"
+            exit 1
+          fi
+          REVIEWERS=$(grep '^- @[A-Za-z0-9_-]\+$' "$FILE" | sort -u | wc -l)
+          if [ "$REVIEWERS" -lt 2 ]; then
+            echo "::error::H.39d evidence file lists duplicate reviewer accounts"
+            exit 1
+          fi
+      - name: Assert each reviewer's attestation line is present
+        run: |
+          FILE="production/qa/evidence/H39d-${{ steps.sprint.outputs.sprint_id }}-call-graph-review.md"
+          ATTESTATION_COUNT=$(grep -c '^- attestation:' "$FILE")
+          if [ "$ATTESTATION_COUNT" -lt 2 ]; then
+            echo "::error::H.39d evidence file lacks two attestation: lines (one per reviewer)"
+            exit 1
+          fi
+```
+
+The evidence file's required structure to satisfy the CI gate:
+
+```markdown
+# H.39d Call-Graph Review — Sprint [sprint-id]
+- date: 2026-MM-DD
+- @reviewer-one
+- @reviewer-two
+- attestation: @reviewer-one — no client-reachable path leads to self:Emit(...) without a server-side authority validator. Traversal: [one-paragraph summary].
+- attestation: @reviewer-two — no client-reachable path leads to self:Emit(...) without a server-side authority validator. Traversal: [one-paragraph summary].
+- flagged_paths: [none / list]
+```
+
+**The CI gate MUST be a required check on PRs that touch `src/server/services/DisturbanceService/Client`.** The PR template still includes the checklist item for human reviewer-awareness, but the CI gate is the mechanical enforcement. CODEOWNERS rules on `src/server/services/DisturbanceService/**` requiring two-reviewer approval are a recommended additional defense; CODEOWNERS may be relaxed under sprint pressure but the CI gate **cannot** be relaxed without a force-push (which is recorded). This eliminates the honor-system gap. The DevOps Engineer MUST land this CI gate before any DisturbanceService.Client method body is introduced or modified — the implementation epic is BLOCKED on the gate's presence per round-7a binding ruling.
+
+### H.39e deferred-queue reference implementation (informational, not normative)
+
+> Cited from GDD H.39e Lint (b): subscribers needing async work after receiving a payload MUST use the deferred-queue pattern; this is the reference shape.
+
+```luau
+-- Acceptable pattern (lint passes):
+self._pendingDeaths = {}
+DisturbanceService:GetOnPlayerDiedSignal():Connect(function(payload)
+    table.insert(self._pendingDeaths, payload)  -- synchronous, yield-free, lint-clean
+end)
+RunService.Heartbeat:Connect(function()
+    while #self._pendingDeaths > 0 do
+        local payload = table.remove(self._pendingDeaths, 1)
+        self:_handleDeathAsync(payload)  -- may yield freely; outside the OnPlayerDied:Connect scope
+    end
+end)
+```
