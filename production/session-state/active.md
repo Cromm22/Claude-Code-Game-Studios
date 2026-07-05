@@ -95,3 +95,11 @@ User ruled accept-as-is over the narrow-gate NEEDS REVISION; systems-index + rev
 - **Ecological Disturbance** — **round-21 verdict = NEEDS REVISION (2026-07-03, this session)**; 12 blocking (list above); round-22 patch pending. NOT approved.
 
 **6 of 7 accepted/approved. Remaining: ED round-22 patch → narrow-gate verdict.** After ED closes: `/review-all-gdds` (all 7) → `/gate-check` toward architecture. Note: systems-index Progress Tracker tally cells remain bloated/stale — separate cleanup.
+
+## Session Extract — /review-all-gdds 2026-07-05
+- Verdict: **FAIL** (7 blocking: C1 PC death-signal re-anchor; C2 Crafting same; C3 MAX_ACTIVE_BEACONS unauthored; C4 oxygen-grace-timer mutually disowned PC:123 vs RM:89; C5 HUD bearing on wrong PA channel (OnPredatorSense unwired); C6 registry stale/missing; D1 2-player BC4 collapse needs ruling)
+- GDDs reviewed: 7 (4 parallel agents; every headline blocker coordinator-verified; coverage disclosures in report)
+- Flagged for revision: player-controller, resource-management, crafting-and-items, hud (+ registry mechanical, PA/ED warning-level)
+- Design-theory read: strongly positive ("unusually mature and internally coherent") — the FAIL is seam debt, not design incoherence; 2 items need USER DECISIONS (C4 owner+duration; D1 fallback-vs-accept)
+- Recommended next: one cross-GDD seam-patch session (mechanical fixes C1/C2/C3/C5/C6 + the two rulings) → re-run /review-all-gdds (or a narrow re-verify) → /gate-check. Do NOT run /gate-check on this FAIL.
+- Report: design/gdd/gdd-cross-review-2026-07-05.md (report write + index flags adopted on widget timeout per the 2026-07-03 precedent — PENDING USER RATIFICATION)
