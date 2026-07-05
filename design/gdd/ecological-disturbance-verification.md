@@ -24,7 +24,7 @@ These blocking infrastructure dependencies must exist before PERF-DEVICE and sev
 | **Field-update-pass seam on `DisturbanceService`** (`_runFieldUpdatePass()` — server-internal only; H.39c MUST also verify non-Client per round-9 grep-sweep update) | H.41k sub-test (e), H.34b cascade verification, H.41i two-beacon order-independence | gameplay-programmer + qa-lead | Round-9 addition for Cluster 2 (B-CC2-A) closure. The H.41k sub-test (e) requires the test harness to advance the field-update pass by exactly one Heartbeat-equivalent step (e.g., to fill P_new's ring buffer from 5 → 17 samples by simulating 12 additional 5 Hz passes). The existing `_advanceTestClock(seconds)` seam advances clock reads but does NOT trigger the Heartbeat callback that runs the field-update pass body — passing real time without firing the pass leaves the live-source decay cache stale and the per-player ring buffer un-updated. The new seam: `DisturbanceService:_runFieldUpdatePass()` invokes the entire field-update pass body (decay-cache population, per-player ring-buffer XZ-sample append, per-flora field evaluation, tier-classification + TierCrossedEvent firing, beacon cap evaluation, OnMeterUpdate fire) **without yielding to Heartbeat**, then returns. Production code uses the actual `RunService.Heartbeat`-driven invocation; the seam is for deterministic test stepping. H.39c MUST be updated to grep for `_runFieldUpdatePass` alongside the existing test seams to verify it is not exposed via `Service.Client`. |
 | **Ring-buffer manipulation seam on `DisturbanceService`** (`_setRingBufferState(player: Player, samples: {Vector3})` — server-internal only; H.39c MUST verify non-Client per round-9 grep-sweep update) | H.41k sub-tests (a)–(e), H.30c sub-AC (g) construction of interleaved Heartbeat-aligned conditions | gameplay-programmer + qa-lead | Round-9 addition for Cluster 2 (B-CC2-C) closure. H.41k sub-tests need to construct under-filled, fully-filled, and post-teleport-discontinuity ring-buffer states deterministically (e.g., P_new joined 1.0 s ago and has 5 samples; P1 has 17 samples; P_void has 0 samples because its Character is nil). Using the natural pulse cadence to populate the buffer is non-deterministic in tests (depends on real Heartbeat timing). The seam: `DisturbanceService:_setRingBufferState(player, samples)` directly writes the ring buffer for `player` with the supplied `{Vector3}` array (length determines how filled the buffer is; index 1 = oldest sample, index n = newest). Tests use this to construct exact buffer states before invoking `_runFieldUpdatePass`. Production code never invokes `_setRingBufferState`; H.39c verifies non-Client. |
 | **Characterless-player harness mechanism** (round-9 addition for Cluster 2 B-CC2-D closure; H.41j sub-test (a)) | H.41j sub-test (a) `P_void.Character == nil` precondition | qa-lead + gameplay-programmer | Round-9 addition. The 4-simulated-client harness (above) MUST expose a mode where a mock player joins with `Player.CharacterAutoLoads = false` set BEFORE `Players.PlayerAdded` fires, so `player.Character == nil` for the duration of the sub-test (no automatic respawn). Implementation: the harness calls `Players.CharacterAutoLoads = false` at session-startup, creates the mock player via the harness's mock-player factory, fires `PlayerAdded`, and does NOT call `Player:LoadCharacter()` — `Character` remains nil. After the sub-test completes, the harness restores `Players.CharacterAutoLoads = true` and calls `LoadCharacter()` for any remaining mock players to leave the test environment clean. (The harness's `MockPlayerFactory` API exposes `CreateCharacterlessPlayer(userId): Player` as the canonical entry point.) |
-| **Sub-stud-tolerance source-placement helper** on `DisturbanceService` (`_setLiveSourceState(sources: {EmissionPayload})` — server-internal only; H.39c MUST verify non-Client per round-11 grep-sweep update; round-11 B-R10-6 promotion of round-9 R9-I6 forward obligation to prereq table) | H.41l sub-tests (a) / (b) / (c) — the d=4, d=23.9, d=24.1 boundary cases for the round-9 DR-2 = Option B co-location amendment | qa-lead + gameplay-programmer | Round-11 addition. The H.41l boundary tests at d=23.9 studs and d=24.1 studs require placing two Beacon emissions at sub-stud co-location distances (±0.05 studs) that sit on either side of the `INFLUENCE_RADIUS = 24` boundary. Roblox `Vector3` uses single-precision float; the placement helper MUST construct the second beacon's position via `Vector3` arithmetic that survives the float-precision round-trip (recommended: `B2.position = B1.position + Vector3.new(distance, 0, 0)` rather than manual coordinate construction with hard-coded literal coordinates that may quantise to integer-stud precision under the test framework's serialisation). The helper directly writes the live-source list with the supplied `{EmissionPayload}` array — it bypasses Q9 stationary attenuation, schema validation, and the cap-eviction policy, parallel to `_injectSyntheticEmission`'s seam properties (E.24 invariants apply: position finite, `initialMagnitude ∈ (0, 1.00]`, `emissionType` in canonical enum). Production code never invokes `_setLiveSourceState`; H.39c verifies non-Client. The R9-I6 forward obligation in F.2a-IMPORTANT (round-9 cluster) records the architectural rationale; this prereq table row makes the dependency mechanically tracked for sprint planning. **Without this helper, H.41l sub-tests (b) and (c) are unsoundable** — integer-stud-precision placement would round 23.9 → 24 and 24.1 → 24, collapsing the boundary pair into a single test case that cannot distinguish the round-9 amendment's `dist < INFLUENCE_RADIUS` predicate's two branches. |
+| **Sub-stud-tolerance source-placement helper** on `DisturbanceService` (`_setLiveSourceState(sources: {EmissionPayload})` — server-internal only; H.39c MUST verify non-Client per round-11 grep-sweep update; round-11 B-R10-6 promotion of round-9 R9-I6 forward obligation to prereq table) | H.41l sub-tests (a) / (b) / (c) — the d=4, d=23.9, d=24.1 boundary cases for the round-9 DR-2 = Option B co-location amendment; **H.25c** (non-finite candidate construction — round-23 QA-4 cross-reference completion; the row's "Required by" column was not updated when round-22 authored H.25c against this seam) | qa-lead + gameplay-programmer | Round-11 addition. The H.41l boundary tests at d=23.9 studs and d=24.1 studs require placing two Beacon emissions at sub-stud co-location distances (±0.05 studs) that sit on either side of the `INFLUENCE_RADIUS = 24` boundary. Roblox `Vector3` uses single-precision float; the placement helper MUST construct the second beacon's position via `Vector3` arithmetic that survives the float-precision round-trip (recommended: `B2.position = B1.position + Vector3.new(distance, 0, 0)` rather than manual coordinate construction with hard-coded literal coordinates that may quantise to integer-stud precision under the test framework's serialisation). The helper directly writes the live-source list with the supplied `{EmissionPayload}` array — it bypasses Q9 stationary attenuation, schema validation, and the cap-eviction policy, parallel to `_injectSyntheticEmission`'s seam properties (E.24 invariants apply: position finite, `initialMagnitude ∈ (0, 1.00]`, `emissionType` in canonical enum). Production code never invokes `_setLiveSourceState`; H.39c verifies non-Client. The R9-I6 forward obligation in F.2a-IMPORTANT (round-9 cluster) records the architectural rationale; this prereq table row makes the dependency mechanically tracked for sprint planning. **Without this helper, H.41l sub-tests (b) and (c) are unsoundable** — integer-stud-precision placement would round 23.9 → 24 and 24.1 → 24, collapsing the boundary pair into a single test case that cannot distinguish the round-9 amendment's `dist < INFLUENCE_RADIUS` predicate's two branches. |
 | **Cap-cue persistence-state reset seam** on `DisturbanceService` (`_resetCapCueDecayPassesRemaining(): ()` — server-internal only; H.39c verifies non-Client per round-13 grep-sweep update; round-13 R12-B2 closure of the round-11 H.41m sub-AC (d) parenthetical-deferral that did not execute in the round-11 patch session) | H.41m sub-AC (d) — Scenario 4 cold-start test-isolation precondition (cap-state discriminant State C from cold) | qa-lead + gameplay-programmer | Round-13 addition. H.41m sub-AC (d) requires the test fixture to construct Scenario 4 (State C — beacon near expiry) with no prior cap engagement within the past `math.ceil(1.0 × FIELD_UPDATE_HZ)` passes; without explicit reset, residual `_capCueDecayPassesRemaining[player]` state from a prior sub-test (e.g., a sub-AC (b) Scenario 2 run that left State A populated for some player) contaminates the cold-start assertion AND sub-AC (d) FAILS spuriously even on a correct implementation. The seam: `function DisturbanceService:_resetCapCueDecayPassesRemaining() self._capCueDecayPassesRemaining = {} end` (or equivalent — clearing entries individually via `for player, _ in pairs(self._capCueDecayPassesRemaining) do self._capCueDecayPassesRemaining[player] = nil end` is also acceptable; nil-vs-0 produces identical behaviour because the persistence rule decrements only when the entry is `> 0`, per C.3.4 step 4). Production code never invokes `_resetCapCueDecayPassesRemaining`; H.39c verifies non-Client per the round-13 expansion. **Without this helper, H.41m sub-AC (d) Scenario 4 is unsoundable** — residual persistence state from prior sub-tests' Scenario 2 / Scenario 3 runs would populate `nearby` / `stationary_nearby` on Scenario 4's first pass, contradicting the round-11 B-R10-2 nil-on-State-C-from-cold assertion. |
 | **Extended-stationary-segment-active seam** on `DisturbanceService` (`_setExtendedStationarySegmentActive(active: boolean): ()` — server-internal only; H.39c verifies non-Client per round-15 grep-sweep update; round-15 R14-B9 + red-team B-RT-3 closure of the round-15-first-pass authoring's failure to add this prereq row in the same patch session that introduced the seam at H.PB1-BETA criterion (iv)) | H.PB1-BETA criterion (iv) FAIL-iv-server telemetry contract — bracketing the per-pass telemetry-row capture window for the extended-stationary-squad observation segment | qa-lead + gameplay-programmer + DevOps Engineer | Round-15 addition. The H.PB1-BETA criterion (iv) FAIL-iv-server clause requires per-pass telemetry rows (`pass_index`, `pass_timestamp_seconds`, `squad_t`, `predator_state`, `pre_segment_profile`, `session_id`) written to the evidence file `production/qa/evidence/HPB1-BETA-iv-server-telemetry-[session-id].csv` ONLY during the extended-stationary-squad observation segment (≥ 60 s window). Without this seam, the implementation cannot bracket the telemetry capture — either it logs every field-update pass for the entire session (wasted disk) or it has no signal-to-start-logging mechanism. The seam: `function DisturbanceService:_setExtendedStationarySegmentActive(active: boolean) self._extendedStationarySegmentActive = active end` (or equivalent — production code paths read `self._extendedStationarySegmentActive` to gate telemetry-row emission inside the field-update pass). The Beta-playtest harness invokes the seam at segment-start and segment-end; outside the segment window, no telemetry rows are emitted. Production code never invokes `_setExtendedStationarySegmentActive`; H.39c verifies non-Client per the round-15 expansion. **If Client-callable**, a malicious client could spuriously activate the flag mid-session AND pollute the evidence-file logs with non-segment-window data, OR conversely deactivate the flag during a legitimate segment AND silently drop the FAIL-trigger detection. **Without this helper, H.PB1-BETA criterion (iv) FAIL-iv-server is unsoundable** at production-deploy scale — Beta playtests run on production-deploy where the harness must externally bracket the telemetry. |
 
@@ -253,14 +253,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - name: Detect changed files via paths-filter (round-7c I-7b-8 fix)
+      - name: Detect changed files via paths-filter (round-7c I-7b-8 fix; round-23 B7/QA-1 — RECURSIVE filter)
         id: filter
         uses: dorny/paths-filter@v3
         with:
+          # Round-23 B7/QA-1: the prior filter matched ONLY 'DisturbanceService/Client/**'
+          # and 'DisturbanceService.Client.luau'. Under the standard single-file Knit
+          # layout — Service.Client methods declared inline in Init.luau, the layout
+          # the GDD's own H.30c-i rationale acknowledges — NEITHER path ever matches,
+          # client-touched stays false forever, and this gate (the P0 client-Emit
+          # two-engineer review) silently never fires. The recursive filter below is
+          # the same fix shape H.30c-i's gate already uses; the content-grep step in
+          # check-h39d-evidence narrows to PRs that actually touch Client surface.
           filters: |
             client:
-              - 'src/server/services/DisturbanceService/Client/**'
-              - 'src/server/services/DisturbanceService.Client.luau'
+              - 'src/server/services/DisturbanceService/**/*.luau'
   check-h39d-evidence:
     needs: detect-touched-paths
     if: needs.detect-touched-paths.outputs.client-touched == 'true'
@@ -268,10 +275,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
+      - name: Narrow to Client-surface-touching changes (round-23 B7/QA-1 content grep)
+        id: narrow
+        run: |
+          # Review is required only when a changed DisturbanceService file declares or
+          # touches the Service.Client surface (any of the H.39 four declaration forms,
+          # or an existing Client-method body edit). Doc-only or unrelated-internal
+          # changes to the service tree skip the evidence requirement.
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          TOUCHED=false
+          for f in $(git diff --name-only "$BASE"...HEAD -- 'src/server/services/DisturbanceService/'); do
+            # Round-24 Gate-B1 F4.1: do NOT skip files missing at HEAD — a whole-file
+            # deletion of Client surface must still trigger the review (git diff of a
+            # deleted path still yields the removed lines to grep).
+            if git diff "$BASE"...HEAD -- "$f" | grep -qE '(DisturbanceService\.Client|function .*\.Client[:.])'; then
+              TOUCHED=true
+            fi
+          done
+          echo "client_surface=$TOUCHED" >> $GITHUB_OUTPUT
       - name: Find current sprint id
+        if: steps.narrow.outputs.client_surface == 'true'
         id: sprint
         run: echo "sprint_id=$(cat production/sprints/current.txt)" >> $GITHUB_OUTPUT
       - name: Assert H.39d evidence file exists for current sprint
+        if: steps.narrow.outputs.client_surface == 'true'
         run: |
           FILE="production/qa/evidence/H39d-${{ steps.sprint.outputs.sprint_id }}-call-graph-review.md"
           if [ ! -f "$FILE" ]; then
@@ -279,6 +306,7 @@ jobs:
             exit 1
           fi
       - name: Assert evidence file lists two distinct GitHub reviewers
+        if: steps.narrow.outputs.client_surface == 'true'
         run: |
           FILE="production/qa/evidence/H39d-${{ steps.sprint.outputs.sprint_id }}-call-graph-review.md"
           REVIEWER_COUNT=$(grep -c '^- @[A-Za-z0-9_-]\+$' "$FILE")
@@ -292,6 +320,7 @@ jobs:
             exit 1
           fi
       - name: Assert each reviewer's attestation line is present
+        if: steps.narrow.outputs.client_surface == 'true'
         run: |
           FILE="production/qa/evidence/H39d-${{ steps.sprint.outputs.sprint_id }}-call-graph-review.md"
           ATTESTATION_COUNT=$(grep -c '^- attestation:' "$FILE")
@@ -313,7 +342,7 @@ The evidence file's required structure to satisfy the CI gate:
 - flagged_paths: [none / list]
 ```
 
-**The CI gate MUST be a required check on PRs that touch `src/server/services/DisturbanceService/Client`.** The PR template still includes the checklist item for human reviewer-awareness, but the CI gate is the mechanical enforcement. CODEOWNERS rules on `src/server/services/DisturbanceService/**` requiring two-reviewer approval are a recommended additional defense; CODEOWNERS may be relaxed under sprint pressure but the CI gate **cannot** be relaxed without a force-push (which is recorded). This eliminates the honor-system gap. The DevOps Engineer MUST land this CI gate before any DisturbanceService.Client method body is introduced or modified — the implementation epic is BLOCKED on the gate's presence per round-7a binding ruling.
+**The CI gate MUST be a required check on PRs that touch `src/server/services/DisturbanceService/**/*.luau` whose changed files touch the `Service.Client` surface (round-23 B7/QA-1 — the prior `Client/`-subdirectory-only filter could structurally never fire under the standard single-file Knit layout, where Client methods are declared inline in Init.luau; the recursive filter + content-grep narrowing step above is the same fix shape as the H.30c-i gate).** The PR template still includes the checklist item for human reviewer-awareness, but the CI gate is the mechanical enforcement. CODEOWNERS rules on `src/server/services/DisturbanceService/**` requiring two-reviewer approval are a recommended additional defense; CODEOWNERS may be relaxed under sprint pressure but the CI gate **cannot** be relaxed without a force-push (which is recorded). This eliminates the honor-system gap. The DevOps Engineer MUST land this CI gate before any DisturbanceService.Client method body is introduced or modified — the implementation epic is BLOCKED on the gate's presence per round-7a binding ruling.
 
 ### H.39e deferred-queue reference implementation (informational, not normative)
 
