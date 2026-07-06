@@ -66,7 +66,7 @@ state_ownership:
       - docs/architecture/adr-0007-save-load-cosmetic-persistence.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
 # Example:
 #
@@ -138,7 +138,7 @@ interfaces:
       - docs/architecture/adr-0004-disturbanceservice-core-architecture.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
 # Example:
 #
@@ -177,7 +177,7 @@ performance_budgets:
       - docs/architecture/adr-0006-remoteevent-trust-boundary.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
   - system: character_replication_baseline
     status: active
@@ -188,7 +188,7 @@ performance_budgets:
       - docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
 # Example:
 #
@@ -255,7 +255,7 @@ api_decisions:
       - docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
   - purpose: spatial_index
     status: active
@@ -267,7 +267,7 @@ api_decisions:
       - docs/architecture/adr-0004-disturbanceservice-core-architecture.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
   - purpose: streaming_chunk_membership
     status: active
@@ -279,7 +279,7 @@ api_decisions:
       - docs/architecture/adr-0004-disturbanceservice-core-architecture.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
   - purpose: async_cross_service_charge_pattern
     status: active
@@ -291,7 +291,7 @@ api_decisions:
       - docs/architecture/adr-0005-death-respawn-lifecycle.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending). Reusable project-wide for any future async cross-service charge, per Architecture Principle #4."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending. Reusable project-wide for any future async cross-service charge, per Architecture Principle #4."
 
   - purpose: remote_event_validation_order
     status: active
@@ -303,7 +303,7 @@ api_decisions:
       - docs/architecture/adr-0006-remoteevent-trust-boundary.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
   - purpose: player_character_network_ownership
     status: active
@@ -315,7 +315,7 @@ api_decisions:
       - docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
   - purpose: predator_network_ownership
     status: active
@@ -327,7 +327,7 @@ api_decisions:
       - docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
     added: 2026-07-06
     revised: ""
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
 # Example:
 #
@@ -408,7 +408,7 @@ forbidden_patterns:
       defeats the entire double-commit race guard the state machine exists for."
     adr: docs/architecture/adr-0005-death-respawn-lifecycle.md
     added: 2026-07-06
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
   - pattern: knitinit_hard_error_without_shutdown_catch
     status: active
@@ -423,7 +423,7 @@ forbidden_patterns:
       (this project's own H.3d/H.3e and R7c-I4 included)."
     adr: docs/architecture/adr-0005-death-respawn-lifecycle.md
     added: 2026-07-06
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending). Binding project-wide, not just ADR-0005's own check."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending. Binding project-wide, not just ADR-0005's own check."
 
   - pattern: silent_drop_for_remotefunction
     status: active
@@ -435,7 +435,7 @@ forbidden_patterns:
       pattern is copied verbatim onto a synchronous RemoteFunction call."
     adr: docs/architecture/adr-0006-remoteevent-trust-boundary.md
     added: 2026-07-06
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
   - pattern: second_datastore_persistence_surface
     status: active
@@ -448,7 +448,7 @@ forbidden_patterns:
       one run-stat' addition)."
     adr: docs/architecture/adr-0007-save-load-cosmetic-persistence.md
     added: 2026-07-06
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
   - pattern: anchoring_predator_root_part
     status: active
@@ -459,7 +459,7 @@ forbidden_patterns:
       root part at any point would break the predator's NetworkOwnership on the next call."
     adr: docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
     added: 2026-07-06
-    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
 # Example:
 #

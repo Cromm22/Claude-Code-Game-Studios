@@ -1,7 +1,7 @@
 # ADR-0007: Save/Load & Cosmetic Persistence
 
 ## Status
-Proposed
+Accepted (ratified by the user 2026-07-06)
 
 ## Date
 2026-07-06

@@ -1,7 +1,7 @@
 # ADR-0003: Locomotion Driver — Humanoid vs. Character Controller Library
 
 ## Status
-Proposed
+Accepted (ratified by the user 2026-07-06)
 
 ## Date
 2026-07-06

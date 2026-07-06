@@ -1,7 +1,7 @@
 # ADR-0005: Death & Respawn Lifecycle
 
 ## Status
-Proposed
+Accepted (ratified by the user 2026-07-06)
 
 ## Date
 2026-07-06

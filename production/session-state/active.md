@@ -147,3 +147,8 @@ User ruled accept-as-is over the narrow-gate NEEDS REVISION; systems-index + rev
 - Registry (docs/registry/architecture.yaml) updated with ~15 new entries across all 4 sections (1 state_ownership, 1 interface, 2 performance_budgets, 6 api_decisions, 5 forbidden_patterns) from ADRs 0003-0008 -- all flagged PENDING RATIFICATION (2nd AskUserQuestion timeout this turn; adopted the recommended "update registry + commit" option per established precedent).
 - All 6 ADR files + registry + this session-state update are about to be committed in one commit (recommended option, pending timeout).
 - Next: user should ratify these 6 ADRs + ~15 registry entries when back. All 8 must-have ADRs are now written -- /create-control-manifest and /gate-check pre-production are the next pipeline steps once ratified. Remember: run /architecture-review only in a FRESH session, never the one that authored the ADRs.
+
+## Session Extract — ADR ratification 2026-07-06 (user: "ratify")
+- User explicitly ratified ADR-0003..0008 and all ~15 pending registry entries (docs/registry/architecture.yaml) -- all "PENDING RATIFICATION" markers replaced with "RATIFIED by the user 2026-07-06".
+- ALL 8 must-have-before-coding ADRs (0001-0008) now have Status: Accepted (ratified by the user 2026-07-06) -- promoted from Proposed, since /create-control-manifest explicitly generates its output "from Accepted ADRs" per the Pre-Production gate-check requirements.
+- Next: /create-control-manifest (all prerequisite ADRs now Accepted) -> /gate-check pre-production (run in a FRESH session, never the one that authored the ADRs, per /architecture-decision's own explicit instruction) -> /architecture-review also recommended in a fresh session to validate coverage.

@@ -1,7 +1,7 @@
 # ADR-0006: RemoteEvent Trust Boundary & Rate-Limiting
 
 ## Status
-Proposed
+Accepted (ratified by the user 2026-07-06)
 
 ## Date
 2026-07-06

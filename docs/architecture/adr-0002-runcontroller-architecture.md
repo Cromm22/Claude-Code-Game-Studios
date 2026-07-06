@@ -1,7 +1,7 @@
 # ADR-0002: RunController Architecture
 
 ## Status
-Proposed
+Accepted (ratified by the user 2026-07-06)
 
 **Adoption note**: This ADR was drafted after 3 consecutive `AskUserQuestion` timeouts (60s each, no response) during this session. Per this project's established precedent (adopt the recommended option, flag pending ratification, and stop re-offering widgets after repeated timeouts rather than retrying indefinitely), the assumptions, decision, and write were all made autonomously using the recommended options. **RATIFIED by the user 2026-07-06** — the autonomous adoption is now explicitly confirmed, no longer pending.
 
