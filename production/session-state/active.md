@@ -109,3 +109,11 @@ User ruled accept-as-is over the narrow-gate NEEDS REVISION; systems-index + rev
 - All 7 blockers CLOSED + re-verified (6 LANDED-CLEAN first pass; re-verify caught HUD H.20/H.22 stale-channel ACs + a second bench-cap site — both fixed same-session per its prescriptions, standard no-further-pass caveat).
 - Files: player-controller.md (C.5 block, G.6 knob, F.2 rows, F.4/F.5 cells, :371 attribution), resource-management.md (C4 note, D1 ruling ×2, RN tags ×3, CR.8 joint invariant), crafting-and-items.md (C.8 block, BCT3 cap + H.131, join pins ×2), hud.md (OnPredatorSense ×3 sites + H.20/H.22 rewrites), ecological-disturbance.md (G.7 mirror note), forward-obligations (3 tracker rows → LANDED), entities.yaml (squadAggregateT exclusion form + 2 new constants), systems-index (4 rows restored), gdd-cross-review-2026-07-05.md (addendum + re-verify close-out).
 - Cross-review verdict: FAIL (2026-07-05) → **superseded: closes PASS-equivalent (2026-07-06)**. Next: /gate-check toward architecture.
+
+## Session Extract — /gate-check systems-design→technical-setup 2026-07-06
+- Verdict: CONCERNS (no blockers; CD/PR/AD concerns, TD ready). production/stage.txt written to "Technical Setup" (timeout-adopted, PENDING RATIFICATION — 3 consecutive widget timeouts this turn).
+- Panel: CD-CONCERNS (RunController climax, Pillar-2 gather-phase tension, pending rulings), TD-READY, PR-CONCERNS (RunController = near-term architecture blocker, ADR round-inflation guardrail), AD-CONCERNS (OQ.6 oxygen-color contradiction vs planned HSV CI gate).
+- Day-1 Technical Setup tasks: ratify C4/D1; author RunController contract FIRST (gates PC architecture); resolve HUD OQ.6 before its ADR/CI-hook; port round-inflation guardrail into ADR process; decide Camera/OQ.3; gate PA ADR on prototype; front-load N1/N3/N5 empirical Roblox verifications.
+- Gate-check's own chain-of-verification caught + fixed one more stale ref (HUD OQ.4, bearing channel).
+- Report: production/gate-checks/systems-design-to-technical-setup-2026-07-06.md
+- Next: `/create-architecture` (required before ADRs per the skill's own note) OR ratify the pending rulings first.
