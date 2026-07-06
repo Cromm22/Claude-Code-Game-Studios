@@ -13,7 +13,7 @@
 - [x] MVP priority tier defined
 - [x] No stale references remain — swept clean; this gate's own chain-of-verification caught and fixed one more (HUD OQ.4 still cited the pre-patch bearing channel)
 - [~] `/review-all-gdds` verdict: original was **FAIL**; closes at **PASS-equivalent only via the same-file addendum** after the seam-patch + re-verify — a real nuance, not a formality
-- [~] Two rulings (C4 grace-timer owner/duration; D1 2-player BC4 kill-criterion) were adopted on a timed-out widget under this project's established precedent and are marked **PENDING RATIFICATION** everywhere they're recorded
+- [x] Two rulings (C4 grace-timer owner/duration; D1 2-player BC4 kill-criterion) were adopted on a timed-out widget under this project's established precedent — **explicitly RATIFIED by the user 2026-07-06**, no longer pending
 
 ## Director Panel Assessment
 
@@ -30,7 +30,7 @@ No director returned NOT READY. Three of four CONCERNS sets the floor.
 None.
 
 ## Recommendations (day-1 Technical Setup tasks, not gate prerequisites)
-1. Ratify C4 (grace-timer, PC-owned/5s) and D1 (2-player BC4 kill-criterion) explicitly.
+1. ~~Ratify C4 (grace-timer, PC-owned/5s) and D1 (2-player BC4 kill-criterion) explicitly.~~ **DONE 2026-07-06** — both explicitly ratified by the user.
 2. Author RunController's interface contract first — PC's architecture is gated on it.
 3. Resolve OQ.6 (oxygen-meter color vs. predator-hue-exclusion band) before writing its HSV-gate ADR/CI-hook.
 4. Port a round-inflation guardrail into the ADR process (one-decision-per-ADR + re-decomposition tripwire).

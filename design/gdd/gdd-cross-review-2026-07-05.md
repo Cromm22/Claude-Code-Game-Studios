@@ -108,7 +108,7 @@ Seven blocking issues (C1–C6 + D1) must be resolved before architecture begins
 
 # ADDENDUM — Cross-GDD Seam-Patch APPLIED (2026-07-05/06, user-directed)
 
-**User rulings (widget timed out; recommended options adopted per the 2026-07-03 precedent — PENDING RATIFICATION):**
+**User rulings — RATIFIED 2026-07-06** (originally adopted on a timed-out widget per the 2026-07-03 precedent; the user explicitly confirmed both on 2026-07-06 — no longer pending):
 - **C4 → PC owns the grace timer, 5 s.** RM's approved text already said "PC-owned"; PC's contrary attribution was the error. Contract pinned in BOTH docs: RM's argument-less squad-wide `OnPlayerOxygenExpired()` (edge-triggered on Empty entry) starts ONE squad-wide PC timer `OXYGEN_GRACE_DURATION = 5 s` (new PC G.6 knob, range 4–8 s); at expiry PC re-checks RM's server-internal pool read and applies the T5 death path only if still Empty; a mid-grace Canister restore (RM CR.6) cancels; a fresh Empty entry restarts. The `(playerId)` arity vestige dropped from PC F.2 (discharges RM OQ.7).
 - **D1 → accept as-designed + BINDING kill-criterion.** Recorded at RM's BC4-death edge case + OQ.4: if the 2-player post-BC4-death win rate reads effectively zero at the first vertical-slice playtest, the `aliveCount ≤ 2` last-stand oxygen floor ships as the PRE-COMMITTED fallback — decision made now, gated only on the measurement.
 
