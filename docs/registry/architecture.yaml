@@ -56,6 +56,18 @@ state_ownership:
     revised: ""
     note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
+  - state: cosmetic_profile_data
+    status: active
+    owner_system: save-load-cosmetic-persistence
+    adr: docs/architecture/adr-0007-save-load-cosmetic-persistence.md
+    interface: "ProfileStore-backed CosmeticProfileData (OwnedCosmetics, EquippedCosmetics, ProcessedReceipts, MetaProgression) — sole persistence surface in the entire game"
+    write_access: save-load-cosmetic-persistence-only — no other system may call ProfileStore/DataStoreService directly (see forbidden_patterns)
+    referenced_by:
+      - docs/architecture/adr-0007-save-load-cosmetic-persistence.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
 # Example:
 #
 # state_ownership:
@@ -113,6 +125,21 @@ interfaces:
     revised: ""
     note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
+  - contract: request_squad_oxygen_spend
+    status: active
+    pattern: direct_call
+    producer: player-controller
+    consumers:
+      - resource-management
+    adr: docs/architecture/adr-0005-death-respawn-lifecycle.md
+    signal_signature: "RequestSquadOxygenSpend(deadPlayerUserId: number, amount: number, reason: string, deathEventId: string): () — deduplicated by resource-management on (deadPlayerUserId, deathEventId)"
+    referenced_by:
+      - docs/architecture/adr-0005-death-respawn-lifecycle.md
+      - docs/architecture/adr-0004-disturbanceservice-core-architecture.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
 # Example:
 #
 # interfaces:
@@ -140,7 +167,28 @@ interfaces:
 # Register a budget when an ADR explicitly claims a frame time allocation.
 # The registry lets /architecture-review verify the total doesn't exceed the target.
 
-performance_budgets: []
+performance_budgets:
+  - system: remote_event_global_budget
+    status: active
+    budget_ms: null
+    notes: "Per-player global RemoteEvent budget: 30 accepted fires/sec across ALL client-fired events (tumbling 1.0s window), on top of each event's own per-event rate limit + burst cap. Derived from summing current per-event limits at their busiest legitimate combination (~21.3/s) with headroom; re-derive if a future high-frequency event is added."
+    adr: docs/architecture/adr-0006-remoteevent-trust-boundary.md
+    referenced_by:
+      - docs/architecture/adr-0006-remoteevent-trust-boundary.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
+  - system: character_replication_baseline
+    status: active
+    budget_ms: null
+    notes: "Provisional 15-30 KB/s baseline per-client bandwidth for character replication (Humanoid/HumanoidRootPart state, N players + 1 predator), BEFORE any game-specific signal (ED's ~8.2 KB/s, HUD, PA broadcasts) is added, against the <50 KB/s per-client advisory ceiling. UNVERIFIED — pending empirical measurement at the /prototype predator-ai spike; every other system's bandwidth budget should subtract from the MEASURED baseline once it exists, not the full 50 KB/s ceiling."
+    adr: docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
+    referenced_by:
+      - docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
 
 # Example:
 #
@@ -195,6 +243,91 @@ api_decisions:
     added: 2026-07-06
     revised: ""
     note: "RATIFIED by the user 2026-07-06 — no longer pending."
+
+  - purpose: locomotion_driver
+    status: active
+    api: "Humanoid (WalkSpeed, MoveDirection, Humanoid:MoveTo(), PathfindingService:FindPathAsync-driven NPC pursuit)"
+    not: "Character Controller Library (post-cutoff full release) for either Player Controller or Predator AI"
+    adr: docs/architecture/adr-0003-locomotion-driver.md
+    reason: "Zero rewrite cost to already-approved GDD ACs phrased in Humanoid terms; ratifies Predator AI's own OQ.7 recommendation; lower live-platform documentation risk for NPC pathfinding-driven pursuit specifically. Explicitly re-evaluated at the /prototype predator-ai spike, not a permanently closed decision."
+    referenced_by:
+      - docs/architecture/adr-0003-locomotion-driver.md
+      - docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
+  - purpose: spatial_index
+    status: active
+    api: "Plain Luau table-of-tables spatial hash grid (grid[cellX][cellZ] = {sourceId, ...}), cell size 32 studs"
+    not: "Region3 / Workspace:FindPartsInRegion3-family APIs"
+    adr: docs/architecture/adr-0004-disturbanceservice-core-architecture.md
+    reason: "Region3 queries physical BasePart Instances in Workspace; disturbance sources are pure data (position+magnitude+age), not physical Instances — using Region3 would require spawning invisible marker Parts purely to be queryable, real overhead for a purely data-structural problem a plain table already solves in O(1)."
+    referenced_by:
+      - docs/architecture/adr-0004-disturbanceservice-core-architecture.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
+  - purpose: streaming_chunk_membership
+    status: active
+    api: "Server-computed, position-based heuristic (player's server-tracked position within STREAMING_PUSH_RADIUS of a chunk's center)"
+    not: "Player.ReplicationFocus (client-writable, already banned in ecological-disturbance.md's own H.31b) or any other client-driven streaming signal"
+    adr: docs/architecture/adr-0004-disturbanceservice-core-architecture.md
+    reason: "No client-writable property or client-fired signal may gate server-authoritative push decisions. The position heuristic requires no uncertain post-cutoff API and its worst-case failure mode (early/late push) is a bandwidth nicety, not a security issue."
+    referenced_by:
+      - docs/architecture/adr-0004-disturbanceservice-core-architecture.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
+  - purpose: async_cross_service_charge_pattern
+    status: active
+    api: "Pending -> InFlight -> Committed/Abandoned state machine with a post-yield ownership re-check (re-verify row.state == \"InFlight\" AFTER a yield resolves, before committing)"
+    not: "Fire-and-forget async calls for any cross-service charge where a double-commit or lost-charge would be a correctness bug"
+    adr: docs/architecture/adr-0005-death-respawn-lifecycle.md
+    reason: "Protects against a staleness-sweep re-arming a row to Pending (and re-dispatching) WHILE the original call is still yielding — without the post-yield re-check, the original call's late success could double-commit against the re-dispatched attempt's own commit."
+    referenced_by:
+      - docs/architecture/adr-0005-death-respawn-lifecycle.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending). Reusable project-wide for any future async cross-service charge, per Architecture Principle #4."
+
+  - purpose: remote_event_validation_order
+    status: active
+    api: "6-step canonical order: (1) alive/state guard, (2) per-event rate limit + burst cap, (3) global per-player budget, (4) payload shape validation, (5) server-side plausibility re-derivation, (6) deep/domain validation"
+    not: "Any RemoteEvent handler skipping or reordering these steps, or mutating state before a check fails"
+    adr: docs/architecture/adr-0006-remoteevent-trust-boundary.md
+    reason: "Generalizes Player Controller's own existing per-event pattern (C.9's drop-first ordering) as the binding project-wide standard for every client-fired RemoteEvent, so new events don't reinvent or under-implement it."
+    referenced_by:
+      - docs/architecture/adr-0006-remoteevent-trust-boundary.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
+  - purpose: player_character_network_ownership
+    status: active
+    api: "Default automatic NetworkOwnership (Roblox standard — owning client simulates its own character's physics)"
+    not: "Forcing explicit server NetworkOwnership on player characters"
+    adr: docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
+    reason: "Movement/visual feedback is explicitly permitted to be client-predicted per game-concept.md; gameplay-consequential outcomes are already protected by RemoteEvent server validation (ADR-0006), not by physics ownership. Forcing server ownership would remove local responsiveness for zero server-authority benefit."
+    referenced_by:
+      - docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
+  - purpose: predator_network_ownership
+    status: active
+    api: "Explicit server NetworkOwnership via HumanoidRootPart:SetNetworkOwner(nil)"
+    not: "Any client-owned physics for the predator NPC"
+    adr: docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
+    reason: "The predator has no owning client; its position is entirely server-driven via PathfindingService results. Ratifies predator-ai.md's own existing GDD design. Must be re-invoked on every predator respawn/recreate (SetNetworkOwner is per part-instance, not persisted on a template) and must never be called on an Anchored part (throws)."
+    referenced_by:
+      - docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
+    added: 2026-07-06
+    revised: ""
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
 
 # Example:
 #
@@ -261,6 +394,72 @@ forbidden_patterns:
     adr: docs/architecture/adr-0002-runcontroller-architecture.md
     added: 2026-07-06
     note: "RATIFIED by the user 2026-07-06 — no longer pending."
+
+  - pattern: async_charge_without_post_yield_recheck
+    status: active
+    description: "Any async cross-service call using the Pending/InFlight/Committed/Abandoned
+      state machine (ADR-0005) must re-check row.state == \"InFlight\" AFTER the yield
+      resolves, before treating the call as committed. Never treat pcall's ok==true as
+      proof of a real yield having completed if the callee could ever return a Promise
+      instead of yielding synchronously."
+    why: "pcall does not await a Promise — it reports ok=true the instant a Promise
+      object is constructed, not once it resolves. If a callee is ever made genuinely
+      async via a Promise without the caller awaiting it inside the pcall, this silently
+      defeats the entire double-commit race guard the state machine exists for."
+    adr: docs/architecture/adr-0005-death-respawn-lifecycle.md
+    added: 2026-07-06
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
+  - pattern: knitinit_hard_error_without_shutdown_catch
+    status: active
+    description: "Every KnitInit-time config-validation hard error (error(...)) is only
+      effective if the server bootstrap's Knit.Start() catch handler actually halts the
+      server instance (e.g., game:Shutdown()) rather than only logging the rejection."
+    why: "The common Knit bootstrap boilerplate (Knit.Start():andThen(print):catch(warn))
+      only LOGS a rejected KnitInit promise — Roblox has no implicit crash-on-uncaught-
+      error at the process level. Without an explicit hard-stop in the catch handler, a
+      misconfigured constant that error()s at KnitInit would silently fail to block
+      server startup, defeating every KnitInit-time hard-error requirement project-wide
+      (this project's own H.3d/H.3e and R7c-I4 included)."
+    adr: docs/architecture/adr-0005-death-respawn-lifecycle.md
+    added: 2026-07-06
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending). Binding project-wide, not just ADR-0005's own check."
+
+  - pattern: silent_drop_for_remotefunction
+    status: active
+    description: "The silent-drop-on-reject convention (ADR-0006) applies to fire-and-forget
+      RemoteEvents ONLY. Any future RemoteFunction must always return a value on every
+      code path, including rejection — never a silent drop."
+    why: "An un-returned RemoteFunction invocation leaves the calling client's coroutine
+      yielded indefinitely — a real Roblox footgun if the RemoteEvent-oriented silent-drop
+      pattern is copied verbatim onto a synchronous RemoteFunction call."
+    adr: docs/architecture/adr-0006-remoteevent-trust-boundary.md
+    added: 2026-07-06
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
+  - pattern: second_datastore_persistence_surface
+    status: active
+    description: "No system other than save-load-cosmetic-persistence may call
+      ProfileStore or DataStoreService, for any purpose."
+    why: "Architecture Principle #5 ('Rounds, not saves') makes cosmetic/meta-progression
+      persistence the SOLE persistence surface in the entire game — every other system's
+      state is discarded at run end by construction. A second persistence surface would
+      violate this principle even if well-intentioned (e.g., a tempting 'just persist this
+      one run-stat' addition)."
+    adr: docs/architecture/adr-0007-save-load-cosmetic-persistence.md
+    added: 2026-07-06
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
+
+  - pattern: anchoring_predator_root_part
+    status: active
+    description: "The predator's HumanoidRootPart must never be Anchored (e.g., to
+      implement a freeze/stagger state) — use Humanoid.WalkSpeed = 0 instead."
+    why: "SetNetworkOwner(nil) (ADR-0008, required for the predator's server-authoritative
+      positioning) throws an error if called on an Anchored part. Anchoring the predator's
+      root part at any point would break the predator's NetworkOwnership on the next call."
+    adr: docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
+    added: 2026-07-06
+    note: "PENDING RATIFICATION — added on a 60s AskUserQuestion timeout per this project's established precedent (adopt recommended option, flag pending)."
 
 # Example:
 #
