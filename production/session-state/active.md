@@ -117,3 +117,14 @@ User ruled accept-as-is over the narrow-gate NEEDS REVISION; systems-index + rev
 - Gate-check's own chain-of-verification caught + fixed one more stale ref (HUD OQ.4, bearing channel).
 - Report: production/gate-checks/systems-design-to-technical-setup-2026-07-06.md
 - Next: `/create-architecture` (required before ADRs per the skill's own note) OR ratify the pending rulings first.
+
+## Session Extract — /create-architecture 2026-07-06
+- Master architecture document written: docs/architecture/architecture.md (v0.3)
+- Technical Requirements Baseline: 218 items across ED(35)/PA(29)/PC(33)/RM(18)/RN(16)/Crafting(40)/HUD(31)/cross-cutting(16)
+- System layer map: Foundation=ED+PC+RunController(unauth)+SaveLoad(unauth,no-GDD); Core=RM+Crafting; Feature=PA+RN+Camera(unauth); Presentation=HUD
+- 16 required ADRs identified (8 must-have-before-coding, 4 should-have, 4 can-defer); zero ADRs written yet
+- Engine Knowledge Gap: 7 HIGH RISK domains (locomotion driver, Input Action System, require()-singleton, BindableEvent sync, Knit RemoteSignal API, KnitStart ordering, AST-tooling), 7 MEDIUM RISK
+- TD-ARCHITECTURE sign-off: CONCERNS -> APPROVED WITH CONDITIONS (4 findings fixed in-document same session: TR-coverage overclaim, RequestSquadOxygenSpend dedup-key signature, death-fan-out consumer-count/ReleasePredatorLock-caller contradiction [PA only, not PC], RunController read-direction mandated event-subscriber-only). LP-FEASIBILITY skipped (Lean review mode).
+- Discovered + verified via git: a prior RunController arbiter migration was attempted and backed out at commit 3747c3c (round-24) - uncommitted, defeat-half-only, non-buildable. Recorded as a lesson (not salvageable code) in ADR 2's scope.
+- Recommended next 3 ADRs, in order: (1) KnitInit/KnitStart Ordering Discipline (cheap, unblocks the others), (2) RunController Architecture (event-subscriber-mandated), (3) Locomotion Driver (gated on /prototype predator-ai).
+- Next: /architecture-decision [title] for each ADR (Foundation-layer first) -> /create-control-manifest once ADRs land -> /gate-check pre-production once all must-have ADRs are written.
