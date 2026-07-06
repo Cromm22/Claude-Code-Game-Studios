@@ -103,3 +103,32 @@ Seven blocking issues (C1–C6 + D1) must be resolved before architecture begins
 5. Registry: update `squadAggregateT`, add `MAX_ATTRIBUTION_ARCHIVE_ENTRIES` (C6).
 6. **DECISION:** 2-player BC4 — author a fallback vs accept-with-kill-criterion (D1).
 7. Warning batch at each GDD's next touch (PA reconciliation read; joint anti-camping note; playtest-target flags).
+
+---
+
+# ADDENDUM — Cross-GDD Seam-Patch APPLIED (2026-07-05/06, user-directed)
+
+**User rulings (widget timed out; recommended options adopted per the 2026-07-03 precedent — PENDING RATIFICATION):**
+- **C4 → PC owns the grace timer, 5 s.** RM's approved text already said "PC-owned"; PC's contrary attribution was the error. Contract pinned in BOTH docs: RM's argument-less squad-wide `OnPlayerOxygenExpired()` (edge-triggered on Empty entry) starts ONE squad-wide PC timer `OXYGEN_GRACE_DURATION = 5 s` (new PC G.6 knob, range 4–8 s); at expiry PC re-checks RM's server-internal pool read and applies the T5 death path only if still Empty; a mid-grace Canister restore (RM CR.6) cancels; a fresh Empty entry restarts. The `(playerId)` arity vestige dropped from PC F.2 (discharges RM OQ.7).
+- **D1 → accept as-designed + BINDING kill-criterion.** Recorded at RM's BC4-death edge case + OQ.4: if the 2-player post-BC4-death win rate reads effectively zero at the first vertical-slice playtest, the `aliveCount ≤ 2` last-stand oxygen floor ships as the PRE-COMMITTED fallback — decision made now, gated only on the measurement.
+
+**Mechanical fixes applied:**
+- **C1** — PC C.5 normative death-signal-source block: PC does NOT subscribe to `Humanoid.Died`; it consumes `DisturbanceService:GetOnPlayerDiedSignal()` (same-frame synchronous relay per ED C.1.11 step 5, so all "at the moment Humanoid.Died fires" phrasing is unchanged in meaning); + PC F.2 ED-death-signal row (also naming RN as a consumer of the same source — closes the RN reverse-cite half); + PC F.4 "dual source" cell corrected.
+- **C2** — Crafting C.8 twin block (document-wide, incl. E.24/E.25 wipe detection; `Players.PlayerRemoving` connections unaffected — the monopoly covers `Humanoid.Died` only).
+- **C3** — Crafting BCT3 now enforces `MAX_ACTIVE_BEACONS = 3` at the publish site (reject BEFORE `Emit`, error code `E_BEACON_CAP`, ops-log) + new **AC H.131 [P0]** (3-live-beacons fixture via ED injection seams + zero-Emit assertion + negative control) + registry entry with the H.36 bidirectional-lock note.
+- **C5** — HUD re-attributes `bearing`/`distanceBand` to PA's per-client `OnPredatorSense` (FIX-17) at all three sites (Interactions split into two PA rows; D.3 variable table; Hard Dependencies row); Channel B keeps the lock-specific fields.
+- **C6** — Registry: `squadAggregateT` updated to the round-23 exclusion form (nil→unfiltered; empty-remainder→lone player's own T per PA H.57; zero players→0.0); `MAX_ATTRIBUTION_ARCHIVE_ENTRIES` (4000) and `MAX_ACTIVE_BEACONS` (3) registered.
+- **ED tracker rows** PC-T5 / Crafting-C.8 / Crafting-MAX_BEACON flipped → LANDED 2026-07-05.
+
+**Warning fold-ins:** PC `BEACON_HALF_LIFE` attribution corrected (Crafting's *requested* [64,128] tightening; ED's registered value remains 90 s / [45,180]); RM's stale RN tags refreshed (dependency row + both forward-pending AC gates → SATISFIED per RN's authored `canisterCycleTime = 10.0 s`); **joint anti-camping invariant** notes added at RM CR.8 + ED G.7 (mirrored — the guarantee lives in the RM×ED composition; neither may retune it away unilaterally); Crafting bench-cap pinned frozen-both-directions (mid-run join does not raise it; RunController owns whether joins exist at all).
+
+**Re-verify:** one narrow fresh-agent pass over both sides of every seam (result recorded below when delivered).
+
+## Re-verify result (2026-07-06) — seam-patch CLOSED after two post-re-verify fixes
+
+A narrow fresh-agent re-verify walked BOTH sides of every seam: **6 of 7 blockers LANDED-CLEAN on first check** (C1, C2, C3, C4, C6, D1 — each verified against the receiving GDD's actual mechanism text: ED C.1.11, PA FIX-17, RN D.1a/D.1b, RM D.5/D.6). The re-verify returned **FAIL on two residuals, both fixed same-session:**
+1. **(Major) HUD H.20/H.22** still asserted `bearing`/`distanceBand` as `OnPredatorLockChanged` payload fields — contradicting the corrected Interactions table three lines away. **FIXED:** both ACs rewritten against `OnPredatorSense`; H.20 now additionally asserts Channel B carries NO bearing/band/worldPosition (a payload carrying any of the three fails the AC).
+2. **(Minor) Crafting bench-cap join pin** had landed at only one of the freeze-rule's two prose sites (C.3.5 rule vs the RunSession field comment). **FIXED:** second site pinned; both now read frozen-both-directions.
+Also applied: the re-verify's cosmetic observation (PC F.5 engine-table `Humanoid.Died` row now carries the relay footnote).
+
+**Standard caveat:** the two post-re-verify fixes are verbatim implementations of the re-verify's own prescriptions and have not had a further independent pass. **All 7 cross-review blockers are now closed; the FAIL verdict of 2026-07-05 is superseded — the cross-review closes at PASS-equivalent (blockers resolved; the warning batch is registered at each GDD's next-touch list).**

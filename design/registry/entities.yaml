@@ -107,6 +107,24 @@ constants:
     referenced_by: []
     notes: "Safety valve cap (E.12). Eviction policy TBD in DisturbanceService ADR — recommended default: drop-new-from-same-player."
 
+  - name: MAX_ATTRIBUTION_ARCHIVE_ENTRIES
+    category: constant
+    value: 4000
+    unit: count
+    source: design/gdd/ecological-disturbance.md (C.1.11 + G.4)
+    referenced_by: []
+    added: 2026-07-05
+    notes: "Registered 2026-07-05 (cross-review C6 — introduced by ED round-24/PF-1 but never registered). Archive count cap parallel to MAX_LIVE_SOURCES; safe range 2000–8000; FIFO-oldest eviction, predator-lock-referenced entries exempt, ops-logged; ~7% headroom over the ~3,720 natural 20-min worst case (bounds pathology, never trims natural play). Fenced as ED H.36a workload 11."
+
+  - name: MAX_ACTIVE_BEACONS
+    category: constant
+    value: 3
+    unit: count
+    source: design/gdd/crafting-and-items.md (BCT3 publish-site cap; enforcement AC H.131)
+    referenced_by: [design/gdd/ecological-disturbance.md]
+    added: 2026-07-05
+    notes: "Registered 2026-07-05 (cross-review C3 — ED F.6's Crafting-MAX_BEACON mandate, open since round-15). Bidirectionally locked with ED H.36's perf-PASS scope clause (activeBeacons ≤ 3): raising this value INVALIDATES ED's measured perf envelope and makes ED's R11-I8 grid-mandate binding. Crafting rejects over-cap Beacon activations at the publish site with error code E_BEACON_CAP before the emission reaches DisturbanceService:Emit."
+
   - name: ATTRIBUTION_ARCHIVE_TTL
     category: constant
     value: 1200
@@ -974,12 +992,13 @@ formulas:
 
   - name: squadAggregateT
     category: formula
-    expression: "squadT = if connectedPlayers is empty then 0.0 else max(fieldValue(pi.position) for each connected player pi)"
-    variables: [pi]
+    expression: "GetSquadAggregateT(excludePlayer: Player?) -> squadT = if remainder(connectedPlayers minus excludePlayer) is empty then (if connectedPlayers is empty then 0.0 else max over ALL connected players) else max(fieldValue(pi.position) for pi in the remainder); nil argument -> unfiltered max over all connected players"
+    variables: [pi, excludePlayer]
     output_range: [0.0, 1.0]
-    source: design/gdd/ecological-disturbance.md (D.5, D.6b)
-    referenced_by: []
-    notes: "Empty-player guard required to avoid math.max() on empty arg list (E.15, H.22b). NaN guard delegated to E.16 emission-time schema validation (D.5 prose note). Server-internal accessor D.6b GetSquadAggregateT() returns the same value for predator Retreat-trigger logic; not exposed via Knit Service.Client."
+    source: design/gdd/ecological-disturbance.md (D.5 exclusion-form paragraph, D.6b)
+    referenced_by: [design/gdd/predator-ai.md, design/gdd/hud.md]
+    revised: 2026-07-05
+    notes: "UPDATED 2026-07-05 (cross-review C6 — the prior zero-arg entry was the pre-round-23 form whose lack of exclusion made PA's Hunt→Disengage structurally unreachable, ED round-23 B1). Exclusion form (round-23): PA's quiet-check reads GetSquadAggregateT(excludeLockedPlayer); nil → unfiltered D.5 max (HUD path unchanged); empty remainder → UNFILTERED max (lone player's own T, PA H.57 solo semantics — never 0/nil on a non-empty server); zero connected players → 0.0 (E.15/H.22b); D.5/playerT finiteness guards apply (ED round-22/24). Verified by ED H.22c. Server-internal only, never on Service.Client."
 
   - name: canisterCycleTime
     category: formula
