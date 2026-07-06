@@ -30,7 +30,7 @@
 #   Superseded entries:     Grep pattern="status: superseded"
 
 version: 1
-last_updated: ""
+last_updated: "2026-07-06"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -43,7 +43,18 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: run_lifecycle_end_state
+    status: active
+    owner_system: run-controller
+    adr: docs/architecture/adr-0002-runcontroller-architecture.md
+    interface: "RunEndConditionRaised(conditionType, squadState): () to raise (write, one-shot latched); GetRunEndedSignal(): Signal to subscribe (read-only)"
+    write_access: run-controller-only (the _hasEnded latch itself; callers raise conditions, they do not write the latch directly)
+    referenced_by:
+      - docs/architecture/adr-0002-runcontroller-architecture.md
+    added: 2026-07-06
+    revised: ""
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
 # Example:
 #
@@ -71,7 +82,36 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: run_end_condition_raised
+    status: active
+    pattern: direct_call
+    producer: "player-controller (T7 wipe, T8 victory) AND crafting-and-items (C.5.8 BCT-DEFEAT) — multiple callers, one contract"
+    consumers:
+      - run-controller
+    adr: docs/architecture/adr-0002-runcontroller-architecture.md
+    signal_signature: "RunEndConditionRaised(conditionType: \"wipe\" | \"victory\", squadState: SquadStateSnapshot): ()"
+    referenced_by:
+      - docs/architecture/adr-0002-runcontroller-architecture.md
+    added: 2026-07-06
+    revised: ""
+    note: "RATIFIED by the user 2026-07-06 — server-internal only, MUST NOT be placed under a Knit service's .Client sub-table (see forbidden_patterns)."
+
+  - contract: run_ended
+    status: active
+    pattern: signal
+    producer: run-controller
+    consumers:
+      - hud
+      - analytics
+      - player-controller (own T7/T8 terminal-state cleanup)
+    adr: docs/architecture/adr-0002-runcontroller-architecture.md
+    signal_signature: "RunEnded(exitReason: \"wipe\" | \"victory\", squadState: SquadStateSnapshot, timestamp: number) — fired exactly once per run"
+    referenced_by:
+      - docs/architecture/adr-0002-runcontroller-architecture.md
+    added: 2026-07-06
+    revised: ""
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
 # Example:
 #
@@ -131,7 +171,30 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+  - purpose: cross_service_signal
+    status: active
+    api: "Knit's bundled Signal class (RbxUtil) via Signal.new()"
+    not: "Instance.new(\"BindableEvent\") for new cross-service signals"
+    adr: docs/architecture/adr-0001-knit-lifecycle-ordering-discipline.md
+    reason: "Signal:Fire() dispatch synchronicity is a plain-Luau-call guarantee, independent of Workspace.SignalBehavior (which governs BindableEvent and has been drifting toward Deferred across Roblox releases)."
+    referenced_by:
+      - docs/architecture/adr-0001-knit-lifecycle-ordering-discipline.md
+    added: 2026-07-06
+    revised: ""
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
+
+  - purpose: cross_service_live_registration
+    status: active
+    api: "require()-cached RegistrationHandshake module (module-private, not a Knit service)"
+    not: "Knit.GetService() when a live registration (not just a signal read) must cross the undefined KnitStart-order boundary"
+    adr: docs/architecture/adr-0001-knit-lifecycle-ordering-discipline.md
+    reason: "require() module-cache identity is independent of Knit's KnitInit/KnitStart lifecycle, so it works regardless of which service's KnitStart runs first. Generalized from Ecological Disturbance's ED<->Predator AI RegistrationHandshake design."
+    referenced_by:
+      - docs/architecture/adr-0001-knit-lifecycle-ordering-discipline.md
+    added: 2026-07-06
+    revised: ""
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
 # Example:
 #
@@ -157,7 +220,47 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: knitstart_time_cross_service_construction
+    status: active
+    description: "A service must never construct an object, signal, or accessor
+      inside KnitStart if another service might need to synchronously read or
+      call it during that other service's own KnitStart. All such objects must
+      be constructed during KnitInit instead."
+    why: "Knit guarantees all KnitInits complete before any KnitStart fires, but
+      gives no ordering guarantee between different services' KnitStart calls.
+      Constructing a cross-service-visible object in KnitStart risks another
+      service's KnitStart running first and finding the object missing."
+    adr: docs/architecture/adr-0001-knit-lifecycle-ordering-discipline.md
+    added: 2026-07-06
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
+
+  - pattern: registration_handshake_across_actor_boundary
+    status: active
+    description: "RegistrationHandshake modules must only be require()'d from the
+      default serial script context, never from inside an Actor used for
+      parallel Luau execution."
+    why: "require() module-cache identity is scoped per Luau execution context.
+      require()-ing the same ModuleScript from inside an Actor returns a
+      separate cached table from the main serial context, silently breaking
+      the RegistrationHandshake singleton assumption with no error."
+    adr: docs/architecture/adr-0001-knit-lifecycle-ordering-discipline.md
+    added: 2026-07-06
+    note: "RATIFIED by the user 2026-07-06 — no longer pending. Binding until/unless a future ADR explicitly re-examines parallel Luau adoption."
+
+  - pattern: run_end_condition_raised_exposed_as_client_method
+    status: active
+    description: "RunController's RunEndConditionRaised method must never be placed
+      under a Knit service's .Client sub-table, and must never be reachable by a
+      RemoteFunction/RemoteEvent a game client can fire directly."
+    why: "RunEndConditionRaised ends the run for the whole squad on a single call
+      with no server-side validation of the caller's claim (it trusts the caller
+      to have already determined the condition is true). Exposing it to clients
+      would let any connected player fire a fake wipe/victory and end the run for
+      everyone — a server-authority breach."
+    adr: docs/architecture/adr-0002-runcontroller-architecture.md
+    added: 2026-07-06
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
 # Example:
 #
