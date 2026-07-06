@@ -4,7 +4,7 @@
 > Systems: Crafting & Items, Ecological Disturbance, HUD, Player Controller, Predator AI, Resource Management, Resource Node.
 > Method: 4 parallel review agents — consistency (2 passes: ED-outbound + remainder), design-theory holism, cross-system scenario walkthrough — with every headline blocker independently re-verified against the artifacts by the coordinating session (grep + line-range reads on both sides of each claim).
 > **Coverage disclosure (union across seats):** every GDD was fully read by at least one seat EXCEPT: Crafting's own Acceptance-Criteria table was not cross-checked in full against sibling ACs, and Player Controller's AC/Open-Questions tail had only partial coverage. The ED companion files were lightly touched this run (they were exhaustively audited in ED rounds 22–24 days prior). These gaps are marked NOT-CHECKED in seat reports, not silently assumed clean.
-> **Widget note:** the write-report and flag-GDDs approvals timed out (user AFK); the recommended options were adopted per this project's established timeout precedent (2026-07-03) — **pending user ratification**.
+> **Widget note:** the write-report and flag-GDDs approvals timed out (user AFK); the recommended options were adopted per this project's established timeout precedent (2026-07-03) — **explicitly RATIFIED by the user 2026-07-06**, along with the C4/D1 rulings and the stage advance to Technical Setup.
 
 ---
 

@@ -42,4 +42,4 @@ Chain-of-Verification: 5 questions checked — independently re-verified (via gr
 
 ## Resolution
 
-`production/stage.txt` written to `Technical Setup` — adopted per this session's established timeout-precedent (the closing widget received no response after 60s, three consecutive times in this turn; the recommended option — advance now, concerns as day-1 tasks — was adopted). **Pending user ratification**, consistent with every other timeout-adopted decision this session (the C4/D1 rulings themselves, the cross-review report-write/index-flag actions).
+`production/stage.txt` written to `Technical Setup` — originally adopted per this session's established timeout-precedent (the closing widget received no response after 60s, three consecutive times in this turn; the recommended option — advance now, concerns as day-1 tasks — was adopted). **RATIFIED by the user 2026-07-06** — the stage advance, along with the C4/D1 rulings and the cross-review report-write/index-flag actions, is now explicitly confirmed, not just timeout-adopted.

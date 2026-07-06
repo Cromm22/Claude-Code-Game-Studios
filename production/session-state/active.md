@@ -111,7 +111,7 @@ User ruled accept-as-is over the narrow-gate NEEDS REVISION; systems-index + rev
 - Cross-review verdict: FAIL (2026-07-05) → **superseded: closes PASS-equivalent (2026-07-06)**. Next: /gate-check toward architecture.
 
 ## Session Extract — /gate-check systems-design→technical-setup 2026-07-06
-- Verdict: CONCERNS (no blockers; CD/PR/AD concerns, TD ready). production/stage.txt written to "Technical Setup" (timeout-adopted, still PENDING RATIFICATION — 3 consecutive widget timeouts this turn; distinct from the C4/D1 rulings, which the user explicitly ratified separately on 2026-07-06).
+- Verdict: CONCERNS (no blockers; CD/PR/AD concerns, TD ready). production/stage.txt written to "Technical Setup" (originally timeout-adopted — 3 consecutive widget timeouts this turn — **now explicitly RATIFIED by the user 2026-07-06**, same as the C4/D1 rulings).
 - Panel: CD-CONCERNS (RunController climax, Pillar-2 gather-phase tension, pending rulings), TD-READY, PR-CONCERNS (RunController = near-term architecture blocker, ADR round-inflation guardrail), AD-CONCERNS (OQ.6 oxygen-color contradiction vs planned HSV CI gate).
 - Day-1 Technical Setup tasks: ratify C4/D1; author RunController contract FIRST (gates PC architecture); resolve HUD OQ.6 before its ADR/CI-hook; port round-inflation guardrail into ADR process; decide Camera/OQ.3; gate PA ADR on prototype; front-load N1/N3/N5 empirical Roblox verifications.
 - Gate-check's own chain-of-verification caught + fixed one more stale ref (HUD OQ.4, bearing channel).
