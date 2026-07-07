@@ -1,0 +1,30 @@
+{
+  "name": "Terranova",
+  "tree": {
+    "$className": "DataModel",
+    "$properties": {
+      "PlaceVersion": 1
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "gameplay": {
+        "$path": "src/gameplay"
+      }
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Packages": {
+        "$path": "Packages"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayer",
+        "controllers": {
+          "$path": "src/controllers"
+        }
+      }
+    }
+  }
+}

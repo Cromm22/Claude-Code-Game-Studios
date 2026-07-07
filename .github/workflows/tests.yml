@@ -1,0 +1,50 @@
+name: Automated Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run TestEZ Specs (Lune, headless)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # NOTE: This CI workflow uses Foreman + Lune (standalone Luau runtime).
+      # Lune is a proper Luau interpreter that can execute this project's code,
+      # which uses Luau syntax (--!strict, type annotations, compound operators)
+      # that plain Lua 5.1 cannot parse. Lune provides built-in Roblox API
+      # emulation (@lune/roblox) for game:GetService(), require(), etc.
+      #
+      # Foreman (github.com/Roblox/foreman) manages CLI tool versions via
+      # foreman.toml. It installs: Lune (test runner), Rojo (build tool).
+      #
+      # See tests/README.md for architecture documentation and tests/run_tests.lua
+      # for the actual test runner implementation.
+
+      - name: Install Foreman
+        run: |
+          curl -L https://github.com/Roblox/foreman/releases/latest/download/foreman-linux-x86_64.zip -o foreman.zip
+          unzip foreman.zip -d /usr/local/bin
+          chmod +x /usr/local/bin/foreman
+          echo "$HOME/.foreman/bin" >> "$GITHUB_PATH"
+
+      - name: Install project tools (Lune, Rojo) via Foreman
+        run: foreman install
+
+      - name: Run TestEZ specs under Lune
+        run: |
+          lune run tests/run_tests.lua tests/unit tests/integration
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/results/
+          if-no-files-found: ignore
