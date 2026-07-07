@@ -1,5 +1,16 @@
 # Session State
 
+## Session Extract — /story-done pc-2, /dev-story+/code-review+/story-done rc-1+pc-1 (2026-07-07)
+- pc-2 closed COMPLETE WITH NOTES (4 advisory items carried from its earlier code review, logged as tech debt — `docs/tech-debt-register.md` created, TD-001 through TD-004).
+- rc-1 (RunController Core Aggregator) and pc-1 (Locomotion & Sprint-State Authority) implemented IN PARALLEL (independent epics/files, no conflicts — both edited `tests/run_tests.lua` concurrently and merged cleanly). Both code-reviewed (engine specialist verdict CLEAN on both; QA verdict GAPS on both, all gaps closed same-session — rc-1 got a branch-scoped `warn()` check + a `squadState=nil` test; pc-1 got 6 new tests closing the biggest gap found this session: the voluntary "stop sprinting" domain path had never been directly tested, only inferred via the forced-revert path, plus zero coverage on `CheckSprintToggleRateLimit` despite this project's own exploit-resistance testing standard). Both closed COMPLETE.
+- `production/sprint-status.yaml` updated: `rc-1`, `pc-1`, `pc-2` → `done`; `rc-2`, `pc-3`, `pc-11` all newly unblocked (`ready-for-dev`).
+- Process note: a second subagent (rc-1's implementer) also flagged suspected prompt-injection content, including a new category — a "file modified, don't tell the user" note. Independently confirmed as legitimate: both rc-1 and pc-1's agents really were concurrently editing `tests/run_tests.lua` in parallel, so the harness correctly surfaced that to each of them. Not an attack — same false-positive pattern as two earlier incidents this session (stale multi-engine-template docs, the date-change reminder), now with a third confirmed-legitimate category added to the pattern.
+- Not yet committed: ed-3 + fixes, pc-2's closure, rc-1, pc-1, `docs/tech-debt-register.md`.
+
+**NEXT**: ed-4 (Attribution Archive), ed-5 (Decay Formula & fieldValue()), rc-2, pc-3, pc-11 are all ready-for-dev. Consider committing the substantial uncommitted backlog (ed-3, pc-2 closure, rc-1, pc-1, tech-debt register) before continuing, and eventually opening a PR to `main` for a real CI signal (CI uses its own Foreman-installed Lune, not this local `.tools/lune.exe`).
+
+---
+
 ## Session Extract — /dev-story + /code-review, pc-2 and ed-1 (2026-07-07)
 
 - **pc-2 (Lantern Axis, Light-to-Gather Gate & Tap-Hold Gather)**: implemented (`src/gameplay/services/PlayerControllerLanternLogic.luau` + `PlayerControllerService.luau`, test at `tests/unit/player-controller/lantern-gather-gate_test.luau`), code-reviewed (verdict CHANGES REQUIRED, solely on the then-missing test-execution infra — no architectural violations). Committed `ea3119a`, pushed to `origin/crafting-round2-patch`. This same commit also scaffolded the test toolchain (`default.project.json`, `foreman.toml`, `tests/run_tests.lua`, `.github/workflows/tests.yml`) around **Lune** (a real Luau runtime) after an initial Lua 5.1/Lemur attempt was caught and rejected as fundamentally incompatible with this project's `--!strict`/typed/`+=` Luau syntax. Toolchain has NOT been run for real anywhere yet (no local Lune/Foreman; CI push happened but branch push alone doesn't trigger the workflow — needs a PR to `main` or a direct push to `main` to actually fire it).
@@ -19,7 +30,19 @@
 - ed-2 (Emission Schema & Server-Authoritative Emit() Intake) implemented, code-reviewed, and closed COMPLETE in one continuous session. `src/gameplay/services/DisturbanceServiceEmissionLogic.luau` (new, pure validator) + `DisturbanceService.luau` (added `Emit()`) + `tests/unit/ecological-disturbance/emission-schema-server-emit-intake_test.luau` (39 tests, genuinely executed and passing). Code review found and fixed 3 non-blocking issues: an ADR-0004 mis-citation, a `_liveSources` typing gap, and — most notably — a real (currently non-manifesting) `stripLuaComments` test-harness bug: its naive first-`--`-match would have silently truncated a `warn()` message that used `--` as a visual separator, hiding the checked-token region from static checks. Fixed by rewording the message and correcting the test file's own overconfident safety-claim comment. Full suite re-confirmed green (4/4, exit 0) after every fix.
 - `production/sprint-status.yaml` updated: `ed-2` → `done`; `ed-3` unblocked (`ready-for-dev`, blocker cleared — both its dependencies, ed-1 and ed-2, are now done).
 
-**NEXT**: pc-2 still needs its own `/story-done` pass (same verified test evidence now applies — worth re-running the full report rather than assuming). ed-3 (Spatial Hash Grid, Live-Source List & Cap Eviction) is now the natural next ED story. Then commit ed-1 + ed-2 + the test-harness fixes together. Then consider opening a PR to `main` to get the real CI signal too (CI uses its own Foreman-installed Lune, not this local `.tools/lune.exe` — should match, but worth confirming for real).
+**COMMITTED (2026-07-07)**: ed-1 + ed-2 + Lune toolchain fixes committed as `3d119ef`. Not yet pushed.
+
+## Session Extract — /dev-story + /code-review + /story-done ed-3 (2026-07-07)
+- ed-3 (Spatial Hash Grid, Live-Source List & Cap Eviction) implemented, code-reviewed, and closed COMPLETE. `src/gameplay/services/DisturbanceServiceSpatialGridLogic.luau` (new, pure grid/eviction logic) + `DisturbanceService.luau` (Emit() now routes through it) + `tests/unit/ecological-disturbance/spatial-grid-live-source-cap-eviction_test.luau` (21 tests, genuinely executed passing). Code review: engine specialist verdict CLEAN (hand-traced cell math, eviction ordering, tie-break order-independence, grid hygiene — all correct); QA verdict GAPS, all 3 closed same-session (undocumented duplicate-emissionId precondition, untested ops-log warn() call site, unacknowledged liveCount scan cost — all fixed with doc-comments + one new test). Full suite re-confirmed green (5/5, exit 0) after every fix.
+- `production/sprint-status.yaml` updated: `ed-3` → `done`; `ed-4` and `ed-5` both unblocked (`ready-for-dev`).
+- Not yet committed.
+
+## Session Extract — /story-done pc-2 (2026-07-07)
+- Verdict: COMPLETE WITH NOTES. Story: `production/epics/player-controller/story-002-lantern-gather-gate.md` — Lantern Axis, Light-to-Gather Gate & Tap-Hold Gather. Test evidence re-confirmed genuinely passing as part of the current 5/5-file suite.
+- 4 advisory items carried forward from the original code-review (never applied — Suggestions, not Required Changes) logged as tech debt: **`docs/tech-debt-register.md` created** (TD-001 through TD-004, the last being ed-3's own already-flagged Story-004 forward obligation, consolidated into the same register).
+- `production/sprint-status.yaml` updated: `pc-2` → `done`.
+
+**NEXT**: All 3 stories originally flagged as unclosed (ed-1, ed-2, ed-3, pc-2) are now Complete. Remaining ready-for-dev stories: ed-4 (Attribution Archive — flagged with its own forward-test obligation, TD-004), ed-5 (Decay Formula & fieldValue()), rc-1, pc-1. Uncommitted work: ed-3 + its code-review fixes, pc-2's story-file/sprint-status updates, and the new tech-debt register. Consider committing next, and eventually opening a PR to `main` for a real CI signal (CI uses its own Foreman-installed Lune, not this local `.tools/lune.exe`).
 
 ---
 

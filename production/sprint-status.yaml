@@ -18,19 +18,19 @@ stories:
     name: "RunController Core Aggregator — RunEndConditionRaised, Idempotency Latch, and defeatReason Payload Support"
     file: "production/epics/runcontroller/story-001-core-aggregator.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-07"
   - id: "rc-2"
     name: "RunController GetRunEndedSignal Accessor and KnitInit/KnitStart Subscriber-Safety Verification"
     file: "production/epics/runcontroller/story-002-getrunendedsignal-accessor.md"
     priority: must-have
-    status: backlog
+    status: ready-for-dev
     owner: ""
     estimate_days: 0.5
-    blocker: "depends on rc-1"
+    blocker: ""
     completed: ""
 
   # --- Ecological Disturbance ---
@@ -56,28 +56,28 @@ stories:
     name: "Spatial Hash Grid, Live-Source List & Cap Eviction"
     file: "production/epics/ecological-disturbance/story-003-spatial-grid-live-source-cap-eviction.md"
     priority: must-have
+    status: done
+    owner: ""
+    estimate_days: 1.0
+    blocker: ""
+    completed: "2026-07-07"
+  - id: "ed-4"
+    name: "Attribution Archive (write-once store, TTL, count-cap FIFO)"
+    file: "production/epics/ecological-disturbance/story-004-attribution-archive-ttl-cap.md"
+    priority: should-have
     status: ready-for-dev
     owner: ""
     estimate_days: 1.0
     blocker: ""
     completed: ""
-  - id: "ed-4"
-    name: "Attribution Archive (write-once store, TTL, count-cap FIFO)"
-    file: "production/epics/ecological-disturbance/story-004-attribution-archive-ttl-cap.md"
-    priority: should-have
-    status: backlog
-    owner: ""
-    estimate_days: 1.0
-    blocker: "depends on ed-2, ed-3"
-    completed: ""
   - id: "ed-5"
     name: "Decay Formula, Spatial Falloff & fieldValue()"
     file: "production/epics/ecological-disturbance/story-005-decay-falloff-fieldvalue.md"
     priority: should-have
-    status: backlog
+    status: ready-for-dev
     owner: ""
     estimate_days: 1.0
-    blocker: "depends on ed-3"
+    blocker: ""
     completed: ""
   - id: "ed-6"
     name: "Tier Classification with Hysteresis, TierCrossedEvent & Post-Hitch Cascade"
@@ -193,28 +193,28 @@ stories:
     name: "Locomotion & Sprint-State Authority (S1/S2) + Stamina + Ghost-Sprint Guard"
     file: "production/epics/player-controller/story-001-locomotion-sprint-stamina-authority.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 1.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-07"
   - id: "pc-2"
     name: "Lantern Axis, Light-to-Gather Gate & Tap-Hold Gather"
     file: "production/epics/player-controller/story-002-lantern-gather-gate.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-07-07"
   - id: "pc-3"
     name: "Disturbance Emission Publisher (Sprint/Light Pulses, Grace, Cooldown, Magnitude)"
     file: "production/epics/player-controller/story-003-disturbance-emission-publisher.md"
     priority: must-have
-    status: backlog
+    status: ready-for-dev
     owner: ""
     estimate_days: 1.5
-    blocker: "depends on pc-1, pc-2 (pc-2 deferred to should-have — Light-pulse half blocked, see sprint-1.md footnote); ed-2, ed-3"
+    blocker: ""
     completed: ""
   - id: "pc-4"
     name: "Death-Cost Reconciliation Core (deathEventId + State Machine)"
@@ -283,10 +283,10 @@ stories:
     name: "NetworkOwnership & Character Replication Bandwidth"
     file: "production/epics/player-controller/story-011-networkownership-bandwidth.md"
     priority: nice-to-have
-    status: backlog
+    status: ready-for-dev
     owner: ""
     estimate_days: 1.0
-    blocker: "depends on pc-1"
+    blocker: ""
     completed: ""
   - id: "pc-12"
     name: "Quick-Ping (Raycast, Gesture, Origin Tolerance)"

@@ -224,6 +224,11 @@ local function setup_roblox_environment()
 		"PlayerControllerLanternLogic"
 	);
 	load_luau_file(
+		"src/gameplay/services/PlayerControllerLocomotionStaminaLogic.luau",
+		gameplayFolder,
+		"PlayerControllerLocomotionStaminaLogic"
+	);
+	load_luau_file(
 		"src/gameplay/services/DisturbanceServiceBootstrapLogic.luau",
 		gameplayFolder,
 		"DisturbanceServiceBootstrapLogic"
@@ -232,6 +237,16 @@ local function setup_roblox_environment()
 		"src/gameplay/services/DisturbanceServiceEmissionLogic.luau",
 		gameplayFolder,
 		"DisturbanceServiceEmissionLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceSpatialGridLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceSpatialGridLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/RunControllerLogic.luau",
+		gameplayFolder,
+		"RunControllerLogic"
 	);
 	load_luau_file("src/core/ServerBootstrap.luau", coreFolder, "ServerBootstrap");
 end

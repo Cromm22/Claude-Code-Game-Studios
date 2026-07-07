@@ -1,7 +1,7 @@
 # Story 002: Lantern Axis, Light-to-Gather Gate & Tap-Hold Gather
 
 > **Epic**: Player Controller
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: 1.0 day
@@ -95,3 +95,15 @@
 
 - Depends on: None (parallel to Story 001; orthogonal state axis)
 - Unlocks: Story 003, Story 010
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-07
+**Criteria**: 7/7 passing
+**Deviations**: None blocking. Four advisory items carried forward from the original `/code-review` pass (2026-07-07), never applied since they were Suggestions, not Required Changes, and the story's implementation itself was never touched after that review:
+1. `_globalEventCounts` (the ADR-0006 global RemoteEvent budget) is currently service-scoped to `PlayerControllerService`, not truly project-wide — flagged as an input for Story 010 (RemoteEvent Trust Boundary Application) to resolve when it formalizes the shared canonical-order helper.
+2. Minor redundant window-reset duplication in `PlayerControllerService.luau`'s step-3 global-budget check (harmless, traced clean, just inconsistent with step 2's cleaner pattern).
+3. 4 suggested (non-blocking) test cases were never added: the `no-player-state` drop path, double-`BeginGatherHold` overwrite semantics, `TryCommitGatherHold` nodeId-mismatch branch, and H.10's literal 200ms debounce window (current implementation debounces unconditionally, not time-boxed — functionally stricter than the AC, not a violation, but untested as literally specified).
+**Test Evidence**: Logic: `tests/unit/player-controller/lantern-gather-gate_test.luau` — created and genuinely executed passing (re-confirmed 2026-07-07 as part of the full 5/5-file suite, alongside ed-1/ed-2/ed-3).
+**Code Review**: Complete (`/code-review`, earlier session) — verdict was CHANGES REQUIRED solely due to the then-unexecuted test suite (infra gap, since resolved this session); no architectural violations were found at the time.

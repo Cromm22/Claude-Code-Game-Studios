@@ -18,7 +18,8 @@
 --   - Story 002: DONE -- see the Emit() method below and DisturbanceServiceEmissionLogic.luau
 --     (bullet kept and marked complete, rather than deleted, to preserve the Story 001 scope
 --     note's original enumeration as a historical record)
---   - Story 003: spatial grid insertion/removal/query logic
+--   - Story 003: DONE -- see the Emit() method below and DisturbanceServiceSpatialGridLogic.luau
+--     (bullet kept and marked complete, matching the Story 002 precedent immediately above)
 --   - Story 004: attribution archive TTL/cap-eviction logic
 --   - Story 010: Humanoid.Died subscription chain body and OnPlayerDied fan-out dispatch
 --   - Story 011: RegistrationHandshake module's actual export functions
@@ -39,6 +40,17 @@
 -- self._liveSources table keyed by emissionId (Story 003 owns spatial-grid cell placement;
 -- Story 004 owns the attribution archive entry -- both explicitly out of this story's scope).
 --
+-- SCOPE NOTE (Story 003 -- production/epics/ecological-disturbance/story-003-spatial-grid-
+-- live-source-cap-eviction.md): Emit()'s tail now routes through
+-- DisturbanceServiceSpatialGridLogic.InsertEmission(), which places the payload into its grid
+-- cell AND evicts the single oldest live source (by emissionTime ascending, per ADR-0004's
+-- Q3 decision) if self._liveSources is already at DisturbanceConstants.MAX_LIVE_SOURCES. All
+-- grid/cell/eviction math lives in that dependency-free module; this file only owns the real
+-- self._spatialGrid/self._liveSources/self._insertionSequence state tables and the ops-log
+-- warn() call site for cap-evictions. Story 004 owns the attribution archive entry, which this
+-- path never reads or writes (archive independence -- see DisturbanceServiceSpatialGridLogic
+-- .luau's own header note).
+--
 -- Session-scoped (TR-ed-049): no DataStoreService interaction anywhere in this file.
 
 local RunService = game:GetService("RunService")
@@ -50,9 +62,10 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local DisturbanceConstants = require(script.Parent.DisturbanceConstants)
 local BootstrapLogic = require(script.Parent.DisturbanceServiceBootstrapLogic)
 local EmissionLogic = require(script.Parent.DisturbanceServiceEmissionLogic)
+local SpatialGridLogic = require(script.Parent.DisturbanceServiceSpatialGridLogic)
 
-export type SourceId = string
-export type SpatialGrid = { [number]: { [number]: { SourceId } } } -- grid[cellX][cellZ] = flat list of source ids (ADR-0004)
+export type SourceId = SpatialGridLogic.SourceId
+export type SpatialGrid = SpatialGridLogic.SpatialGrid -- grid[cellX][cellZ] = flat list of source ids (ADR-0004)
 
 local DisturbanceService = Knit.CreateService({
 	Name = "DisturbanceService",
@@ -65,6 +78,9 @@ DisturbanceService.ValidateInfluenceRadius = BootstrapLogic.ValidateInfluenceRad
 DisturbanceService.ValidateSpatialGridCellSize = BootstrapLogic.ValidateSpatialGridCellSize
 DisturbanceService.StepAccumulator = BootstrapLogic.StepAccumulator
 DisturbanceService.ValidateAndBuildEmission = EmissionLogic.ValidateAndBuildEmission
+DisturbanceService.CellCoordFor = SpatialGridLogic.CellCoordFor
+DisturbanceService.QueryNeighborhood = SpatialGridLogic.QueryNeighborhood
+DisturbanceService.InsertEmission = SpatialGridLogic.InsertEmission
 
 -- ============================================================================
 -- KnitInit -- builds. Per ADR-0001 Rule 1, every object another service might need to
@@ -95,6 +111,13 @@ function DisturbanceService:KnitInit(): ()
 	self._spatialGrid = {} :: SpatialGrid
 	self._liveSources = {} :: { [string]: EmissionLogic.EmissionPayload } -- keyed by emissionId (Story 002)
 	self._attributionArchive = {} :: { [string]: any } -- Story 004 defines the AttributionEntry shape
+
+	-- Story 003: the deterministic-tie-break bookkeeping InsertEmission()'s eviction rule
+	-- needs (see DisturbanceServiceSpatialGridLogic.luau's FindOldestSourceId header note) --
+	-- a monotonic per-emission sequence counter, NOT derived from Luau's own (unordered) table
+	-- iteration order.
+	self._insertionSequence = {} :: { [string]: number }
+	self._nextInsertionSequence = 0
 
 	-- Raw BindableEvent, per the GDD's own frozen C.1.11 mechanism choice (ADR-0004's
 	-- OnPlayerDied Decision) -- NOT a Knit Signal. Only the empty channel is constructed
@@ -198,9 +221,29 @@ function DisturbanceService:Emit(
 		return
 	end
 
-	-- Story 002 scope: append to the flat live-source list only, keyed by emissionId -- Story
-	-- 003 owns spatial-grid cell placement, Story 004 owns the attribution archive entry.
-	self._liveSources[payload.emissionId] = payload
+	-- Story 003: insert into both the live-source list and the payload's spatial-grid cell,
+	-- cap-evicting the single oldest live source first if already at MAX_LIVE_SOURCES
+	-- (ADR-0004's Q3 evict-oldest policy -- Emit() itself never rejects on cap). `cellSize` is
+	-- passed explicitly from DisturbanceConstants -- see DisturbanceServiceSpatialGridLogic
+	-- .luau's header note on why the module's own fallback is never relied upon here. Story 004
+	-- owns the attribution archive entry, which this call never reads or writes.
+	local evicted, updatedNextSequence = SpatialGridLogic.InsertEmission(
+		self._spatialGrid,
+		self._liveSources,
+		self._insertionSequence,
+		self._nextInsertionSequence,
+		DisturbanceConstants.MAX_LIVE_SOURCES,
+		payload,
+		DisturbanceConstants.SPATIAL_GRID_CELL_SIZE
+	)
+	self._nextInsertionSequence = updatedNextSequence
+
+	if evicted then
+		warn(
+			("DisturbanceService:Emit() cap-evicted oldest live source: emissionId=%s sourcePlayerId=%s emissionType=%s emissionTime=%.3f")
+				:format(evicted.emissionId, tostring(evicted.sourcePlayerId), tostring(evicted.emissionType), evicted.emissionTime)
+		)
+	end
 end
 
 return DisturbanceService
