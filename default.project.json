@@ -9,6 +9,9 @@
       "$className": "ServerScriptService",
       "gameplay": {
         "$path": "src/gameplay"
+      },
+      "core": {
+        "$path": "src/core"
       }
     },
     "ReplicatedStorage": {

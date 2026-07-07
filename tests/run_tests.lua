@@ -23,8 +23,24 @@
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 
--- Lune provides a global `game` object with Roblox API emulation
-declare global game: any
+-- Lune's Roblox emulation requires explicit requires
+local roblox = require("@lune/roblox")
+local Instance = roblox.Instance
+
+-- Create a DataModel to serve as the root `game` object
+local game = Instance.new("DataModel")
+
+-- Make game and Roblox types available globally so loadstring() code can access it
+_G.game = game
+_G.Instance = Instance
+_G.Vector3 = roblox.Vector3
+_G.Vector2 = roblox.Vector2
+_G.CFrame = roblox.CFrame
+_G.Color3 = roblox.Color3
+_G.UDim2 = roblox.UDim2
+_G.UDim = roblox.UDim
+_G.Enum = roblox.Enum
+_G.BrickColor = roblox.BrickColor
 
 -- ============================================================================
 -- Configuration
@@ -94,6 +110,32 @@ local function create_result_dir()
 end
 
 -- ============================================================================
+-- Module Cache for Roblox-style Requires
+-- ============================================================================
+
+-- Since Lune's require() doesn't support Instance objects (unlike Roblox),
+-- we maintain a cache of loaded modules that test files can retrieve via
+-- Instance navigation. This maps Instance paths to their loaded module values.
+local _moduleCache: {[any]: any} = {}
+
+-- Custom require function that handles both strings and Instances
+local function custom_require(module: any): any
+	if type(module) == "string" then
+		-- String path - use Lune's native require
+		return require(module)
+	elseif type(module) == "userdata" then
+		-- Instance object - look it up in our cache
+		if _moduleCache[module] then
+			return _moduleCache[module]
+		else
+			error("Module not found in cache: " .. tostring(module))
+		end
+	else
+		error("require() expects string or Instance, got " .. type(module))
+	end
+end
+
+-- ============================================================================
 -- Roblox API Emulation Setup for Lune
 -- ============================================================================
 
@@ -125,36 +167,73 @@ local function setup_roblox_environment()
 
 	local sss = game:GetService("ServerScriptService") :: Instance
 	local gameplayFolder = ensure_path(sss, {"gameplay", "services"})
+	local coreFolder = ensure_path(sss, {"core"})
+	-- NOTE: this "core" mount is a test-harness-only convenience under
+	-- ServerScriptService, for require()-resolution purposes -- it does not mirror the real
+	-- Rojo tree, where src/core ships as its own sibling mapping (see default.project.json;
+	-- production code under src/core requires its sibling modules via script.Parent, not via
+	-- ServerScriptService.core).
 
 	-- Load actual Luau module files and mount them in the Instance tree
 	-- so they can be require()'d via game:GetService() chain
 	local function load_luau_file(filepath: string, parent: Instance, moduleName: string)
+		-- Create a ModuleScript-like instance
+		local module = Instance.new("ModuleScript")
+		module.Name = moduleName
+		module.Parent = parent
+
+		-- Read and execute the module code using loadstring
 		local ok, content = pcall(function()
 			return fs.readFile(filepath)
 		end)
 
 		if not ok then
 			warn("Could not read file: " .. filepath)
-			return
+			return module
 		end
 
-		-- Create a ModuleScript-like instance
-		local module = Instance.new("ModuleScript")
-		module.Name = moduleName
-		module.Parent = parent
+		-- Compile and execute the module code using loadstring
+		local ok_compile, loadedModule = pcall(function()
+			local fn = loadstring(content, filepath)
+			if fn then
+				return fn()
+			else
+				error("loadstring returned nil for " .. filepath)
+			end
+		end)
 
-		-- Store the source code in a property so Lune's require() can access it
-		(module :: any).Source = content
+		if not ok_compile then
+			warn("Could not execute module from " .. filepath .. ": " .. tostring(loadedModule))
+			return module
+		end
+
+		-- Store the loaded module in our cache using the Instance as key
+		_moduleCache[module] = loadedModule
+
+		-- Also store source for reference
+		local manyType: any = module
+		manyType.Source = content
 
 		return module
 	end
 
-	-- Load the module under test
+	-- Load the module(s) under test
 	load_luau_file(
 		"src/gameplay/services/PlayerControllerLanternLogic.luau",
 		gameplayFolder,
 		"PlayerControllerLanternLogic"
-	)
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceBootstrapLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceBootstrapLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceEmissionLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceEmissionLogic"
+	);
+	load_luau_file("src/core/ServerBootstrap.luau", coreFolder, "ServerBootstrap");
 end
 
 -- ============================================================================
@@ -178,6 +257,10 @@ print("=" .. string.rep("=", 69))
 
 -- Set up Roblox environment for test execution
 setup_roblox_environment()
+
+-- Override the global require function to handle Instance-based requires
+-- This allows test files to use: require(game:GetService("ServerScriptService").gameplay.services.ModuleName)
+_G.require = custom_require
 
 -- Discover all test files
 local all_tests: {string} = {}
@@ -215,6 +298,100 @@ end)
 if not has_testez then
 	warn("TestEZ not found. Install via: luarocks install testez")
 	warn("Tests will still run via direct function calls.\n")
+
+	-- Provide mock TestEZ functions so tests can at least load
+	-- These are minimal stubs that allow test files to execute
+	_G.describe = function(name: string, fn: () -> ())
+		-- Minimal describe - just calls the function
+		if fn then fn() end
+	end
+
+	_G.it = function(name: string, fn: () -> ())
+		-- Minimal it - just calls the function
+		if fn then fn() end
+	end
+
+	_G.expect = function(value: any)
+		-- Minimal expect - returns an object with chained assertions.
+		--
+		-- BUG FIX: the original version of this mock defined its matcher methods
+		-- with Luau's colon self-sugar (`function assertion:equal(other)`), but
+		-- every real call site in this project's test files chains via plain
+		-- dot-access (`expect(x).to.equal(y)`, NOT `expect(x).to:equal(y)`).
+		-- A colon-sugared method invoked via a dot-call receives its caller's
+		-- first REAL argument into the method's implicit `self` parameter, so
+		-- the actual second parameter (`other`) was always nil regardless of
+		-- what the test passed -- e.g. `expect(0).to.equal(0)` silently checked
+		-- `0 ~= nil` and failed with "Expected 0 to equal nil" on every call,
+		-- for every test file, immediately on the first assertion. Fixed by
+		-- declaring these as plain closures (no `self`/colon at all) that
+		-- capture `value` from the enclosing `expect()` scope directly.
+		--
+		-- Also adds real `.never` support (`expect(x).never.to.equal(y)`),
+		-- which the original mock didn't implement at all, even though several
+		-- of this project's real test files use it.
+		local function makeAssertion(negate: boolean)
+			local assertion = {}
+
+			assertion.equal = function(other: any)
+				local isEqual = value == other
+				if negate then
+					if isEqual then
+						error("Expected " .. tostring(value) .. " to NOT equal " .. tostring(other))
+					end
+				else
+					if not isEqual then
+						error("Expected " .. tostring(value) .. " to equal " .. tostring(other))
+					end
+				end
+				return assertion
+			end
+
+			assertion.ok = function()
+				local truthy = value and true or false
+				if negate then
+					if truthy then
+						error("Expected falsy value, got " .. tostring(value))
+					end
+				else
+					if not truthy then
+						error("Expected truthy value, got " .. tostring(value))
+					end
+				end
+				return assertion
+			end
+
+			assertion.a = function(typ: string)
+				local matches = type(value) == typ
+				if negate then
+					if matches then
+						error("Expected type NOT " .. typ .. " but got " .. type(value))
+					end
+				else
+					if not matches then
+						error("Expected type " .. typ .. " but got " .. type(value))
+					end
+				end
+				return assertion
+			end
+
+			return assertion
+		end
+
+		local positive = makeAssertion(false)
+		local negative = makeAssertion(true)
+
+		return {
+			to = positive,
+			be = positive,
+			never = { to = negative, be = negative },
+		}
+	end
+
+	_G.pending = function(name: string)
+		-- Minimal pending - just logs
+		print("PENDING: " .. name)
+	end
 end
 
 -- Create result directory
@@ -232,9 +409,38 @@ local failed_count = 0
 for _, test_file_relative in all_tests do
 	print("Running: " .. test_file_relative)
 
-	-- Lune's require() can load .luau files directly from the filesystem
+	-- Load test file using loadstring() and execute it
+	-- The custom_require function will handle Instance-based requires
 	local ok_load, test_fn = pcall(function()
-		return require(test_file_relative)
+		local content = fs.readFile(test_file_relative)
+
+		-- Prepend variable declarations to make globals available to the loaded code
+		-- This works around Lune's loadstring() environment isolation
+		local preamble = [[
+local game = _G.game
+local Instance = _G.Instance
+local require = _G.require
+local describe = _G.describe
+local it = _G.it
+local expect = _G.expect
+local pending = _G.pending
+local Vector3 = _G.Vector3
+local Vector2 = _G.Vector2
+local CFrame = _G.CFrame
+local Color3 = _G.Color3
+local UDim2 = _G.UDim2
+local UDim = _G.UDim
+local Enum = _G.Enum
+local BrickColor = _G.BrickColor
+]]
+		local wrapped_content = preamble .. content
+
+		local fn = loadstring(wrapped_content, test_file_relative)
+		if fn then
+			return fn()
+		else
+			error("loadstring returned nil")
+		end
 	end)
 
 	if not ok_load then

@@ -87,7 +87,7 @@
 
 **Story Type**: Logic
 **Required evidence**: `tests/unit/player-controller/lantern-gather-gate_test.luau`
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing — verified 2026-07-07 via `.tools/lune.exe run tests/run_tests.lua tests/unit tests/integration` (exit code 0, 3/3 test files pass, 0 failures). One test-harness bug fixed during verification (mock `expect()` matcher's argument binding), unrelated to this story's own logic.
 
 ---
 
