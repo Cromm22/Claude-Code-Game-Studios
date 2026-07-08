@@ -91,4 +91,16 @@ function RunController:RunEndConditionRaised(
 	self._runEnded:Fire(payload)
 end
 
+-- ============================================================================
+-- GetRunEndedSignal -- accessor (Story 002). Subscribers (HUD's end-screen, analytics,
+-- Player Controller's T7/T8 cleanup) call this during their OWN KnitStart to obtain the
+-- Signal object constructed above in KnitInit -- safe regardless of KnitStart order between
+-- services, per ADR-0001 Rule 1 ("KnitInit builds, KnitStart connects"). Every call returns
+-- the SAME Signal instance; this method never constructs a new one.
+-- ============================================================================
+
+function RunController:GetRunEndedSignal(): Signal.Signal
+	return self._runEnded
+end
+
 return RunController

@@ -171,6 +171,51 @@ function DisturbanceServiceSpatialGridLogic.QueryNeighborhood(
 end
 
 -- ============================================================================
+-- Story 008 (D.6 / TR-ed-046) -- general cell-range query primitive for GetHottestHotspot's
+-- `liveSourcesInGridCellsIntersecting(callerPosition, searchRadius)`. NOT the same as
+-- QueryNeighborhood above: that primitive is a FIXED 3x3 neighborhood, sized correctly for
+-- fieldValue()'s/topContributorsAt's fixed INFLUENCE_RADIUS (24 studs at 32-stud cells).
+-- GetHottestHotspot's searchRadius is caller-supplied and documented up to 512 studs (Predator
+-- AI's recommended 32-512 stud range) -- reusing the fixed 3x3 primitive for this step would
+-- silently cap effective search range at ~48 studs regardless of the caller's searchRadius
+-- argument. This function computes the cell range needed to cover a circle of radius
+-- `searchRadius` around `centerPosition` and returns every source id in that range (a superset
+-- of the true circle -- the caller still performs the exact dist2DSquared <= searchRadius^2 cull
+-- per D.6 step 1's own inner check; over-inclusion here is a correctness-safe superset, not a bug).
+-- ============================================================================
+
+--- Returns a flat array of every source id present in every grid cell whose extent could
+--- intersect a circle of radius `searchRadius` centered at `centerPosition`. See this section's
+--- own header note for why this is a distinct primitive from QueryNeighborhood.
+function DisturbanceServiceSpatialGridLogic.QueryCellsInRadius(
+	grid: SpatialGrid,
+	centerPosition: Vector3,
+	searchRadius: number,
+	cellSize: number?
+): { SourceId }
+	local size = cellSize or DEFAULT_SPATIAL_GRID_CELL_SIZE
+	local centerCellX, centerCellZ = DisturbanceServiceSpatialGridLogic.CellCoordFor(centerPosition, size)
+	-- +1 pads for a source sitting near the far edge of the outermost cell in range.
+	local cellRadius = math.floor(searchRadius / size) + 1
+
+	local result: { SourceId } = {}
+	for dx = -cellRadius, cellRadius do
+		local row = grid[centerCellX + dx]
+		if row then
+			for dz = -cellRadius, cellRadius do
+				local bucket = row[centerCellZ + dz]
+				if bucket then
+					for _, id in bucket do
+						table.insert(result, id)
+					end
+				end
+			end
+		end
+	end
+	return result
+end
+
+-- ============================================================================
 -- H.35b -- MAX_LIVE_SOURCES cap-eviction: oldest-first by emissionTime ascending, with a
 -- deterministic tie-break.
 -- ============================================================================

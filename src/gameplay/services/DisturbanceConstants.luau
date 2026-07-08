@@ -21,6 +21,15 @@ DisturbanceConstants.TENSE_THRESHOLD = 0.30
 DisturbanceConstants.HUNT_THRESHOLD = 0.65
 DisturbanceConstants.HYSTERESIS_BAND = 0.03
 
+-- Story 006 (TR-ed-054): post-hitch multi-tier cascade settle-loop defensive iteration bound.
+-- Structurally derived from the 4-member Tier ladder (Retreat->Hunt->Tense->Calm is the worst
+-- case, requiring exactly 4 tierAt calls to detect convergence) -- not a design/balance knob, but
+-- registered here rather than hardcoded inline per coding-standards.md's "never hardcode" rule.
+-- NOTE: unlike RETREAT_THRESHOLD (deliberately NOT registered -- see
+-- DisturbanceServiceHotspotQueryLogic.luau's own TierLowerBound precedent), no prior story ruled
+-- against registering this one.
+DisturbanceConstants.MAX_TIER_CASCADE_ITERATIONS = 4
+
 -- ============================================================================
 -- G.2 -- Decay
 -- ============================================================================
@@ -46,6 +55,18 @@ DisturbanceConstants.ATTRIBUTION_ARCHIVE_TTL = 1200 -- seconds
 DisturbanceConstants.MAX_ATTRIBUTION_ARCHIVE_ENTRIES = 4000
 DisturbanceConstants.MAX_FLORA_PER_CHUNK = 8
 DisturbanceConstants.CHUNK_DIMENSIONS = 64 -- studs
+
+-- Story 014 (ADR-0004 N1): a chunk is "loaded" for a player if their server-tracked position is
+-- within this many studs (XZ-plane only) of the chunk's center. VERIFICATION REQUIRED, NOT
+-- SETTLED: this provisional value is cited verbatim from the story's own Engine Notes /
+-- Implementation Notes ("provisional; verify against Workspace.StreamingTargetRadius"). Recommended
+-- next step per ADR-0004: confirm Workspace.StreamingTargetRadius is readable server-side at the
+-- pinned Studio version and derive this constant from it + a safety margin, then update this
+-- comment to record the verification. Until that Studio verification happens, treat this value as
+-- an engineering placeholder, not a finalized tuning knob -- its only failure mode is a
+-- bandwidth/timing nicety (early/late flora push), never a correctness or security issue (ADR-0004
+-- Consequences section).
+DisturbanceConstants.STREAMING_PUSH_RADIUS = 96 -- studs; PROVISIONAL, Studio-verification required
 
 -- ============================================================================
 -- G.5 -- Per-Emission-Type Magnitudes (D.7)

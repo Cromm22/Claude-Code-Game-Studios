@@ -707,17 +707,43 @@ return function()
 			test_client_table_remains_empty_no_emit_exposed_to_clients()
 		end)
 
-		local function test_no_remote_or_bindable_wiring_present_in_source()
+		-- NARROWED (code-review follow-up, 2026-07-08): this check originally asserted ZERO
+		-- occurrences of "RemoteEvent"/"RemoteFunction" anywhere in the whole file. That was
+		-- always over-broad for what Story 002 actually needed to prove (Emit() itself is never
+		-- reachable from a client-callable surface) -- it just happened to hold vacuously true
+		-- until Story 014 legitimately added real, security-reviewed raw RemoteEvents for an
+		-- entirely unrelated feature (flora chunk streaming), which correctly tripped the
+		-- whole-file check. Narrowed to scope the RemoteEvent/RemoteFunction absence check to
+		-- Emit()'s own function body specifically -- the actual security invariant this story
+		-- cares about -- while keeping the OnServerEvent/OnServerInvoke checks whole-file (those
+		-- remain a real, still-valid, zero-occurrence invariant project-wide: no server-side
+		-- client-input handler exists anywhere in this file, confirmed independently by Story
+		-- 014's own test_zero_onserverevent_registrations_for_flora_events).
+		local function test_emit_function_body_never_touches_remote_or_bindable_wiring()
 			local source = loadServiceSource()
-			expect(source:find("RemoteEvent")).to.equal(nil)
-			expect(source:find("RemoteFunction")).to.equal(nil)
-			-- BindableEvent legitimately appears once, for the unrelated OnPlayerDied channel
-			-- (Story 001/ADR-0004) -- confirm it is NOT wired to fire or call Emit.
+			local emitStart = source:find("function DisturbanceService:Emit%(")
+			expect(emitStart).never.to.equal(nil)
+			local emitEnd = source:find("\nend", emitStart :: number)
+			expect(emitEnd).never.to.equal(nil)
+			local emitBody = source:sub(emitStart :: number, emitEnd :: number)
+
+			expect(emitBody:find("RemoteEvent")).to.equal(nil)
+			expect(emitBody:find("RemoteFunction")).to.equal(nil)
+			-- BindableEvent legitimately appears elsewhere in the file, for the unrelated
+			-- OnPlayerDied channel (Story 001/ADR-0004) -- confirm Emit() itself never touches it.
+			expect(emitBody:find("BindableEvent")).to.equal(nil)
+		end
+		it("test_emit_function_body_never_touches_remote_or_bindable_wiring", function()
+			test_emit_function_body_never_touches_remote_or_bindable_wiring()
+		end)
+
+		local function test_no_server_side_client_input_handlers_present_anywhere_in_source()
+			local source = loadServiceSource()
 			expect(source:find("OnServerEvent")).to.equal(nil)
 			expect(source:find("OnServerInvoke")).to.equal(nil)
 		end
-		it("test_no_remote_or_bindable_wiring_present_in_source", function()
-			test_no_remote_or_bindable_wiring_present_in_source()
+		it("test_no_server_side_client_input_handlers_present_anywhere_in_source", function()
+			test_no_server_side_client_input_handlers_present_anywhere_in_source()
 		end)
 	end)
 end

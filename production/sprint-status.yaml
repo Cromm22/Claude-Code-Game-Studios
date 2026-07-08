@@ -10,7 +10,7 @@ goal: "Stand up the minimal cross-service spine (RunController arbiter, Ecologic
 start: "2026-07-06"
 end: "2026-07-20"
 generated: "2026-07-06"
-updated: "2026-07-07"
+updated: "2026-07-08"
 
 stories:
   # --- RunController (Must Have) ---
@@ -27,11 +27,11 @@ stories:
     name: "RunController GetRunEndedSignal Accessor and KnitInit/KnitStart Subscriber-Safety Verification"
     file: "production/epics/runcontroller/story-002-getrunendedsignal-accessor.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-08"
 
   # --- Ecological Disturbance ---
   - id: "ed-1"
@@ -65,55 +65,55 @@ stories:
     name: "Attribution Archive (write-once store, TTL, count-cap FIFO)"
     file: "production/epics/ecological-disturbance/story-004-attribution-archive-ttl-cap.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-07-08"
   - id: "ed-5"
     name: "Decay Formula, Spatial Falloff & fieldValue()"
     file: "production/epics/ecological-disturbance/story-005-decay-falloff-fieldvalue.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-07-08"
   - id: "ed-6"
     name: "Tier Classification with Hysteresis, TierCrossedEvent & Post-Hitch Cascade"
     file: "production/epics/ecological-disturbance/story-006-tier-classification-hysteresis-tiercrossedevent.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1.0
-    blocker: "depends on ed-5"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-08"
   - id: "ed-7"
     name: "Squad Aggregate t & GetSquadAggregateT Accessor"
     file: "production/epics/ecological-disturbance/story-007-squad-aggregate-t-accessor.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 0.5
-    blocker: "depends on ed-5"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-08"
   - id: "ed-8"
     name: "GetHottestHotspot Query & topContributorsAt"
     file: "production/epics/ecological-disturbance/story-008-hottest-hotspot-query.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1.0
-    blocker: "depends on ed-3, ed-5"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-08"
   - id: "ed-9"
     name: "OnDisturbanceBandCrossed Squad-Aggregate Band-Crossing Signal"
     file: "production/epics/ecological-disturbance/story-009-disturbance-band-crossed-signal.md"
     priority: should-have
-    status: backlog
+    status: ready-for-dev
     owner: ""
     estimate_days: 0.5
-    blocker: "depends on ed-6, ed-7"
+    blocker: ""
     completed: ""
   - id: "ed-10"
     name: "Humanoid.Died Monopoly & OnPlayerDied Fan-out"
@@ -155,11 +155,11 @@ stories:
     name: "StreamingEnabled Chunk Membership & Flora Chunk Snapshot/Update Push"
     file: "production/epics/ecological-disturbance/story-014-streaming-chunk-membership-flora-push.md"
     priority: nice-to-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1.5
-    blocker: "depends on ed-1, ed-5"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-08"
   - id: "ed-15"
     name: "Beacon Stationary-Squad Hunt-Floor Cap & Cap-State Discriminant"
     file: "production/epics/ecological-disturbance/story-015-beacon-stationary-cap-discriminant.md"
@@ -211,11 +211,11 @@ stories:
     name: "Disturbance Emission Publisher (Sprint/Light Pulses, Grace, Cooldown, Magnitude)"
     file: "production/epics/player-controller/story-003-disturbance-emission-publisher.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 1.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-08"
   - id: "pc-4"
     name: "Death-Cost Reconciliation Core (deathEventId + State Machine)"
     file: "production/epics/player-controller/story-004-death-cost-reconciliation-core.md"
@@ -283,11 +283,11 @@ stories:
     name: "NetworkOwnership & Character Replication Bandwidth"
     file: "production/epics/player-controller/story-011-networkownership-bandwidth.md"
     priority: nice-to-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-07-08"
   - id: "pc-12"
     name: "Quick-Ping (Raycast, Gesture, Origin Tolerance)"
     file: "production/epics/player-controller/story-012-quick-ping.md"

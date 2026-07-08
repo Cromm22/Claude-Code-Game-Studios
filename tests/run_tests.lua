@@ -192,9 +192,35 @@ local function setup_roblox_environment()
 			return module
 		end
 
-		-- Compile and execute the module code using loadstring
+		-- Compile and execute the module code using loadstring.
+		--
+		-- HARNESS GAP FIX (Story 014): every prior *Logic module only ever CONSUMED
+		-- already-constructed Roblox datatype values (Vector3, etc.) passed in as parameters by
+		-- its caller (a test file, whose own preamble below already injects `local Vector3 =
+		-- _G.Vector3`). DisturbanceServiceStreamingLogic.ChunkCenterFor is the first pure-logic
+		-- module function in this codebase that CONSTRUCTS a new Vector3 internally (from parsed
+		-- chunk-id components) -- exposing that this loadstring call never gave loaded MODULE
+		-- files the same datatype-global preamble test files get, so a bare `Vector3.new(...)`
+		-- inside a module function body failed with "attempt to index nil with 'new'" the first
+		-- time any module actually needed it. Fixed by prepending the same minimal datatype
+		-- preamble the test-file loader already uses below (excluding TestEZ-only globals
+		-- describe/it/expect/pending, and excluding `require`, since no module loaded via this
+		-- function currently calls require() at all -- see every DisturbanceService*Logic
+		-- module's own "zero-require" header precedent).
+		local modulePreamble = [[
+local game = _G.game
+local Instance = _G.Instance
+local Vector3 = _G.Vector3
+local Vector2 = _G.Vector2
+local CFrame = _G.CFrame
+local Color3 = _G.Color3
+local UDim2 = _G.UDim2
+local UDim = _G.UDim
+local Enum = _G.Enum
+local BrickColor = _G.BrickColor
+]]
 		local ok_compile, loadedModule = pcall(function()
-			local fn = loadstring(content, filepath)
+			local fn = loadstring(modulePreamble .. content, filepath)
 			if fn then
 				return fn()
 			else
@@ -229,6 +255,16 @@ local function setup_roblox_environment()
 		"PlayerControllerLocomotionStaminaLogic"
 	);
 	load_luau_file(
+		"src/gameplay/services/PlayerControllerEmissionPublisherLogic.luau",
+		gameplayFolder,
+		"PlayerControllerEmissionPublisherLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceConstants.luau",
+		gameplayFolder,
+		"DisturbanceConstants"
+	);
+	load_luau_file(
 		"src/gameplay/services/DisturbanceServiceBootstrapLogic.luau",
 		gameplayFolder,
 		"DisturbanceServiceBootstrapLogic"
@@ -242,6 +278,36 @@ local function setup_roblox_environment()
 		"src/gameplay/services/DisturbanceServiceSpatialGridLogic.luau",
 		gameplayFolder,
 		"DisturbanceServiceSpatialGridLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceAttributionArchiveLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceAttributionArchiveLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceDecayFalloffLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceDecayFalloffLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceSquadAggregateLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceSquadAggregateLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceHotspotQueryLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceHotspotQueryLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceStreamingLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceStreamingLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceTierClassificationLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceTierClassificationLogic"
 	);
 	load_luau_file(
 		"src/gameplay/services/RunControllerLogic.luau",

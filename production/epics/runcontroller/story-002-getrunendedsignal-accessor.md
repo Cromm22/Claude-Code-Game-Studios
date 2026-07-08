@@ -1,7 +1,7 @@
 # Story 002: RunController GetRunEndedSignal Accessor and KnitInit/KnitStart Subscriber-Safety Verification
 
 > **Epic**: RunController
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Integration
 > **Manifest Version**: 2026-07-06
@@ -102,3 +102,12 @@
 
 - Depends on: Story 001 (needs `RunEndConditionRaised`'s `_runEnded:Fire()` call to exist in order to test subscriber receipt)
 - Unlocks: HUD epic's end-screen `RunEnded`-subscription work; analytics' `RunEnded{exitReason}` event wiring; Player Controller epic's T7/T8 cleanup subscription; Resource Node epic's completability gate (which names `RunEnded` as an open dependency)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-08
+**Criteria**: 6/6 passing
+**Deviations**: None blocking. Code review noted a pre-existing, unrelated drift in `control-manifest.md:118` (still describes the older direct-Crafting→RunController model that ADR-0002 already corrected) — logged as TD-007, not a defect in this story.
+**Test Evidence**: `tests/integration/runcontroller/get_run_ended_signal_test.luau` — passing
+**Code Review**: Complete — APPROVED
