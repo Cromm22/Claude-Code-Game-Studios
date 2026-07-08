@@ -29,7 +29,7 @@
 #   All forbidden patterns: Grep pattern="^  - pattern:" (forbidden_patterns section)
 #   Superseded entries:     Grep pattern="status: superseded"
 
-version: 1
+version: 2
 last_updated: "2026-07-06"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
@@ -68,6 +68,45 @@ state_ownership:
     revised: ""
     note: "RATIFIED by the user 2026-07-06 — no longer pending."
 
+  - state: beacon_charge_tier
+    status: active
+    owner_system: crafting-and-items
+    adr: docs/architecture/adr-0009-resource-management-disturbance-band-accessor.md
+    interface: "CraftingService:GetCurrentBeaconChargeTier(): number — read-only, server-internal, returns [1,4]. Crafting owns the mapping from its internal BC1-6 lifecycle to this coarser drain-relevant tier; consumers must not interpret the internal BC1-6 stage count."
+    write_access: crafting-and-items-only
+    referenced_by:
+      - docs/architecture/adr-0009-resource-management-disturbance-band-accessor.md
+      - docs/architecture/adr-0010-resource-management-tick-loop.md
+    added: 2026-07-06
+    revised: ""
+    note: "Resolves an ownership ambiguity in resource-management.md's own CR.2 text ('the ED/Beacon escalation authority') — architecture.md's Module Ownership table already placed Beacon lifecycle under Crafting & Items, not Ecological Disturbance; this entry makes that explicit for future ADRs. RATIFIED by the user 2026-07-06 — no longer pending."
+
+  - state: player_locomotion_and_stamina
+    status: active
+    owner_system: player-controller
+    adr: docs/architecture/adr-0011-player-controller-sprint-stamina-authority.md
+    interface: "Server-authoritative S1(Walk)/S2(Sprint) state + stamina scalar [0,100]. Write: RequestSprintToggle (validated RemoteEvent, ADR-0006). Read: OnStaminaChanged push (<=5Hz, owning client only, display-only — client never gates input from this value)."
+    write_access: player-controller-only
+    referenced_by:
+      - docs/architecture/adr-0011-player-controller-sprint-stamina-authority.md
+      - docs/architecture/adr-0003-locomotion-driver.md
+    added: 2026-07-06
+    revised: ""
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
+
+  - state: player_render_scope
+    status: active
+    owner_system: player-controller
+    adr: docs/architecture/adr-0012-player-controller-death-spectator-state.md
+    interface: "renderScope: \"alive\" | \"dead-respawning\" | \"post-run\" — server-minted, pushed once per transition to the owning client only, never inferred client-side from Humanoid.Health or any other proxy signal."
+    write_access: player-controller-only
+    referenced_by:
+      - docs/architecture/adr-0012-player-controller-death-spectator-state.md
+      - docs/architecture/adr-0002-runcontroller-architecture.md
+    added: 2026-07-06
+    revised: ""
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
+
 # Example:
 #
 # state_ownership:
@@ -98,16 +137,16 @@ interfaces:
   - contract: run_end_condition_raised
     status: active
     pattern: direct_call
-    producer: "player-controller (T7 wipe, T8 victory) AND crafting-and-items (C.5.8 BCT-DEFEAT) — multiple callers, one contract"
+    producer: "player-controller (T7 wipe pre-activation, T8 victory, AND in-window BC4 outcomes forwarded from crafting-and-items' OnBeaconWindowFailed/Survived) — sole current caller"
     consumers:
       - run-controller
     adr: docs/architecture/adr-0002-runcontroller-architecture.md
-    signal_signature: "RunEndConditionRaised(conditionType: \"wipe\" | \"victory\", squadState: SquadStateSnapshot): ()"
+    signal_signature: "RunEndConditionRaised(conditionType: \"wipe\" | \"victory\", squadState: SquadStateSnapshot, defeatReason: (\"wipe\" | \"scatter\")?): ()"
     referenced_by:
       - docs/architecture/adr-0002-runcontroller-architecture.md
     added: 2026-07-06
-    revised: ""
-    note: "RATIFIED by the user 2026-07-06 — server-internal only, MUST NOT be placed under a Knit service's .Client sub-table (see forbidden_patterns)."
+    revised: "2026-07-06"
+    note: "RATIFIED by the user 2026-07-06 — server-internal only, MUST NOT be placed under a Knit service's .Client sub-table (see forbidden_patterns). Revised 2026-07-06 (architecture-review follow-up fix): corrected producer from a stale 'Crafting is a current direct caller' claim (Crafting's own GDD model routes through PC, not the arbiter directly) and added the optional defeatReason field so PC can forward Crafting's wipe/scatter distinction."
 
   - contract: run_ended
     status: active
@@ -136,6 +175,21 @@ interfaces:
     referenced_by:
       - docs/architecture/adr-0005-death-respawn-lifecycle.md
       - docs/architecture/adr-0004-disturbanceservice-core-architecture.md
+    added: 2026-07-06
+    revised: ""
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
+
+  - contract: get_current_beacon_charge_tier
+    status: active
+    pattern: direct_call
+    producer: crafting-and-items
+    consumers:
+      - resource-management
+    adr: docs/architecture/adr-0009-resource-management-disturbance-band-accessor.md
+    signal_signature: "CraftingService:GetCurrentBeaconChargeTier(): number — never yields, never throws; RM defaults to tier 1 and logs if the pcall-wrapped call fails"
+    referenced_by:
+      - docs/architecture/adr-0009-resource-management-disturbance-band-accessor.md
+      - docs/architecture/adr-0010-resource-management-tick-loop.md
     added: 2026-07-06
     revised: ""
     note: "RATIFIED by the user 2026-07-06 — no longer pending."
@@ -458,6 +512,45 @@ forbidden_patterns:
       positioning) throws an error if called on an Anchored part. Anchoring the predator's
       root part at any point would break the predator's NetworkOwnership on the next call."
     adr: docs/architecture/adr-0008-character-replication-bandwidth-networkownership.md
+    added: 2026-07-06
+    note: "RATIFIED by the user 2026-07-06 — no longer pending."
+
+  - pattern: task_delay_for_cancellable_time_windows
+    status: active
+    description: "A time window whose resolution might need to be short-circuited
+      by an unrelated event (a squad wipe, a BindToClose forced cleanup, an
+      idempotency latch flipping) must be implemented as a per-Heartbeat clock
+      comparison (routed through the owning system's clock-injection seam, e.g.
+      Crafting's _clock() — never an inline workspace:GetServerTimeNow() call),
+      never a scheduled task.delay callback."
+    why: "task.delay cannot be cleanly cancelled without holding and explicitly
+      cancelling the returned thread, and even then a race exists between the
+      cancelling event and an already-fired delayed callback running on stale
+      state. A per-tick clock comparison can simply be skipped once a short-circuit
+      condition is set, with no pending callback to ever fire late."
+    adr: docs/architecture/adr-0013-crafting-survival-window-and-bench-watcher.md
+    added: 2026-07-06
+    revised: "2026-07-06"
+    note: "RATIFIED by the user 2026-07-06 — no longer pending. Revised 2026-07-06 (architecture-review follow-up fix): description corrected to require routing through Crafting's _clock() seam — the ADR's original sample called workspace:GetServerTimeNow() inline, which this pattern entry had inadvertently mirrored."
+
+  - pattern: client_position_trusted_as_final_placement_coordinate
+    status: active
+    description: "A client-supplied placement position (bench, beacon, or any
+      future placeable) must be treated as a direction hint only. The server
+      independently re-derives the final placement transform (clamp -> LOS
+      raycast -> floor raycast -> overlap check); the client's Y coordinate in
+      particular must never survive into the final transform, and the floor
+      raycast's own origin height must derive from the placing player's own
+      server-tracked position, never from the client's hint Y."
+    why: "Trusting any part of a client-supplied coordinate for final placement
+      re-opens the exact class of exploit ADR-0006's trust-boundary principle
+      exists to prevent (e.g., a modified client reporting a Y value that places
+      an object inside or above terrain the server would never have resolved to).
+      Deriving the floor-raycast origin from the client's hint Y (rather than the
+      player's own tracked position) additionally risks originating the ray on
+      the wrong floor of a multi-story structure — a real bug caught during this
+      ADR's engine-specialist review, not just a defense-in-depth precaution."
+    adr: docs/architecture/adr-0014-crafting-placement-validation.md
     added: 2026-07-06
     note: "RATIFIED by the user 2026-07-06 — no longer pending."
 

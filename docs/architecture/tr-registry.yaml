@@ -24,33 +24,1903 @@
 #
 # STATUS VALUES: active | deprecated | superseded-by: TR-[system]-NNN
 
-version: 1
-last_updated: ""
+version: 2
+last_updated: "2026-07-06"
 
-requirements: []
+requirements:
+  # ============================== Player Controller (pc) ==============================
+  - id: TR-pc-001
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Locomotion driver is Humanoid.WalkSpeed; server sets WALK_SPEED=12/SPRINT_SPEED=20 on S1<->S2 transitions"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-002
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Per-platform sprint binding (touch toggle / KB+M hold / gamepad L3-hold) via UserInputService+ContextActionService"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-003
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Jump enabled mid-sprint; pulse timers are server-clock interval-based, never reset-on-interrupt (bunny-hop precluded)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-004
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Sprint-state authority model: server-gated T1/T2, forced-walk at 0 stamina, sprint input ignored until stamina>0"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-005
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Server-authoritative stamina: STAMINA_MAX=100, drain 12.5/s, regen 10/s, REGEN_DELAY=1.5s, ticked on RunService.Heartbeat"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-006
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "OnStaminaChanged pushed <=5 Hz to owning client only; client never gates input"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-007
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Lantern axis (S3a/S3b); Light publishes on server-authoritative lanternRaised set by RequestLanternToggle validation"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-008
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Light-to-gather gate: dual radii, coupled-knob config validation, server-authoritative dark-zone classification"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-009
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Mid-gather lantern-lower cancels in-progress gather server-side"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-010
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "PC publishes Sprint & Light emissions via DisturbanceService:Emit(type, position, magnitude, sourcePlayerId)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-011
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Emission position = server-observed HumanoidRootPart.Position; client-predicted positions forbidden"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-012
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Pulse cadence (SPRINT=2s/LIGHT=4s), FIRST_PULSE_GRACE_WINDOW, GRACE_REENTRY_COOLDOWN, magnitude attenuation, SPRINT_HOLD_FLOOR"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-013
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Clock-injection seam (getServerTime() DI); inline workspace:GetServerTimeNow() forbidden + CI grep gate"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-014
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Mobile analog-drift threshold MOBILE_ANALOG_DRIFT_THRESHOLD=2 studs; XZ interval displacement sampling"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-015
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Sprint-pulse flora micro-pulse (ED render-side response to existing Emit; no new signal)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-016
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Death moment acquired via DisturbanceService:GetOnPlayerDiedSignal() — not a direct Humanoid.Died subscription"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-017
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Server-authoritative RESPAWN_DELAY=30s timer at Humanoid.Died; idempotent guard refuses re-entry on double-fire"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-018
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Oxygen deduction via RequestSquadOxygenSpend — server-internal Knit call, idempotent per (userId, deathEventId)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-019
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "DeathCostReconciliation state machine (Pending/InFlight/Committed/Abandoned) with load-bearing post-yield ownership re-check"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-020
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "deathEventId = PC-minted monotonic per-session counter; record survives T6"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-021
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Reconciliation tick on Heartbeat every 5s; yielding remainder task.spawn'd off handler; staleness-sweep re-arm"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-022
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Path B PlayerRemoving imminent-death predicate; cross-service PlayerRemoving teardown-order race"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-023
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "OXYGEN_GRACE_DURATION=5s, PC-owned, squad-wide; pool re-check at expiry; hard config error <2s"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-024
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "OnPlayerOxygenExpired() argument-less, squad-wide RM->PC trigger starts the grace timer"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-025
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "T5 pre-yield side-effect ordering: ReleasePredatorLock/OnPlayerS4Entered/OnSquadMemberAliveChanged fire synchronously before the oxygen-spend yield"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-026
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "T7 whole-squad-wipe raises RunController:RunEndConditionRaised('wipe', squadState); PC never broadcasts RunEnded"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-027
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "T8 victory consumes OnBeaconWindowSurvived, raises ('victory', ...); victory-over-wipe precedence"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-028
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "RUN_END_DEFEAT_HOLD 0.5s arbiter hold window bounding the adjacent-tick wipe-vs-BCT4 race"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-029
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "_beaconActivated latch set on OnEscapeBeaconActivated, cleared on RunEnded or BEACON_LATCH_TIMEOUT self-heal"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-030
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "PC subscribes to RunEnded(outcome); drives alive/S4->S5 + input lock; idempotent"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-031
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Oxygen-gated respawn wait: T6 withheld if pool<1, re-checked each Heartbeat"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-032
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Sprint hard-reset on death; respawn spawns S1 with stamina=MAX, lantern lowered"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-033
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Spectator camera + StreamingEnabled chunk-load guard (HasChunkLoaded()); dead-player experience"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-034
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Dead-player input state guards: RequestPing rejected S4/S5; renderScope server-minted; movement/gather locked"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-035
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Client-fired RemoteEvent canonical validation: alive-guard -> rate+burst -> payload -> server re-derivation, drop-first"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-036
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Per-player global RemoteEvent budget across all client-fired events"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-037
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Server-pushed-only events register zero OnServerEvent callbacks"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-038
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Ping: server re-runs raycast (client candidateTargetId advisory), origin within PING_ORIGIN_TOLERANCE of server position"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-039
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "PlayerHeartbeat S2-only 1Hz; SPRINT_CLIENT_TIMEOUT=3s ghost-sprint force-revert"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-040
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "PredatorService-owned server-internal lastPredatorDamageTimestamp + predatorCausedImminent latch"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-041
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "PredatorService S4 lifecycle pair OnPlayerS4Entered/OnPlayerT6Respawned driving the S4 no-re-acquire gate"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-042
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "PredatorService:ReleasePredatorLock(player) idempotent, invoked on death (both paths) + reconciliation success"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-043
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "OnSquadMemberAliveChanged(playerId, isAlive) server-internal edge to Crafting RunSession.aliveMembers"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-044
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Server-tracked HumanoidRootPart.Position is PA's perception input; no client-predicted positions into perception"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-045
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "KnitInit builds all cross-service-visible signals + bootstrap-inits per-player tables; KnitStart connects"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-046
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "KnitInit config-validation hard-error on misconfigured knobs; requires bootstrap catch->game:Shutdown()"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-047
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Player characters default automatic NetworkOwnership; server-authoritative WalkSpeed"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-048
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Character-replication bandwidth baseline; PC signal budget within <50 KB/s ceiling"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-049
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Emote slots 4-6 cosmetically replaceable; no cosmetic may alter WalkSpeed/emission magnitudes"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-050
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Tap-hold gather 500ms wall-clock (not frames); gather ring is the only client-predicted UI"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-051
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "Two-finger ping gesture detection in client controller (PING_TWO_FINGER_WINDOW=150ms)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-052
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "HapticService rumble wrapped in IsMotorSupported() guard"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pc-053
+    system: pc
+    gdd: design/gdd/player-controller.md
+    requirement: "C.12 contract-completeness CI hook (every signal in canonical table, floor-gated fields declared)"
+    created: 2026-07-06
+    revised: ""
+    status: active
 
-# --- EXAMPLE ENTRIES (remove when first real entries are added) ---
-#
-# - id: TR-combat-001
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Player takes damage from enemies based on attack power minus defence"
-#   created: 2026-03-10
-#   revised: ""
-#   status: active
-#
-# - id: TR-combat-002
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Combo window timing is 0.4 seconds between hits"
-#   created: 2026-03-10
-#   revised: "2026-04-01"
-#   status: active
-#
-# - id: TR-combat-003
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Old damage formula using raw stats"
-#   created: 2026-03-10
-#   revised: ""
-#   status: superseded-by: TR-combat-001
+  # ============================== Resource Management (rm) ==============================
+  - id: TR-rm-001
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Pool is a single server-side scalar P, owned exclusively by ResourceService, clamped [0, OXYGEN_POOL_START]"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-002
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Clients get a read-only server-authoritative projection of P — never a write handle"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-003
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Client dead-reckons P_displayed = P_lastSync - drainRate_lastSync x dt; sync payload carries P + drainRate/band"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-004
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Discrete events OnOxygenDeducted/OnOxygenRestored carry authoritative P_after pinned to specific sub-steps"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-005
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Latency-pop bound: discrete events carry serverSendTime; client latency-projects before adopting"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-006
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Per-band drain keyed to Beacon Charge Tier; RM reads current band from the ED/Beacon escalation authority each tick"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-007
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Fail-safe: if the BCT accessor is nil/unavailable, default to BC1 (slowest drain) for that tick and log"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-008
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "60Hz Heartbeat per-tick deterministic order (deductions -> restores -> drain), clamp after each step"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-009
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "MAX_TICK_DT=0.1s cap on Heartbeat delta + non-negative dt guard"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-010
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Death-cost deduction: RequestSquadOxygenSpend(...) server-internal Knit call, idempotent per (userId, deathEventId)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-011
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Idempotency write-before-throwable-work: dedup key written before the deduction"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-012
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "deathEventId is PC-owned, session-lifetime-unique; RM treats it as an opaque idempotency key"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-013
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Run-end race guard: spend rejected as no-op once run ended; dedup-set cleared + P reset at run end"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-014
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Respawn carries no RM charge; PC owns RESPAWN_DELAY=30s"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-015
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Canister faucet OnOxygenPulseRequest(amount, requestingPlayerId) as fire-and-forget server-internal Knit Signal"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-016
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Squad-wide oxygen state machine (Healthy/Critical/Empty) with 2-unit recovery hysteresis"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-017
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Empty->death cascade: OnPlayerOxygenExpired() argument-less squad-wide broadcast, fired exactly once on Empty entry"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-018
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Oxygen-empty grace timer: PC-owned squad-wide OXYGEN_GRACE_DURATION=5s, pool-recheck at expiry, hard-error below 2.0s"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-019
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "DP-2 death-cost ratio init assertion DEATH_OXYGEN_COST/OXYGEN_POOL_START in [0.10,0.15], fail-fast"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-020
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Other fail-fast init fences (CANISTER_RESTORE_OXYGEN, BC4 over-supply, canisterCycleTime floor)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-021
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Security: RequestSquadOxygenSpend and every P-mutating op are structurally server-internal only"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-022
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "HUD signal surface: OnOxygenChanged(amount, drainRate) + OnOxygenStateChanged + deducted/restored, rate-limited"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-023
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Sync bandwidth: OXYGEN_SYNC_HZ=2 delta-suppressed push must fit <50 KB/s per client"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-024
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Same-tick death coalescing to a single OnOxygenDeducted with applied k count/amount"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-025
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Anti-idle/anti-camping is a jointly-owned RM x ED invariant; drain constants must not be retuned toward zero unreviewed"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-026
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Beacon-survival win-check must be evaluated before OnPlayerOxygenExpired on the boundary tick"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-027
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "D1 2-player BC4 last-stand kill-criterion (aliveCount <= 2), analytics segmentation by squad size"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rm-028
+    system: rm
+    gdd: design/gdd/resource-management.md
+    requirement: "Player disconnect (PlayerRemoving, not death): no oxygen charged; flat-headcount drain unchanged"
+    created: 2026-07-06
+    revised: ""
+    status: active
+
+  # ============================== Resource Node (rn) ==============================
+  - id: TR-rn-001
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "NodeRecord server-side data structure (nodeId, tier, material, worldPosition, state, gathererPlayerId, lockTimestamp, respawnTimestamp, generationToken)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-002
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Node enumeration at boot via CollectionService tag 'ResourceNode'; nodes server-resident regardless of StreamingEnabled"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-003
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Per-tier config constants (yield/extraction/respawn) data-driven, not hardcoded"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-004
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Server arm-scan loop @ ARM_SCAN_HZ=10 on a task.spawn'd task.wait loop"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-005
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "All-pairs proximity distance-squared test each tick; explicit no-spatial-grid choice"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-006
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Two decoupled arm records (firstArmTimestamp frozen / positionAtArm refreshed) + arm/disarm hysteresis"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-007
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "RequestGather = sole client event; server-side validation order & re-derivation, never trust client"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-008
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Per-player rate limit 1/1.5s sustained, burst 2/3s, token bucket cleared on disconnect"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-009
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Teleport-delta sanity (GATHER_MAX_TELEPORT_DELTA=8) + position-spoof hardening (OQ.10 SetNetworkOwner(nil) during gather)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-010
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Non-yielding critical section for lock check-and-set; one-gatherer guarantee via Luau cooperative scheduling"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-011
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Alive/not-dead-respawning guard on RequestGather (defense-in-depth)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-012
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Extraction/respawn/safety-valve timers built on a mockable scheduling interface for testability"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-013
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Node-count config gates (MIN_LIGHT_NODES=6, MIN_MEDIUM_NODES=4, Heavy>=4) asserted at KnitInit via error()"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-014
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "HEAVY_NODE_MIN_RESPAWN_STAGGER=15s enforced at server-init (WCAG flash-accumulation)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-015
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Dark-zone node spacing floor >=~10 studs; couples to PC DC-5 lantern/dark-zone"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-016
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "OnNodeStateChanged broadcast + client per-nodeId last-state buffering; RemoteEvents not streaming-gated"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-017
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "OnNodeFullStateSnapshot join/respawn bootstrap (full-state re-sync)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-018
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Gathering payload carries extractionDuration + extractionStartTimestamp for drift-free HUD progress"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-019
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "T1-T7 node state machine with synchronous non-yielding resolve ordering + node.state guards"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-020
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Respawn via task.delay + per-node generationToken invalidation; ResetAllNodes() synchronous non-yielding ordering"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-021
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Same-tick run-end race: RN subscribes to RunEnded to drive ResetAllNodes/T4 and its runActive flag"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-022
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Safety-valve force-release (T5 lock-age timeout NODE_EXTRACT_TIME + BUFFER)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-023
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "DisturbanceService:Emit('Gather', pos, magnitude, playerId) publisher call, non-yielding, emit-before-grant"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-024
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "OnGatherCompleted(playerId,nodeId,materialType,count) -> Crafting; single inventory write path"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-025
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "PC player-death signal consumed by RN's T4 mid-extract release"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-026
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Lantern-raised / isDarkZone accessor (PC-owned) for dark-zone gather validation & re-check at commit"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-027
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "canisterCycleTime > 9.09s floor + BC3 supply bound asserted at KnitInit from named constants"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-028
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "MAX_NODE_POINTLIGHTS_IN_FRUSTUM=4 dynamic-light budget + range LOD + mobile emissive SurfaceAppearance path"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-029
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Mobile perf budget (iPhone-SE 30 fps): geometry/light tweens only, no per-node particle emitters except completion"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-030
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Aggregate completion-flash WCAG 2.3.1 <=3/s gating/merge (HUD/PC render layer)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-rn-031
+    system: rn
+    gdd: design/gdd/resource-node.md
+    requirement: "Cross-input parity + persistent tether/commit-confirm/pre-cancel warning render (PC/UX)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+
+  # ============================== Ecological Disturbance (ed) ==============================
+  - id: TR-ed-001
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Table-of-tables spatial hash grid (32-stud cells, 3x3 neighborhood scan) backing fieldValue() and GetHottestHotspot"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-002
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Two-store model: live-source list (magnitude>floor) + write-once attribution archive keyed by emissionId"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-003
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "EmissionPayload fixed 7-field record + published EmissionType Luau types, no optional fields"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-004
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "HotspotResult exactly-6-field non-optional return; hotspotId stable %d_%d cellKey"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-005
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Published payload types: MeterUpdatePayload, DisturbanceAlertPayload, DeathAttributionPayload, OnPlayerDiedPayload"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-006
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Per-player XZ ring buffer (~15 samples) for cumulative-distance stationary integral"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-007
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Per-beacon BeaconCapEvalEntry cache, two-field encoding (sentinel -1.0 forbidden)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-008
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Server-side loadedChunks[player] membership set, server-computed only"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-009
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Per-player per-flora last-pushed-t cache, reset on snapshot/drop"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-010
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "_capCueDecayPassesRemaining[player] cadence-derived decay counter (1.0s persistence)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-011
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "previousTierAtPosition keyed by canonical %d_%d string (never Vector3 userdata)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-012
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "_deathLockSnapshot single-writer mailbox for predatorWasLockedAtDeath"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-013
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Predator-lock registry = single source of truth; no GetLockedTargetedPlayers accessor"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-014
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "DisturbanceService_Update budget <=~1.43ms avg / 2.86ms p99 on iPhone SE"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-015
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "DisturbanceService_HotspotQuery <=1ms avg / 2ms p99 per call"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-016
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Two debug.profilebegin fences; all 11 per-pass workloads lexically nested inside Update fence"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-017
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Per-source decay caching: m(age)/math.exp evaluated <=once per source per pass"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-018
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Forbidden transcendentals in inner loop (no pow/^/sqrt); squared-distance cull, cheap-then-expensive"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-019
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "MAX_LIVE_SOURCES=500 hard cap + cap-hit policy"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-020
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Attribution archive count cap MAX_ATTRIBUTION_ARCHIVE_ENTRIES=4000, FIFO evict-oldest skipping locked"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-021
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Cap-formula step-6 full live-source scan O(beacons x sources <=1500) measured inside stress budget"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-022
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Query-position count anchoring (~20/cycle; MAX_FLORA_PER_CHUNK=8)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-023
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "All PERF-DEVICE budgets valid ONLY at FIELD_UPDATE_HZ=5 and activeBeacons<=3"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-024
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Memory ceiling <1GB; session-scoped field discarded at run-end"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-025
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Canonical clock workspace:GetServerTimeNow(); os.time/tick/os.clock forbidden on emission path"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-026
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "5Hz field-update loop on RunService.Heartbeat with accumulator + graceful-skip catch-up"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-027
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "emissionId via HttpService:GenerateGUID(false), server-side only, never client-supplied"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-028
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Knit DisturbanceService+DisturbanceController; 3 .Client RemoteSignals fired :Fire/:FireAll"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-029
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Two raw RemoteEvents FloraChunkUpdate/FloraChunkInitialSnapshot, server-fire-only"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-030
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Server-internal OnPlayerDied BindableEvent, synchronous-dispatch semantics, KnitInit-constructed"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-031
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "StreamingEnabled chunk-load detection API (or escalate to CD); ReplicationFocus forbidden"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-032
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Humanoid.Died sole subscriber, registered in KnitInit, CI-enforced monopoly"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-033
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Character.PrimaryPart nil-guard before .Position on ring-buffer writes"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-034
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Predator nav via PathfindingService:FindPathAsync; ED supplies targets only"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-035
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "HUD meter tween 0.25s Sine; flora Color3.Lerp/PointLight client-side; server pushes only targetT scalars"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-036
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "KnitInit config-validation fatal error (INFLUENCE_RADIUS, grid-cell vs influence invariants)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-037
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Server-internal TierCrossedEvent (position-keyed, coalesced one-per-pass-per-boundary)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-038
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Server-internal OnDisturbanceBandCrossed(direction,newTier,ts) squad-aggregate signal (up+down)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-039
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "OnPredatorStateChanged BindableEvent (PA-owned) subscribed for defense-in-depth lock purge"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-040
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "RegisterPredatorLock/ReleasePredatorLock, merge-on-reregister, 5s grace, clear-fire ownership"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-041
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Module-private RegistrationHandshake.luau at binding path, exactly 5 exports, require()-acquired"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-042
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Register-time-subscribe pattern; DisturbanceService KnitStart getters-before-handler-setter order"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-043
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Emit(emissionType, position, magnitude, sourcePlayerId) server-internal publisher, fire-and-forget, emit-before-reward"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-044
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "GetOnPlayerDiedSignal(): BindableEvent single death channel; subscribers yield-free"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-045
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "GetSquadAggregateT(excludePlayer: Player?): number exclusion-form semantics + empty/zero guards"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-046
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "GetHottestHotspot(callerPosition, searchRadius, minimumTier) caller-supplied position; nil-recovery"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-047
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Cross-GDD constant locks (tiers 0.30/0.65/1.00, hysteresis +-0.03, half-lives 30/90s, MAX_ACTIVE_BEACONS=3)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-048
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Attribution archive TTL ATTRIBUTION_ARCHIVE_TTL=1200s, longest-of lifetime + fenced purge"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-049
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Session-scoped field, no cross-run persistence, DataStoreService out of scope"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-050
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Sources persist server-side independent of any client's StreamingEnabled; keyed by emissionId"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-051
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Lazy expiry; low-frequency maintenance cull pass (EXPIRY_MAINTENANCE_INTERVAL 2-4s)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-052
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Yield-free single-Luau-frame death path (5a-5c + 4a-4c), no yield primitives"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-053
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "KnitInit/KnitStart ordering discipline (build-in-Init, connect-in-Start)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-054
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Post-hitch multi-tier cascade settle loop (tierAt one boundary/call, <=4 iters, one event/boundary)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-055
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Predator queries synchronous at PA's 4Hz; DisturbanceService cadence-agnostic, decoupled 5Hz field"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-056
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Same-frame Fire(false)-before-Fire(true) ordering on lock pivot"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-057
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "iPhone SE-class binding performance + bandwidth floor"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-058
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Touch tap-toggle sprint -> H.PB1 fairness telemetry captured split by input method"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-059
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "BEACON_CUMULATIVE_DISTANCE_THRESHOLD provisional pending iPhone-SE analog-drift measurement"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-060
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "StreamingEnabled chunk CHUNK_DIMENSIONS=64x64 studs"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-061
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Server sole authority; emission data as plain Luau tables only, never Instance attributes/Workspace"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-062
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "No client-callable Emit() path; client-caused emissions route through validating server authority"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-063
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Zero client-callable RemoteFunctions across the whole system"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-064
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "ReplicationFocus/any client-writable property never trusted; loadedChunks sole snapshot authority"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-065
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Full server-side emission schema validation (reject null/<=0/NaN/+-Inf/out-of-enum), not graceful"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-066
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Per-player targeted routing on 3 RemoteSignals (:FireAll forbidden — per-player t leak)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-067
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "All test seams (_setTestClock, _injectSyntheticEmission, etc.) server-internal, never .Client, grep-verified"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-068
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Raw flora RemoteEvents register zero OnServerEvent callbacks, CI-enforced"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-069
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "CI BLOCKING lint gates (H.39e monopoly, H.39f, H.39d, H.30c-i) are load-bearing architecture"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-070
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Stateful tier classification: hysteresis +-0.03 downward-only + first-call flat-threshold dispatch"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-071
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "squadT = max over connected players + empty-player short-circuit + finiteness fail-quiet guards"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-ed-072
+    system: ed
+    gdd: design/gdd/ecological-disturbance.md
+    requirement: "Beacon stationary-squad Hunt-floor cap (multiplicative scaleFactor, engagement ratios, denom-zero short-circuit)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+
+  # ============================== Predator AI (pa) ==============================
+  - id: TR-pa-001
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Exactly one server-authoritative predator instance/server; spawned in Patrol at session start; never despawns mid-run"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-002
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Server network-ownership: SetNetworkOwner(nil) on unanchored HRP, re-assert on every un-anchor/respawn"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-003
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Field-only perception via ED accessors at 4 Hz; no direct player-read bypass path"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-004
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "ED must expose GetSquadAggregateT(excludePlayer) returning max over alive-minus-excluded set"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-005
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Raycast perception budget <=16 rays/tick @4 Hz"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-006
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "PREDATOR_AUDIO_RANGE > PREDATOR_VISUAL_RANGE binding invariant; hit requires unobstructed LOS"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-007
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Deterministic no-RNG targeting total order: field -> sq-distance -> hotspot.id"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-008
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Player lock argmin dist^2(hotspot, player.HumanoidRootPart); reads server-authoritative HRP.Position"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-009
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Lock re-eval as single decision point at PREDATOR_LOCK_REEVAL_INTERVAL; debounce persists across boundaries"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-010
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Lock-clear owned solely by DisturbanceService:ReleasePredatorLock"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-011
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "PredatorEncountered analytics once/player/session; session-persistent _seenPlayers dedup"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-012
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Navmesh-bound movement, per-state WalkSpeed, startup config-gate on speed ordering"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-013
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Combat: melee+LOS Lunge, one-shot guard, ATTACK_COOLDOWN, hitsToDeath, bounded knockback"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-014
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Inter-callback Health>1 guard for same-Heartbeat concurrent damage (predator + RM oxygen)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-015
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "BC4 beacon-commit max(actualBeaconT, 0.65); quiet->Disengage suppressed in BC4"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-016
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "BC4 loseability cross-GDD constraint: BEACON_WINDOW_DURATION + O2 rate tuned so 1-HP squad loses on air first"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-017
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Two-channel publication: Channel-A server-internal BindableEvent + Channel-B client RemoteSignal, both KnitInit-constructed"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-018
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "RegistrationHandshake push module: server-only, 5 exports, pending-invocation queue (cap 64), KnitStart strict ordering"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-019
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Death attribution: store top-3 emissionIds from HotspotResult; eager GetDeathAttributionPayload"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-020
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Deterministic 4-state FSM; state-exit nav-target clear + 3 Hunt-internal timers cancelled together"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-021
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "HUD replication: bearing+distanceBand (never worldPosition); per-client targeted OnPredatorSense:Fire @10-20 Hz"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-022
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Telegraph + state-change ship as one combined RemoteEvent; server enforces minimum-state-duration"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-023
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Pathfinding fallback: FindPathAsync throttle, direct-locomotion fallback, stuck detection, stale-token monotonic counter"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-024
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Float-determinism precision contract (IEEE-754 single; HOTSPOT_TIE_EPSILON) settled with ED before interface freeze"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-025
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "ED must reserve dirty-flag/push-cache accessor path before interface freeze"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-026
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "PredatorService per-burst-Heartbeat CPU ceiling <=2 ms p95 @4-player worst case"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-027
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "PC integration: kill->T5 death path; predatorCausedImminent latch cleared on respawn/release/run-end"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-028
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "RunController RunEnded subscription: first-action synchronous idempotent teardown"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-029
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Locomotion driver choice — Humanoid vs Character Controller Library (OQ.7)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-030
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Client-side cosmetic FSM plays from <=4 Hz broadcast; rigged keyframe anims; eye-shine one-way gate"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-031
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Cross-GDD config gates: PREDATOR_AUDIO_RANGE > SIGNAL_ANCHOR_DETECTION_RADIUS; knockback re-entry floor (OQ.4)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-pa-032
+    system: pa
+    gdd: design/gdd/predator-ai.md
+    requirement: "Startup config-validation framework: hard error() at KnitInit must actually halt startup"
+    created: 2026-07-06
+    revised: ""
+    status: active
+
+  # ============================== Crafting & Items (craft) ==============================
+  - id: TR-craft-001
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Beacon activation opens a survival window; victory fires only on window-survival, currently routed through PC"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-002
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "BCT-DEFEAT: Crafting fires OnBeaconWindowFailed(reason in {'scatter','wipe'}) -> PC maps both to RunEnded(defeat)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-003
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "runOutcomeResolved idempotent terminal latch -> run-end cleanup fires exactly once across >=2 firing paths"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-004
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "CraftingService subscribes to run-lifecycle RunEnded signal to latch runOutcomeResolved"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-005
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Survival-window end is a per-Heartbeat _clock() comparison, never task.delay"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-006
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "CraftingService MUST NOT subscribe to Humanoid.Died directly; death enqueue driven by GetOnPlayerDiedSignal()"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-007
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Death/departure callback body is yield-free (only enqueues); buffered drain in _step"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-008
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Publisher contract: DisturbanceService:Emit('Beacon'|'Craft', position, magnitude, sourcePlayerId)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-009
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "MAX_ACTIVE_BEACONS=3 enforced at the Crafting publish site before the emission reaches Emit"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-010
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "RequestCraft / RequestBeaconActivate client->server, server-validated, per-player rate-limited, silent-drop"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-011
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "5 further client-fired events (RequestCraftCancel, RequestBeaconPlace, RequestUseItem, RequestEquipItem, RequestPlaceItem)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-012
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Crafting-owned per-player global limit CRAFTING_GLOBAL_RATE_LIMIT=8/s + 16/3s burst"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-013
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Placement validation order: clamp -> LOS raycast -> floor raycast -> overlap"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-014
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "BC4 hold check reads server-tracked HumanoidRootPart.Position; position-replication trust caveat"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-015
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Test-harness DI seam (_clock/_step/_enqueueDeparture/_enqueueReadd/_memberPosition/_simulateRestart/_simulateBindToClose)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-016
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "All Crafting state purely runtime; zero DataStore/ProfileStore writes during a run; cleared at RunEnded"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-017
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "BindToClose during BC4 = forced cleanup, no victory/defeat/decay; handler must not block on the window timer"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-018
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "KnitInit-time construction of cross-service-visible signals (OnBeaconWindowSurvived etc.)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-019
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Knit CraftingService (server) + CraftingController (client); all cross-boundary state mutations route through the server"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-020
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Bench proximity watcher: server-side, SENSOR_CHECK_HZ=5 via Heartbeat accumulator"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-021
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Server CPU budgets: progress evaluator < 0.5 ms/Heartbeat; Anchor sensor < 0.1 ms; MicroProfiler tags"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-022
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Bandwidth discipline: OnCraftProgressUpdate <=5Hz; OnBeaconHoldStateChanged hysteresis band"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-023
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "RunStarted init: OnRunStarted(runId, squadRoster) delivered by upstream run-start/matchmaking gate; MIN_SQUAD_SIZE=2"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-024
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "New Craft emission type registered against ED's reserved 4-slot enum (consumes 1 slot)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-craft-025
+    system: craft
+    gdd: design/gdd/crafting-and-items.md
+    requirement: "Cosmetic-boundary invariants on bench/beacon/anchor (no change to craft time, emission magnitude, position, material cost)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+
+  # ============================== HUD (hud) ==============================
+  - id: TR-hud-001
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Pure-subscriber consumer: holds no authoritative state, validates nothing client-side, never echoes upstream"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-002
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Single persistent ScreenGui: ResetOnSpawn=false, elevated DisplayOrder, IgnoreGuiInset=true + manual safe-area"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-003
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Root UIScale + UIAspectRatioConstraint, iPhone-SE->desktop; cross-aspect layout incl. ultrawide bar-width cap"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-004
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "CR.9 split-ownership seam: HUD creates/owns the interactive Instance, producer binds input + owns FireServer"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-005
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "HUD controllers connect all producer signal handlers during KnitStart"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-006
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Apply OnNodeFullStateSnapshot (+ analogous bootstrap snapshots) before any incremental per-node event"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-007
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Transient alert-channel precedence structure: higher priority preempts, equal priority FIFO-queues"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-008
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "FlashArbiter module: sole code path allowed to start any flash/throb tween; <=3 onsets/sec (WCAG 2.3.1)"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-009
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Client interpolation loops never exceeding producer cadence"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-010
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Oxygen dead-reckoning: projection off event serverSendTime, workspace:GetServerTimeNow(), clamp[0,600]"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-011
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Bearing->screen chevron: signed-shortest-arc lerp + snap threshold, CW-from-north convention"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-012
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Server-clock-derived timers for gather ring & survival-window countdown via GetServerTimeNow()"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-013
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Startup config-assert: FAR/NEAR/CONTACT opacity & scale triples strictly monotone increasing"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-014
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Consume ED producer signals OnMeterUpdate/OnDisturbanceAlert/OnDeathAttributionPushed"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-015
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Consume PC OnPlayerDied (incl. reconciliation-recovery variant) + OnSquadMemberAliveChanged"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-016
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Consume PA OnPredatorSense for bearing/band chevron; OnPredatorLockChanged (Channel B) for YOU-lock"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-017
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Consume RM oxygen signals: OnOxygenChanged, OnOxygenStateChanged, OnOxygenDeducted/Restored, OnPlayerOxygenExpired"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-018
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Consume RN OnNodeStateChanged, GatherNodeArmed/Disarmed, OnNodeFullStateSnapshot"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-019
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Subscribe to RunController RunEnded(outcome) for victory/defeat banner + run-end input-lock"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-020
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Consume Crafting beacon charge/BCT/survival-window pushes + beaconActivated/runOutcomeResolved flags"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-021
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Dead/Spectating macro-state: hide own-vitals/gather, show respawn-timer countdown + oxygen-gated respawn-delay"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-022
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Eye-shine = screen-space treatment triggered by distanceBand=='CONTACT', never world-anchored"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-023
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Bearing single-frame privacy: no client-readable bearing time-series beyond one smoothed value"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-024
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Performance budget: HUD per-frame CPU <=2.0ms at 30fps mobile floor"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-025
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Bandwidth: HUD requests no push-rate higher than producers publish; signals rate-limited <=5Hz"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-026
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Touch/platform: 44pt min touch targets; hit-area decoupled from visual size; no hover"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-027
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Reduced-motion: read external reducedMotion flag, classify animations load-bearing vs decorative"
+    created: 2026-07-06
+    revised: ""
+    status: active
+  - id: TR-hud-028
+    system: hud
+    gdd: design/gdd/hud.md
+    requirement: "Audio precedence gate: 2D non-diegetic UI-audio layer; drop-not-queue state machine"
+    created: 2026-07-06
+    revised: ""
+    status: active

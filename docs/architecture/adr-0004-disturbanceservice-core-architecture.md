@@ -15,7 +15,7 @@ Accepted (ratified by the user 2026-07-06)
 | **Knowledge Risk** | HIGH/MEDIUM — StreamingEnabled chunk-load detection (N1) and `require()`/`Signal`/`BindableEvent` dispatch semantics (already governed by ADR-0001) are both flagged HIGH in `docs/architecture/architecture.md`'s Engine Knowledge Gap Summary; the spatial-grid data-structure choice and Knit `RemoteSignal` method names (`:Fire`/`:FireAll`, corrected once already mid-design per the GDD's own history) are MEDIUM. |
 | **References Consulted** | `docs/engine-reference/roblox/VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `design/gdd/ecological-disturbance.md` (C.1.x, D.1–D.7, G.5–G.7), `design/gdd/ecological-disturbance-forward-obligations.md` (N1–N11 — the ADR obligations this document is required to close), ADR-0001 (KnitInit/KnitStart Ordering Discipline, RegistrationHandshake pattern) |
 | **Post-Cutoff APIs Used** | None chosen definitively — see N1 below, which is left as an explicit pre-implementation verification item rather than a guessed API name, per this project's own engine-reference verification workflow (`VERSION.md`: "WebSearch the API name + Roblox if you are uncertain"). |
-| **Verification Required** | N1 (StreamingEnabled chunk-load detection API — see Decision), N3 (Knit `RemoteSignal:Fire` on a departed `Player` is a silent no-op — empirical Studio test required, not assumed from training data). |
+| **Verification Required** | N1 (StreamingEnabled chunk-load detection API — see Decision), N3 (Knit `RemoteSignal:Fire` on a departed `Player` is a silent no-op — empirical Studio test required, not assumed from training data), `Workspace.SignalBehavior = Enum.SignalBehavior.Immediate` pin for `OnPlayerDied` (fixed 2026-07-06 — confirm this enum member and property are settable at server-boot time at the pinned Studio version; see the `OnPlayerDied` channel type Decision below). |
 
 ## ADR Dependencies
 
@@ -95,6 +95,22 @@ Both are observability-only — neither changes runtime behavior, both exist so 
 
 **Decision**: adopt **Option (a)** from N10's own framing — a **once-per-field-update-pass pre-dispatch registry snapshot**, consulted by `_captureDeathLockSnapshot` for every death that occurs within the same pass, rather than accepting the post-purge "decayed history" read for the second death. Concretely: at the start of each field-update pass, before processing any `Humanoid.Died` callbacks that pass triggers, the current `predatorId` lock registry is snapshotted into a pass-scoped local. Every death handled within that same pass reads from the pass-scoped snapshot, not the live (potentially-already-purged) registry — so a second same-pass death sees the SAME at-death lock state the first death saw, regardless of fan-out ordering between the two `Humanoid.Died` callbacks. This is chosen over Option (b) (accept degraded semantics) because it preserves death-screen narrative correctness for both players at a small, bounded implementation cost (one extra table snapshot per pass, not per death), and because the GDD's own framing marks Option (a) as closing the gap rather than merely documenting it. **This ADR authors the mechanism; a companion AC (recommended id `H.30d`, per N10's own suggestion) exercising the two-deaths-same-pass scenario should be added to the GDD in a follow-up touch** — this ADR does not itself edit the GDD's Acceptance Criteria section.
 
+### `OnPlayerDied` channel type — raw `BindableEvent`, not Knit `Signal` (fixed 2026-07-06, closes a cross-ADR type tension)
+
+**Decision**: `OnPlayerDied` is constructed as a raw `Instance.new("BindableEvent")`, per the GDD's own frozen C.1.11 text (round-11 BLOCK-3 / red-team I-3 closure), which types the payload as a published Luau type alias fired over a literal `BindableEvent`, and whose yield-free correctness proofs (the synchronous single-Luau-frame death path, C.1.11/C.1.12) are argued from literal `BindableEvent:Fire` dispatch semantics specifically — not from Knit `Signal`'s guarantee, which the GDD text never references. ADR-0001's general project-wide preference for Knit's `Signal` class (its own Key Interfaces section, and its Risks section's mitigation) applies to **new** cross-service channels authored after ADR-0001; it does not retroactively override an already-frozen, round-11-closed GDD decision without a design ruling reopening that closure, which is out of this ADR's scope to make unilaterally.
+
+Because the channel stays a raw `BindableEvent`, ADR-0001's own stated fallback applies: **`Workspace.SignalBehavior` must be explicitly pinned to `Enum.SignalBehavior.Immediate`** at server boot (not left at the platform default, which Roblox has been drifting toward `Deferred` across releases — ADR-0001's own Risks section). This is a one-line, one-time server-boot assertion, not a per-call cost, and is required specifically because `OnPlayerDied`'s subscribers (Player Controller, Crafting & Items, Predator AI) all assume synchronous, same-frame dispatch.
+
+```luau
+-- Server boot, before any KnitInit runs (fixed 2026-07-06 — closes the ADR-0001/
+-- ADR-0004 type tension: OnPlayerDied stays a raw BindableEvent per the GDD's own
+-- frozen C.1.11 closure, so this pin is required rather than relying on Knit Signal's
+-- dispatch-mechanism-independent guarantee).
+workspace.SignalBehavior = Enum.SignalBehavior.Immediate
+```
+
+This decision is scoped to `OnPlayerDied` specifically (and any other already-GDD-frozen raw `BindableEvent` channel, if one exists) — every *new* cross-service signal authored under ADR-0001 going forward should still prefer Knit's `Signal` class per that ADR's own guidance, sidestepping this pin requirement entirely for those channels.
+
 ### N11 — `hotspot.id` comparison convention
 
 **Decision**: `hotspot.id` (the `"%d_%d"`-format dedup-cell string) comparison for tie-breaking (Predator AI's Core Rule 3 / H.8 third tier) uses **Luau's native string `<` operator (byte-lexicographic)** — no numeric parse of the encoded cell coordinates. This is the GDD's own recommended pin; adopted verbatim since any single deterministic total order satisfies PA's determinism clause and this is purely a cross-implementation-consistency hygiene decision, not a live contradiction.
@@ -107,12 +123,19 @@ DisturbanceService
 │     - spatial hash grid (empty, cell-size 32)
 │     - live-source list (empty)
 │     - attribution archive (empty, cap MAX_ATTRIBUTION_ARCHIVE_ENTRIES)
-│     - OnPlayerDied Signal (ADR-0001 Rule 1: constructed here, not KnitStart)
+│     - OnPlayerDied BindableEvent, per the GDD's own frozen C.1.11 mechanism choice
+│       (ADR-0001 Rule 1: constructed here, not KnitStart; type kept as raw
+│       BindableEvent, not Knit Signal — see the Engine Compatibility note below
+│       on Workspace.SignalBehavior pinning. Fixed 2026-07-06: this bullet
+│       previously read "Signal," inconsistent with the GDD's own C.1.11 text.)
+│     - Humanoid.Died chain registration (Players.PlayerAdded → CharacterAdded → Died)
+│       (ADR-0001 Rule 1: fixed 2026-07-06 — this bullet previously appeared under
+│       KnitStart below, contradicting both the GDD's C.1.11 "registered in KnitInit"
+│       requirement and ADR-0001 Rule 1 itself)
 │     - RegistrationHandshake module (ADR-0001 Rule 2 worked example — see below)
 │     - loadedChunks: {[Player]: {[chunkId]: true}}  (server-computed, N1)
 │
 ├── KnitStart:
-│     - Humanoid.Died chain registration (Players.PlayerAdded → CharacterAdded → Died)
 │     - field-update Heartbeat loop begins (decay pass + N7/N8 monitoring)
 │
 ├── Public surface (server-internal, non-.Client):
@@ -198,6 +221,7 @@ end)
 - N10's pre-dispatch snapshot adds one extra table copy per field-update pass (not per death) — a small, bounded cost accepted for death-screen correctness.
 
 ### Risks
+- **`/architecture-review` re-verification fix (2026-07-06)**: this ADR's diagram previously called `OnPlayerDied` a "Signal" (matching ADR-0001's general preference) while the GDD's own frozen C.1.11 text specifies a raw `BindableEvent` — an unresolved type tension between this ADR and ADR-0001. Fixed by keeping the raw `BindableEvent` (respecting the GDD's already-closed round-11 decision) and adding an explicit `Workspace.SignalBehavior = Enum.SignalBehavior.Immediate` boot-time pin, per ADR-0001's own stated fallback for channels that stay `BindableEvent`. The diagram's `KnitStart` section also previously listed `Humanoid.Died` chain registration, contradicting both the GDD's C.1.11 "registered in KnitInit" requirement and ADR-0001 Rule 1 — moved to `KnitInit` in the diagram above.
 - **Engine-specialist review (2026-07-06) fixes**: the `Key Interfaces` spatial-grid type had a bug (`GridCell` was declared as a `{sourceId: string}` record instead of the flat string list the Decision text describes — fixed to `type SourceId = string; SpatialGrid = {[number]: {[number]: {SourceId}}}`); `_isChunkLoadedForPlayer` used full 3D `.Magnitude` against an XZ-only grid concept (fixed to an XZ-plane-only distance check, matching `cellCoordFor`'s own XZ-only cell coordinates — vertical distance across cliffs/caves/multi-level builds would otherwise skew results); `self._loadedChunks[player]` had no `PlayerRemoving` cleanup (fixed — a `Players.PlayerRemoving` connection now clears it, preventing a per-departed-player table leak).
 - **`STREAMING_PUSH_RADIUS`'s correct value is unverified** — set too small, chunks push late (visible pop); set too large, wasted bandwidth pushing to players who haven't rendered the chunk yet. **Mitigation**: named as Verification Required; tune empirically against H.32d's cache-integrity ACs during implementation.
 - **N3's empirical Knit `RemoteSignal:Fire` no-op behavior is unverified** against the pinned build. **Mitigation**: explicit Studio test required before implementation is considered complete (see N3 Decision).
@@ -207,7 +231,7 @@ end)
 
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|---------------------------|
-| ecological-disturbance.md | N1–N11 (forward-obligations.md, "the ADR MUST specify" cluster); spatial-grid data structure and cap-eviction policy (Q3) reverse-cited at GDD line 1288 | Every N-item closed with a specific decision above; `Region3` explicitly rejected in favor of a plain table-of-tables grid; oldest-first eviction adopted for Q3 |
+| ecological-disturbance.md | N1–N11 (forward-obligations.md, "the ADR MUST specify" cluster); spatial-grid data structure and cap-eviction policy (Q3) reverse-cited at GDD line 1288; C.1.11 (`OnPlayerDied` raw `BindableEvent` mechanism, KnitInit registration) | Every N-item closed with a specific decision above; `Region3` explicitly rejected in favor of a plain table-of-tables grid; oldest-first eviction adopted for Q3 (GDD's own Q3 entry updated 2026-07-06 to mark RESOLVED); C.1.11's `BindableEvent` type respected as-is (not silently swapped for Signal), with `Workspace.SignalBehavior` pinned instead — see the dedicated Decision subsection above |
 | predator-ai.md | Consumes `GetHottestHotspot`, `GetSquadAggregateT`, the ED↔PA RegistrationHandshake | Unchanged — this ADR implements, not renames, the frozen contracts PA's approved GDD depends on |
 
 ## Performance Implications

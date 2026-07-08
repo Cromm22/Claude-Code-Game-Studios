@@ -524,7 +524,7 @@ The HUD operates in a separate visual layer from the world. Its palette must rem
 | **HUD stroke / text** | Opaque white | `#F0F0F0` | `Color3.fromRGB(240, 240, 240)` | Maximum contrast against the cool-dark world. Off-white reads as equipment readout, not chrome |
 | **HUD frame fill (default)** | Transparent cool dark | `#1A1E2B` @ ~60% opacity | `Color3.fromRGB(26, 30, 43)` at ImageTransparency ~0.4 | Cool-tinted dark fill recedes against the world while creating a readable panel |
 | **Oxygen meter — safe (>30%)** | Teal-white | `#5FFFD8` | `Color3.fromRGB(95, 255, 216)` | Cool, functional. Distinct from flora green (more blue-tinted) |
-| **Oxygen meter — warning (10–30%)** | Pale amber-yellow | `#FFD060` | `Color3.fromRGB(255, 208, 96)` | Light, desaturated amber-yellow at hue ~50° vs predator's 33°. Lighter value, yellower hue. The position-on-meter context disambiguates from predator hue |
+| **Oxygen meter — warning (10–30%)** | Pale warning yellow | `#FFF860` | `Color3.fromRGB(255, 248, 96)` | Light, desaturated warm yellow at hue ~57° (S~62%), 24° clear of predator's 33° reserved hue and outside the ±15° exclusion band entirely — corrected 2026-07-06 after the prior value (`#FFD060`, hue ~42°) was found to sit inside the exclusion zone despite §4.5's earlier (incorrect) claim of hue ~50° |
 | **Oxygen meter — critical (<10%)** | Light red-orange | `#FF8060` | `Color3.fromRGB(255, 128, 96)` | Light, desaturated red-orange. Hue closer to red (~10°) than predator amber. Light value vs mid-tone predator |
 | **Disturbance meter — low endpoint** | Cool grey-blue | `#3A4A60` | `Color3.fromRGB(58, 74, 96)` | Empty meter — receding, almost invisible |
 | **Disturbance meter — high endpoint** | Vivid violet-blue | `#6040E0` | `Color3.fromRGB(96, 64, 224)` | Saturated cool violet. ~100°+ hue separation from predator amber. Players learn "violet meter = approaching threshold" as separate from "amber in periphery = predator present" |
@@ -546,7 +546,7 @@ The HUD operates in a separate visual layer from the world. Its palette must rem
 - Direction: Horizontal (left = empty, right = full — meter drains left)
 - Keypoints (on the fill gradient):
   - `0.0`: `Color3.fromRGB(255, 128, 96)` (critical red-orange)
-  - `0.3`: `Color3.fromRGB(255, 208, 96)` (warning amber-yellow)
+  - `0.3`: `Color3.fromRGB(255, 248, 96)` (warning yellow — corrected 2026-07-06, was `Color3.fromRGB(255, 208, 96)`)
   - `1.0`: `Color3.fromRGB(95, 255, 216)` (safe teal-white)
 
 ### 4.6 Semantic Color Vocabulary
@@ -562,7 +562,7 @@ The color grammar of Terranova's world. Players learn it through play.
 | **Warm white light (`#FFDCA5`)** | Safety. Relief. Temporary. | Safe room entry — immediate temperature shift from cool exterior |
 | **Amber-orange (predator reserved `#E8871A` ± 15°)** | The predator is present or approaching. No other meaning. | First predator encounter; any peripheral amber trace is unambiguous alarm |
 | **Violet-blue (disturbance meter high `#6040E0`)** | Your squad's collective ecological disturbance. UI signal, not world signal. | HUD disturbance meter — graduates cool-grey to vivid violet over the run |
-| **Teal-white / amber-yellow / red-orange (oxygen meter)** | Oxygen remaining. Teal = fine. Yellow = attention. Red = act now. | Oxygen meter — present from session start |
+| **Teal-white / warning yellow / red-orange (oxygen meter)** | Oxygen remaining. Teal = fine. Yellow = attention. Red = act now. | Oxygen meter — present from session start |
 
 ### 4.7 Colorblind Safety Audit
 
@@ -575,9 +575,9 @@ Backup cues:
 - **Scale**: predator is 4–6 player-heights; flora is sub-player-height. A shape that fills the vertical frame is not flora.
 - **Sound cue**: predator has a dedicated audio signature (rumble / low-frequency sweep) that begins before visual contact. **Primary backup cue for this pair.**
 
-**Pair 2 — Disturbance meter violet vs. oxygen warning amber-yellow (`#6040E0` vs. `#FFD060`)**
+**Pair 2 — Disturbance meter violet vs. oxygen warning yellow (`#6040E0` vs. `#FFF860`)**
 
-Risk profile: **Tritanopia** collapses blue and yellow channels. Violet may shift red-leaning; amber-yellow may shift grey-pink.
+Risk profile: **Tritanopia** collapses blue and yellow channels. Violet may shift red-leaning; warning yellow may shift grey-pink.
 
 Backup cues:
 - **Position**: meters are at different screen positions (oxygen bottom-left, disturbance paired beside).

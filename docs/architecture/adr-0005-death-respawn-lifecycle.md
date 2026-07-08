@@ -141,6 +141,13 @@ type ReconcileRow = {
     inFlightSince: number?,  -- getServerTime() at Pending -> InFlight; nil while Pending
 }
 
+-- PC's own C.11 clock-injection seam (production default; tests override this
+-- field directly). Added 2026-07-06 re-verification fix — _dispatchOxygenSpend
+-- below previously called workspace:GetServerTimeNow() inline, which PC's GDD
+-- explicitly forbids and grep-gates (same seam ADR-0011 also defines for PC's
+-- other Heartbeat-bound state).
+PlayerController.getServerTime = function() return workspace:GetServerTimeNow() end
+
 -- PC: minting (session-lifetime-unique, monotonic).
 local _deathEventCounter = 0
 local function nextDeathEventId(): string
@@ -159,7 +166,8 @@ end
 -- object is constructed, before it resolves, silently defeating this entire race guard.
 function PlayerController:_dispatchOxygenSpend(row: ReconcileRow): ()
     row.state = "InFlight"
-    row.inFlightSince = workspace:GetServerTimeNow()
+    row.inFlightSince = self.getServerTime()  -- C.11 seam, NOT inline workspace:GetServerTimeNow()
+                                               -- (fixed 2026-07-06 re-verification — see review report Conflict #4)
     local ok, result = pcall(function()
         return Knit.GetService("ResourceService"):RequestSquadOxygenSpend(
             row.userId, 1, "death", row.deathEventId)  -- row.userId, not a duplicated param (drift risk)
@@ -237,6 +245,7 @@ end
 - The reconciliation state machine is non-trivial to implement correctly (4 states, a staleness sweep, a post-yield re-check) — this is accepted complexity, not avoidable, given the correctness requirements (no double-charge, no silently-lost charge across `BindToClose`).
 
 ### Risks
+- **`/architecture-review` re-verification fix (2026-07-06)**: `_dispatchOxygenSpend`'s original sample wrote `row.inFlightSince = workspace:GetServerTimeNow()` inline, bypassing PC's own C.11 clock-injection seam — a GDD-mandated, CI-grep-gated rule this ADR itself is subject to as a PC-owned time-sensitive field. Fixed by adding `PlayerController.getServerTime` as a seam field (mirroring the same fix applied to ADR-0011) and routing the write through it.
 - **Engine-specialist review (2026-07-06) — 2 blocking fixes applied**: (1) the `pcall`-wrapped dispatch had no stated yield discipline — if `RequestSquadOxygenSpend` is ever made genuinely async via a Knit Promise, `pcall` would report success the instant the Promise is *constructed*, not once it *resolves*, silently defeating the entire post-yield race guard this state machine exists for. Fixed: `RequestSquadOxygenSpend` MUST yield synchronously within its own call, or if it ever returns a Promise, `_dispatchOxygenSpend` MUST `:await()`/`:expect()` it inside the `pcall`, never bare-call-and-check `ok`. (2) `error()` thrown at `KnitInit` does not necessarily halt server startup — the common Knit bootstrap boilerplate (`Knit.Start():andThen(print):catch(warn)`) only logs a rejected `KnitInit` promise, which would silently defeat R7c-I4's "refuses to start" requirement. Fixed: the project's server bootstrap MUST use a `catch` handler that calls `game:Shutdown()` (or equivalent hard-stop) on any `KnitInit` rejection — stated as binding project-wide, not just for this ADR's own config-validation check. Also fixed: `_dispatchOxygenSpend` dropped its duplicated `deadPlayerUserId` parameter in favor of `row.userId` (drift-risk cleanup), and `_deathDedupSet`'s type is now declared explicitly.
 - **The staleness sweep's own re-arm timing is not fully specified by this ADR** — PC's GDD implies a sweep exists (referenced by the "aged InFlight row" re-arm trigger) but its interval/threshold isn't restated here. **Mitigation**: this is implementation detail belonging to PC's own service, not a cross-service contract; flagged as an Open Question below rather than guessed at in this ADR.
 - **D1's kill-criterion is only as good as the analytics segmentation** — if 2-player-squad outcomes aren't segmented from 3/4-player squads in the analytics pipeline, the kill-criterion cannot actually be evaluated. **Mitigation**: named explicitly as an instrumentation requirement in the D1 Decision above, not left implicit.
