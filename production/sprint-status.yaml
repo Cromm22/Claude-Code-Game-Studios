@@ -220,20 +220,20 @@ stories:
     name: "Death-Cost Reconciliation Core (deathEventId + State Machine)"
     file: "production/epics/player-controller/story-004-death-cost-reconciliation-core.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 2.0
-    blocker: "ed-10 done 2026-07-09 — hard blocker cleared; Resource Management's RequestSquadOxygenSpend receiver still mocked for sprint 1 (cross-epic, no stories yet)"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-09"
   - id: "pc-5"
     name: "Death/Respawn Side-Effects & Cross-Service Signals (T5/T6)"
     file: "production/epics/player-controller/story-005-death-respawn-side-effects.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1.5
-    blocker: "depends on pc-4; Predator AI epic (mock), Crafting & Items epic (mock)"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-09"
   - id: "pc-6"
     name: "Path B Disconnect Predicate, Oxygen Grace Timer & Oxygen-Gated Respawn Wait"
     file: "production/epics/player-controller/story-006-path-b-oxygen-grace-timer.md"
@@ -241,7 +241,7 @@ stories:
     status: backlog
     owner: ""
     estimate_days: 1.5
-    blocker: "depends on pc-4; Resource Management (cross-epic, mock); Predator AI (cross-epic, mock)"
+    blocker: "pc-4 done 2026-07-09 — hard blocker cleared; RM + PA still mocked per sprint plan. NOTE (TD-013): must close BOTH the PlayerRemoving teardown AND the H.39 orphan-check interaction for departed players"
     completed: ""
   - id: "pc-7"
     name: "Dead-Player Input Locks & renderScope (S4/S5)"
@@ -250,7 +250,7 @@ stories:
     status: backlog
     owner: ""
     estimate_days: 1.0
-    blocker: "depends on pc-4, pc-5"
+    blocker: "pc-4 + pc-5 done 2026-07-09 — blockers cleared. NOTE: read TD-014 first (OnPlayerDied payload must be widened with deathTimestamp/deathEventId before/with any HUD-facing consumer)"
     completed: ""
   - id: "pc-8"
     name: "Minimal Spectator Camera"
@@ -268,7 +268,7 @@ stories:
     status: backlog
     owner: ""
     estimate_days: 1.5
-    blocker: "depends on pc-4, pc-5; RunController rc-1/rc-2 (done sprint 1); Crafting & Items (cross-epic, mock)"
+    blocker: "pc-4 + pc-5 done 2026-07-09, rc-1/rc-2 done — hard blockers cleared; Crafting & Items still mocked per sprint plan"
     completed: ""
   - id: "pc-10"
     name: "RemoteEvent Trust Boundary Application (Canonical Order + Global Budget)"
@@ -313,7 +313,7 @@ stories:
     status: backlog
     owner: ""
     estimate_days: 0.5
-    blocker: "depends on pc-1, pc-4"
+    blocker: ""
     completed: ""
   - id: "pc-15"
     name: "C.12 Contract-Completeness CI Hook Extension"

@@ -1,7 +1,7 @@
 # Story 004: Death-Cost Reconciliation Core (deathEventId + State Machine)
 
 > **Epic**: Player Controller
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Manifest Version**: 2026-07-06
@@ -101,11 +101,20 @@
 
 **Story Type**: Logic
 **Required evidence**: `tests/unit/player-controller/death-cost-reconciliation-core_test.luau`
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing (part of the 20/20-file suite, `.tools/lune.exe run tests/run_tests.lua tests/unit tests/integration` → exit 0, re-verified 2026-07-09 after code-review fixes)
 
 ---
 
 ## Dependencies
 
-- Depends on: Ecological Disturbance epic's `Humanoid.Died` fan-out story (`GetOnPlayerDiedSignal()`/`OnPlayerDied` BindableEvent construction) — cross-epic; Resource Management epic's `RequestSquadOxygenSpend` receiving-service implementation — cross-epic
+- Depends on: Ecological Disturbance epic's `Humanoid.Died` fan-out story (`GetOnPlayerDiedSignal()`/`OnPlayerDied` BindableEvent construction) — cross-epic (**closed: ed-10, 2026-07-09**); Resource Management epic's `RequestSquadOxygenSpend` receiving-service implementation — cross-epic (**mocked per the sprint plan**: injectable `self._requestSquadOxygenSpendFn` seam, warn-once + unconditional-success default, swapped for the real ResourceService call when the RM epic lands)
 - Unlocks: Story 005, Story 006, Story 007, Story 009
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-09
+**Criteria**: 7/7 passing — full AC-traceability produced by the QA testability review; H.21 covered at the ordering-hook-point level only (the reset payload is Story 005's scope per this story's own Out-of-Scope — that AC's literal text closes fully when Story 005 lands); H.36 verifiably Story 006's scope (confirmed against story-006's own text, not just trusted)
+**Deviations**: None blocking. Sanctioned RM mock (see Dependencies). Implementer resolved ADR-0005's open staleness-threshold question as `2×RECONCILIATION_TICK_INTERVAL` (named constant, GDD H.38/H.54-derived). Review fixes applied same-session: `DEATH_OXYGEN_SPEND_AMOUNT`/`_REASON` named constants (data-driven-values fix), warn-once stub flag moved from class table to instance state, `BeginDispatch` Pending-precondition assert (defense-in-depth), corrected header leak-bound comment (the "≤4" claim was wrong — see TD-013), +3 tests (wrapper-level H.54 spend-call-count proof, multi-player same-tick independence, stub static shape pin). **TD-013 logged**: Story 006 must close BOTH the PlayerRemoving teardown and the H.39 orphan-check interaction for departed players; Story 005's hook payloads must be idempotent per deathEventId (the pre-yield hook fires on every retry dispatch).
+**Test Evidence**: `tests/unit/player-controller/death-cost-reconciliation-core_test.luau` — passing (20/20 suite, exit 0)
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS (engine specialist: MINOR NOTES, ADR-0005/0001/0004 all PASS incl. a traced race-proof confirmation of the split-dispatch design; QA: TESTABLE with non-blocking gaps, all four named gaps closed same-session)

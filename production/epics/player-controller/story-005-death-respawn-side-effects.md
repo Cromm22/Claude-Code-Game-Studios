@@ -1,7 +1,7 @@
 # Story 005: Death/Respawn Side-Effects & Cross-Service Signals (T5/T6)
 
 > **Epic**: Player Controller
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Integration
 > **Manifest Version**: 2026-07-06
@@ -90,11 +90,20 @@
 
 **Story Type**: Integration
 **Required evidence**: `tests/integration/player-controller/death-respawn-side-effects_test.luau`
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing (part of the 21/21-file suite, `.tools/lune.exe run tests/run_tests.lua tests/unit tests/integration` → exit 0, re-verified 2026-07-09 after code-review fixes)
 
 ---
 
 ## Dependencies
 
 - Depends on: Story 004
-- Unlocks: Story 007, Story 009; Cross-epic: Predator AI epic's `PredatorService` (`OnPlayerS4Entered`/`OnPlayerT6Respawned`/`ReleasePredatorLock` handler implementations); Crafting & Items epic's `OnSquadMemberAliveChanged` consumer (`RunSession.aliveMembers`)
+- Unlocks: Story 007, Story 009; Cross-epic: Predator AI epic's `PredatorService` (`OnPlayerS4Entered`/`OnPlayerT6Respawned`/`ReleasePredatorLock` handler implementations — **note TD-016: PC fires these userId-keyed, deviating from this GDD's `(player)` text; reconcile at PA-epic first touch**); Crafting & Items epic's `OnSquadMemberAliveChanged` consumer (`RunSession.aliveMembers`)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-09
+**Criteria**: 7/7 passing — full AC traceability produced by the QA testability review; the three PARTIAL rows it found (H.72 ordering-sensitivity, H.75 missing 5th proxy, H.70 unfalsifiable grace-anchor claim) were all closed by same-session review fixes, including replacing a false test-comment coverage claim with the real `isSameLife` object-identity assertion.
+**Deviations**: Two BLOCKING engine-review findings fixed same-session: (1) `Player:LoadCharacter()` reachable for departed players (T6 fires regardless of liveness) with an uncaught error aborting sibling respawns — fixed with liveness re-validation inside the now-`task.spawn`'d T6 remainder + a pcall backstop in `_defaultRespawnPlayerAtAnchor`; (2) the T6 live-Character work ran synchronously inside the Heartbeat handler — fixed per the file's own established synchronous-transition-then-task.spawn pattern, preserving H.72's ordering inside the spawned closure. Design decisions ratified by review: call-scoped `dispatchOrigin`/`pathOrigin` params (ADR-frozen `ReconcileRow` untouched — the reviewer confirmed the ADR supersedes the GDD's fuller row prose); `isSameLife` gate (traced sound); `_isPlayerDead` heartbeat-skip (traced sound, stale-watchdog-safe); `OnPlayerDied` as a genuine S→C Client signal per ADR-0006 registry item #10 (outbound-only, 6-step validation correctly N/A). Tech debt: **TD-014** (payload missing `deathTimestamp`/`deathEventId` — widen before Story 007/HUD), **TD-015** (stale-INITIAL-dispatch races a newer life — needs ruling at RM's real async call), **TD-016** (userId-keyed seam deviation), **TD-013 corrected** (T6 does fire for departed players; hook-idempotency facet CLOSED by this story's `dispatchOrigin` design). Studio-verification item carried: `LoadCharacter()`'s synchronous-completion contract (unverifiable under Lune, flagged in-code).
+**Test Evidence**: `tests/integration/player-controller/death-respawn-side-effects_test.luau` — passing (21/21 suite, exit 0)
+**Code Review**: Complete — CHANGES REQUIRED → all fixes applied → effectively APPROVED WITH SUGGESTIONS (engine: ISSUES FOUND with 2 must-fixes, both fixed + statically pinned; QA: GAPS, all four named gaps closed same-session; ADR-0005/0001/0006 all COMPLIANT)
