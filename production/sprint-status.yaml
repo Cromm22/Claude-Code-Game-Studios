@@ -10,7 +10,7 @@ goal: "Stand up the minimal cross-service spine (RunController arbiter, Ecologic
 start: "2026-07-06"
 end: "2026-07-20"
 generated: "2026-07-06"
-updated: "2026-07-08"
+updated: "2026-07-09"
 
 stories:
   # --- RunController (Must Have) ---
@@ -110,20 +110,20 @@ stories:
     name: "OnDisturbanceBandCrossed Squad-Aggregate Band-Crossing Signal"
     file: "production/epics/ecological-disturbance/story-009-disturbance-band-crossed-signal.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-08"
   - id: "ed-10"
     name: "Humanoid.Died Monopoly & OnPlayerDied Fan-out"
     file: "production/epics/ecological-disturbance/story-010-humanoid-died-monopoly-onplayerdied-fanout.md"
     priority: must-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1.0
-    blocker: "depends on ed-1 (ed-4 nominally listed but not a hard blocker for sprint-1 scope, see sprint-1.md footnote)"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-09"
   - id: "ed-11"
     name: "RegistrationHandshake Module & Predator-Lock Registry"
     file: "production/epics/ecological-disturbance/story-011-registrationhandshake-predator-lock-registry.md"
@@ -131,7 +131,7 @@ stories:
     status: backlog
     owner: ""
     estimate_days: 1.5
-    blocker: "depends on ed-1, ed-10"
+    blocker: ""
     completed: ""
   - id: "ed-12"
     name: "Death Attribution Resolution & DeathAttributionPayload"
@@ -149,7 +149,7 @@ stories:
     status: backlog
     owner: ""
     estimate_days: 1.0
-    blocker: "depends on ed-6, ed-7"
+    blocker: ""
     completed: ""
   - id: "ed-14"
     name: "StreamingEnabled Chunk Membership & Flora Chunk Snapshot/Update Push"
@@ -223,7 +223,7 @@ stories:
     status: backlog
     owner: ""
     estimate_days: 2.0
-    blocker: "depends on ed-10 (ED epic); Resource Management's RequestSquadOxygenSpend receiver (cross-epic, no stories yet — mock for sprint 1)"
+    blocker: "ed-10 done 2026-07-09 — hard blocker cleared; Resource Management's RequestSquadOxygenSpend receiver still mocked for sprint 1 (cross-epic, no stories yet)"
     completed: ""
   - id: "pc-5"
     name: "Death/Respawn Side-Effects & Cross-Service Signals (T5/T6)"

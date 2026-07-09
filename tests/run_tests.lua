@@ -310,6 +310,16 @@ local BrickColor = _G.BrickColor
 		"DisturbanceServiceTierClassificationLogic"
 	);
 	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceBandCrossedLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceBandCrossedLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/DisturbanceServiceDeathFanoutLogic.luau",
+		gameplayFolder,
+		"DisturbanceServiceDeathFanoutLogic"
+	);
+	load_luau_file(
 		"src/gameplay/services/RunControllerLogic.luau",
 		gameplayFolder,
 		"RunControllerLogic"

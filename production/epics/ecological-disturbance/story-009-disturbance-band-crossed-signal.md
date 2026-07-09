@@ -1,7 +1,7 @@
 # Story 009: OnDisturbanceBandCrossed Squad-Aggregate Band-Crossing Signal
 
 > **Epic**: Ecological Disturbance
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Integration
 > **Manifest Version**: 2026-07-06
@@ -70,3 +70,12 @@ D.7 coupling note (no action required, just awareness): the tier boundaries (0.3
 
 - Depends on: 006, 007
 - Unlocks: None (consumed by Player Controller, outside this epic)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-08
+**Criteria**: All ACs COVERED (H.28d a-e, signal signature, first-pass rule, post-hitch cascade parity, both directions, security), including 5 stub-based orchestration tests added post-review to decouple this module's own logic from Story 006's real cascade math
+**Deviations**: Reused `TierClassificationLogic.ClassifyWithCascade` via callback injection (not a direct `require()`) — required by the Lune test harness's `script.Parent`-relative-require limitation, a known landmine hit and self-corrected during implementation before delivery. `_setTestClock` seam referenced by this story's own AC text doesn't exist yet anywhere in the codebase (a pre-existing GDD/harness gap inherited verbatim from `ecological-disturbance-verification.md`, not introduced here) — worked around with a harness-local `_now`/`_setNow` field, matching Story 006's precedent. Logged as **TD-010**.
+**Test Evidence**: `tests/integration/ecological-disturbance/disturbance-band-crossed-signal_test.luau` — passing
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS (independently re-verified the load-bearing monotonic-cascade correctness claim by tracing `TierAt` across all threshold regions — confirmed correct)

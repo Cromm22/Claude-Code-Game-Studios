@@ -23,7 +23,10 @@
 --   - Story 004: DONE -- see the Emit() method's archive-write tail, the KnitStart maintenance-
 --     accumulator wiring, the PlayerRemoving handler, and DisturbanceServiceAttributionArchive
 --     Logic.luau (bullet kept and marked complete, matching the Story 002/003 precedent above)
---   - Story 010: Humanoid.Died subscription chain body and OnPlayerDied fan-out dispatch
+--   - Story 010: DONE -- see the KnitInit Humanoid.Died chain registration, the
+--     _onHumanoidDied/_captureDeathLockSnapshot/GetOnPlayerDiedSignal methods below, and
+--     DisturbanceServiceDeathFanoutLogic.luau (bullet kept and marked complete, matching the
+--     Story 002/003/004 precedent above)
 --   - Story 011: RegistrationHandshake module's actual export functions
 --   - Story 017: N7/N8 ops-log monitoring logic inside the Heartbeat loop
 --
@@ -105,6 +108,38 @@
 -- BindableEvent), the real live-source-position enumeration, and the GetTierCrossedSignal()
 -- accessor. See _runTierClassificationPass's own header note for the position-enumeration design
 -- call and its flagged known gap.
+--
+-- SCOPE NOTE (Story 009 -- production/epics/ecological-disturbance/story-009-disturbance-band-
+-- crossed-signal.md): adds the server-internal, squad-aggregate-keyed OnDisturbanceBandCrossed
+-- signal (TR-ed-038) -- distinct from Story 006's position-keyed TierCrossedEvent above: this one
+-- is driven by the single scalar squadT (Story 007's GetSquadAggregateT(nil), unfiltered) rather
+-- than per-position field values. All classification/direction/first-pass math lives in the
+-- dependency-free DisturbanceServiceBandCrossedLogic module, which reuses Story 006's
+-- TierClassificationLogic.ClassifyWithCascade unmodified (TR-ed-054) via CALLER-INJECTED function
+-- reuse rather than reimplementing the settle loop OR require()-ing the sibling module directly
+-- (that module stays zero-require, per every sibling *Logic module's own precedent -- see its own
+-- CALLBACK-INJECTION DESIGN header note); this file only owns the real self._previousSquadTier
+-- state (a single nilable Tier, NOT a table -- see that module's own FIRST-PASS DESIGN CALL note),
+-- the real self._disturbanceBandCrossedSignal Signal (Signal.new(), a NEW cross-service channel per
+-- ADR-0001, matching Story 006's own self._tierCrossedEvent precedent), the real
+-- TierClassificationLogic.ClassifyWithCascade function value bound as the injected callback, and
+-- the GetDisturbanceBandCrossedSignal() accessor.
+--
+-- SCOPE NOTE (Story 010 -- production/epics/ecological-disturbance/story-010-humanoid-died-
+-- monopoly-onplayerdied-fanout.md): adds the Humanoid.Died sole-subscriber chain
+-- (Players.PlayerAdded -> CharacterAdded -> Humanoid.Died:Connect, registered in KnitInit per
+-- ADR-0001 Rule 1 / ADR-0004's Architecture Diagram) and the OnPlayerDied fan-out this is the
+-- ONLY code path anywhere in the server codebase permitted to subscribe to Humanoid.Died
+-- (TR-ed-032; a repo-wide static grep in this story's own test file verifies the monopoly). All
+-- payload-construction math (step 5b) lives in the dependency-free
+-- DisturbanceServiceDeathFanoutLogic module; this file only owns the real
+-- self._deathLockSnapshot state table (KnitInit), the real self._onPlayerDied BindableEvent
+-- (KnitInit -- a RAW BindableEvent, NOT a Knit Signal, per the GDD's own frozen C.1.11 closure --
+-- see ADR-0004's dedicated OnPlayerDied channel type Decision subsection, NOT this story's own
+-- new-channel choice), the real Humanoid.Died chain registration (KnitInit), the real
+-- self:_captureDeathLockSnapshot stub (5a -- TODO(Story 011) below), and the real
+-- workspace:GetServerTimeNow() clock sample (5b, sampled AFTER the snapshot capture). No dedup at
+-- this layer (REQUIRED) -- see DisturbanceServiceDeathFanoutLogic.luau's own NO DEDUP note.
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -123,6 +158,8 @@ local SquadAggregateLogic = require(script.Parent.DisturbanceServiceSquadAggrega
 local HotspotQueryLogic = require(script.Parent.DisturbanceServiceHotspotQueryLogic)
 local StreamingLogic = require(script.Parent.DisturbanceServiceStreamingLogic)
 local TierClassificationLogic = require(script.Parent.DisturbanceServiceTierClassificationLogic)
+local BandCrossedLogic = require(script.Parent.DisturbanceServiceBandCrossedLogic)
+local DeathFanoutLogic = require(script.Parent.DisturbanceServiceDeathFanoutLogic)
 
 export type SourceId = SpatialGridLogic.SourceId
 export type SpatialGrid = SpatialGridLogic.SpatialGrid -- grid[cellX][cellZ] = flat list of source ids (ADR-0004)
@@ -132,6 +169,7 @@ export type HotspotResult = HotspotQueryLogic.HotspotResult
 export type FloraDeltaCache = StreamingLogic.FloraDeltaCache
 export type ChunkPushPayload = StreamingLogic.ChunkPushPayload
 export type Tier = TierClassificationLogic.Tier
+export type BandCrossedDirection = BandCrossedLogic.Direction
 
 local DisturbanceService = Knit.CreateService({
 	Name = "DisturbanceService",
@@ -186,6 +224,9 @@ DisturbanceService.DedupPositionsByCanonicalKey = TierClassificationLogic.DedupP
 DisturbanceService.TierAt = TierClassificationLogic.TierAt
 DisturbanceService.ClassifyWithCascade = TierClassificationLogic.ClassifyWithCascade
 DisturbanceService.RunClassificationPass = TierClassificationLogic.RunClassificationPass
+DisturbanceService.DirectionFor = BandCrossedLogic.DirectionFor
+DisturbanceService.ClassifySquadBandCrossing = BandCrossedLogic.ClassifySquadBandCrossing
+DisturbanceService.BuildDeathPayload = DeathFanoutLogic.BuildDeathPayload
 
 -- ============================================================================
 -- KnitInit -- builds. Per ADR-0001 Rule 1, every object another service might need to
@@ -246,11 +287,30 @@ function DisturbanceService:KnitInit(): ()
 	self._attributionMaintenanceAccumulator = 0
 
 	-- Raw BindableEvent, per the GDD's own frozen C.1.11 mechanism choice (ADR-0004's
-	-- OnPlayerDied Decision) -- NOT a Knit Signal. Only the empty channel is constructed
-	-- here; Story 010 owns the Humanoid.Died dispatch chain that fires it.
+	-- OnPlayerDied Decision) -- NOT a Knit Signal. Constructed here (KnitInit, ADR-0001 Rule 1);
+	-- fired by the Humanoid.Died chain registered immediately below (Story 010).
 	-- Workspace.SignalBehavior is pinned in the server bootstrap script, BEFORE any KnitInit
 	-- runs -- not here (see ADR-0004's own code-sample placement).
 	self._onPlayerDied = Instance.new("BindableEvent")
+
+	-- Story 010 (TR-ed-030): single-writer mailbox this story writes into at (5a) -- Story 012's
+	-- GetDeathAttributionPayload is the reader, using a read-and-clear idiom (out of THIS story's
+	-- scope -- see this story's own Implementation Notes). Keyed by Player, one entry per death.
+	self._deathLockSnapshot = {} :: { [Player]: boolean }
+
+	-- Story 010 (TR-ed-032): Humanoid.Died sole-subscriber chain -- registered HERE, in KnitInit
+	-- (ADR-0001 Rule 1; ADR-0004 Architecture Diagram, fixed 2026-07-06 to KnitInit, not
+	-- KnitStart). This is the ONLY `Humanoid.Died:Connect` call anywhere in the entire server
+	-- codebase -- a repo-wide static grep in this story's own test file verifies the monopoly;
+	-- Story 016's H.39e CI lint later enforces it mechanically project-wide.
+	Players.PlayerAdded:Connect(function(player: Player)
+		player.CharacterAdded:Connect(function(character: Model)
+			local humanoid = character:WaitForChild("Humanoid") :: Humanoid
+			humanoid.Died:Connect(function()
+				self:_onHumanoidDied(player)
+			end)
+		end)
+	end)
 
 	-- Placeholder module reference only -- Story 011 owns its actual exports.
 	self._registrationHandshake = require(script.Parent.DisturbanceServiceRegistrationHandshake)
@@ -313,6 +373,22 @@ function DisturbanceService:KnitInit(): ()
 	-- not KnitStart, so any subscriber (Predator AI) can safely call GetTierCrossedSignal():Connect()
 	-- during its own KnitStart regardless of KnitInit ordering between services (ADR-0001 Rule 1).
 	self._tierCrossedEvent = Signal.new()
+
+	-- Story 009 (TR-ed-038): squad-aggregate-keyed band-crossing state -- a SINGLE nilable Tier,
+	-- NOT a table keyed by position (contrast self._previousTierAtPosition above, which is
+	-- per-position; squadT is one scalar for the whole squad). `nil` here means "no field-update
+	-- pass has classified squadT yet this session" -- DisturbanceServiceBandCrossedLogic's own
+	-- FIRST-PASS DESIGN CALL note explains why this single nilable field does double duty (flat-
+	-- threshold dispatch selection AND first-pass fire suppression) rather than a separate
+	-- self._hasClassifiedSquadTierOnce boolean.
+	self._previousSquadTier = nil :: TierClassificationLogic.Tier?
+
+	-- Story 009 (TR-ed-038): a NEW cross-service Signal -- mirrors self._tierCrossedEvent's own
+	-- ADR-0001 Signal-over-BindableEvent precedent immediately above. Constructed here (KnitInit),
+	-- not KnitStart, so any subscriber (Player Controller, out of this epic) can safely call
+	-- GetDisturbanceBandCrossedSignal():Connect() during its own KnitStart regardless of KnitInit
+	-- ordering between services (ADR-0001 Rule 1).
+	self._disturbanceBandCrossedSignal = Signal.new()
 end
 
 -- ============================================================================
@@ -363,6 +439,13 @@ function DisturbanceService:KnitStart(): ()
 		-- ADR-0004's own engine-specialist review already caught for self._loadedChunks above).
 		self._floraDeltaCache[player] = nil
 
+		-- Story 010 (code-review fix): a player who dies and then disconnects before Story 012's
+		-- read-and-clear reader ever consumes their snapshot entry would otherwise pin their
+		-- departed Player instance in this table for the life of the server (same leak class as
+		-- the two clears above). Story 012's reader already degrades to nil for an absent key by
+		-- design, so clearing here is safe for it.
+		self._deathLockSnapshot[player] = nil
+
 		-- Story 004 condition (b): a departed player can no longer reference any archive entry
 		-- via sourcePlayerId (this story's own scoped interpretation -- see
 		-- DisturbanceServiceAttributionArchiveLogic.luau's CONDITION (b) SCOPING note). Re-run
@@ -372,6 +455,70 @@ function DisturbanceService:KnitStart(): ()
 		AttributionArchiveLogic.HandlePlayerDeparture(self._attributionReferencingPlayers, player.UserId)
 		self:_runAttributionArchiveMaintenancePass()
 	end)
+end
+
+-- ============================================================================
+-- Story 010 (TR-ed-030/032/044/052/061) -- Humanoid.Died sole-subscriber chain (registered in
+-- KnitInit, above) and OnPlayerDied fan-out. All payload-construction math (step 5b) lives in the
+-- dependency-free DisturbanceServiceDeathFanoutLogic module (see its own header note for the
+-- PLAYER IDENTITY / ORDERING NOTE / NO DEDUP design calls); this file only owns the real
+-- self._deathLockSnapshot state table (KnitInit, above), the real self._onPlayerDied BindableEvent
+-- (KnitInit, above), the real Humanoid.Died chain registration (KnitInit, above), the real
+-- self:_captureDeathLockSnapshot stub immediately below, and the real
+-- workspace:GetServerTimeNow() clock sample -- sourced AFTER the snapshot capture (5a), per the
+-- AC's own ordering requirement.
+--
+-- TODO(Story 011): _captureDeathLockSnapshot always returns false. Story 011's predator-lock
+-- registry does not exist yet -- this stub keeps predatorWasLockedAtDeath permanently false until
+-- Story 011 supplies a real registry lookup, mirroring DisturbanceServiceAttributionArchiveLogic
+-- .luau's own DefaultIsEmissionLocked stub precedent from Story 004 (same "-- TODO(Story N)"
+-- marker convention, same "stub returns a fixed default until a later story implements the real
+-- check" shape). Kept as a plain method here (not an injected function-value seam like
+-- DefaultIsEmissionLocked) because this story's own Implementation Notes pin the exact call shape
+-- `self:_captureDeathLockSnapshot(deadPlayer)` verbatim -- Story 011 replaces this method's body
+-- directly when it lands, rather than swapping an injected callback.
+-- ============================================================================
+
+function DisturbanceService:_captureDeathLockSnapshot(_deadPlayer: Player): boolean
+	return false
+end
+
+--- (5a)-(5c): synchronous, yield-free snapshot-then-fire sequence (REQUIRED -- TR-ed-052). No
+--- dedup at this layer (REQUIRED -- see DisturbanceServiceDeathFanoutLogic's own NO DEDUP note):
+--- if Humanoid.Died fires twice for the same player (a pathological replication race, Player
+--- Controller's own documented assumption per ADR-0005), this method runs its own independently-
+--- correct snapshot-then-payload sequence each time it is invoked -- ED performs no
+--- de-duplication of its own; each consumer owns its own idempotency (PC's future
+--- `_deathInProgress` guard, ADR-0005).
+function DisturbanceService:_onHumanoidDied(deadPlayer: Player): ()
+	-- (5a) snapshot the predator-lock registry state for this player, synchronously.
+	local wasLocked = self:_captureDeathLockSnapshot(deadPlayer) -- see Story 011/012 for the registry itself
+	self._deathLockSnapshot[deadPlayer] = wasLocked
+
+	-- (5b) construct payload AFTER the snapshot capture -- ordering matters (AC text): the flag
+	-- value must stay consistent with the registry read at (5a), not a later, possibly-already-
+	-- released state.
+	local now = workspace:GetServerTimeNow()
+	local payload = DeathFanoutLogic.BuildDeathPayload(deadPlayer, wasLocked, now)
+
+	-- (5c) fire, synchronous dispatch guaranteed by the Workspace.SignalBehavior pin (Story 001).
+	self._onPlayerDied:Fire(payload)
+end
+
+-- ============================================================================
+-- GetOnPlayerDiedSignal() -- server-internal accessor (Story 010, TR-ed-030/044). SERVER-INTERNAL
+-- ONLY -- never exposed via DisturbanceService.Client (this file's `Client = {}` table above stays
+-- empty; Story 016's H.39/H.39d CI lint later enforces this mechanically). Returns the SAME
+-- BindableEvent instance every call, constructed once in KnitInit (ADR-0001 Rule 1) so a
+-- subscriber calling this during its own KnitStart never races construction. Fans out to exactly
+-- 3 consumers (Player Controller, Crafting & Items, Predator AI, per this session's TD sign-off)
+-- -- a cross-epic expectation documented here, not enforced at runtime by this method itself (see
+-- this story's own Implementation Notes; Story 016's CI lint verifies the actual subscriber count
+-- once all 3 consuming epics exist).
+-- ============================================================================
+
+function DisturbanceService:GetOnPlayerDiedSignal(): BindableEvent
+	return self._onPlayerDied
 end
 
 -- ============================================================================
@@ -408,6 +555,16 @@ function DisturbanceService:_runFieldUpdatePass(): ()
 	-- push pass above is immaterial -- neither reads nor mutates the other's state, both only
 	-- read this pass's already-computed decay cache via fieldValue().
 	self:_runTierClassificationPass()
+
+	-- Story 009 (TR-ed-038): squad-aggregate-keyed band-crossing signal -- its own clearly-
+	-- delimited step, called AFTER the decay pass above so this pass's GetSquadAggregateT(nil)
+	-- read (inside _runBandCrossedPass) consumes this SAME pass's freshly-cached decay values
+	-- (TR-ed-017, transitively via each member's fieldValue() read). Order relative to
+	-- _runStreamingChunkPushPass/_runTierClassificationPass above is immaterial -- this step
+	-- neither reads nor mutates self._previousTierAtPosition/self._floraDeltaCache/
+	-- self._loadedChunks, and is not read or mutated by either of those steps in turn; it only
+	-- reads/writes its OWN self._previousSquadTier state.
+	self:_runBandCrossedPass()
 end
 
 -- ============================================================================
@@ -706,6 +863,79 @@ end
 
 function DisturbanceService:GetTierCrossedSignal()
 	return self._tierCrossedEvent
+end
+
+-- ============================================================================
+-- Story 009 (TR-ed-038) -- squad-aggregate-keyed band-crossing signal. All classification/
+-- direction/first-pass math lives in the dependency-free DisturbanceServiceBandCrossedLogic
+-- module (see its own header notes for the CALLBACK-INJECTION DESIGN, FIRST-PASS DESIGN CALL, and
+-- DIRECTION-ONCE-PER-CASCADE design calls); this file only owns the real self._previousSquadTier
+-- state (KnitInit, above), the real self._disturbanceBandCrossedSignal Signal (KnitInit, above),
+-- the real self:GetSquadAggregateT(nil) UNFILTERED read below (Story 007 -- this signal is
+-- squad-wide, not per-excluded-player), the real TierClassificationLogic.ClassifyWithCascade
+-- function value passed as `classifyWithCascadeFn` (CALLBACK-INJECTION DESIGN -- BandCrossedLogic
+-- itself never require()s TierClassificationLogic, since script.Parent-relative require() is
+-- unresolvable under this project's loadstring-based Lune test harness, mirroring
+-- DisturbanceServiceHotspotQueryLogic's own precedent), and the real workspace:GetServerTimeNow()
+-- clock sample.
+--
+-- CLOCK-SAMPLE-ONCE-PER-PASS (design call, flagged): `now` is sampled exactly ONCE per call to
+-- this method, before the fire loop, and the SAME value is used to stamp every event fired this
+-- pass (rather than re-sampling workspace:GetServerTimeNow() once per event inside the loop).
+-- Mirrors this file's own established "compute once per pass, reuse for every event/query within
+-- that pass" discipline (TR-ed-017's decay-cache-frozen-per-pass precedent, applied here to the
+-- clock read rather than a decay computation) -- all events fired by one field-update pass
+-- legitimately share one "fire time." AC-H.28d's own text only requires "timestamp from
+-- workspace:GetServerTimeNow() at fire time," which a single per-pass sample satisfies exactly
+-- (the pass IS the fire time for every event it produces).
+--
+-- NO _setTestClock SEAM (discrepancy, flagged): the story's own AC text parenthetically mentions
+-- "deterministic in tests via the _setTestClock seam," but no such seam exists anywhere in this
+-- file (or anywhere else in this codebase, confirmed by search) -- every other
+-- workspace:GetServerTimeNow() call site in this file (the decay pass, _topContributorsAt,
+-- _runAttributionArchiveMaintenancePass, Emit) samples the real clock directly with no injectable
+-- override. This method follows that SAME established real-clock-sampling precedent rather than
+-- introducing a one-off seam found nowhere else in this service; the integration test below
+-- verifies the classification/direction/event-count/first-pass behavior entirely through the pure
+-- DisturbanceServiceBandCrossedLogic module and a fake per-test clock function on the test
+-- harness's own Fake service (mirroring Story 006's tier-crossed-signal-subscription_test.luau
+-- harness precedent), never through the real workspace clock.
+-- ============================================================================
+
+function DisturbanceService:_runBandCrossedPass(): ()
+	local squadT = self:GetSquadAggregateT(nil)
+
+	local finalTier, events = BandCrossedLogic.ClassifySquadBandCrossing(
+		squadT,
+		self._previousSquadTier,
+		TierClassificationLogic.ClassifyWithCascade,
+		DisturbanceConstants.TENSE_THRESHOLD,
+		DisturbanceConstants.HUNT_THRESHOLD,
+		DisturbanceConstants.HYSTERESIS_BAND,
+		DisturbanceConstants.MAX_TIER_CASCADE_ITERATIONS
+	)
+
+	self._previousSquadTier = finalTier
+
+	if #events > 0 then
+		local now = workspace:GetServerTimeNow()
+		for _, event in events do
+			self._disturbanceBandCrossedSignal:Fire(event.direction, event.newTier, now)
+		end
+	end
+end
+
+-- ============================================================================
+-- GetDisturbanceBandCrossedSignal() -- server-internal accessor (Story 009, TR-ed-038).
+-- SERVER-INTERNAL ONLY -- never exposed via DisturbanceService.Client (this file's `Client = {}`
+-- table above stays empty). Naming matches GetTierCrossedSignal()'s own established convention
+-- (drops "On"/verb-form padding, pairs the core noun directly with "Signal"). Returns the SAME
+-- Signal instance every call, constructed once in KnitInit (ADR-0001 Rule 1) so a subscriber
+-- calling this during its own KnitStart never races construction.
+-- ============================================================================
+
+function DisturbanceService:GetDisturbanceBandCrossedSignal()
+	return self._disturbanceBandCrossedSignal
 end
 
 -- ============================================================================

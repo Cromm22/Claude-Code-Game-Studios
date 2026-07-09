@@ -1,7 +1,7 @@
 # Story 010: Humanoid.Died Monopoly & OnPlayerDied Fan-out
 
 > **Epic**: Ecological Disturbance
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Integration
 > **Manifest Version**: 2026-07-06
@@ -106,7 +106,7 @@ The 3-consumer fan-out count (PC, Crafting, Predator AI) is a cross-epic expecta
 
 **Story Type**: Integration
 **Required evidence**: `tests/integration/ecological-disturbance/humanoid-died-monopoly-onplayerdied-fanout_test.luau` — must exist and pass
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing (part of the 19/19-file suite, `.tools/lune.exe run tests/run_tests.lua tests/unit tests/integration` → exit 0, re-verified 2026-07-09 after code-review fixes)
 
 ---
 
@@ -114,3 +114,12 @@ The 3-consumer fan-out count (PC, Crafting, Predator AI) is a cross-epic expecta
 
 - Depends on: 001, 004
 - Unlocks: 011, 012
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-09
+**Criteria**: 6/6 passing — all COVERED per the QA testability review's full AC-traceability table (behavioral coverage via the disclosed FakeDisturbanceService harness + static/structural checks against the real source, per this epic's established Lune-harness strategy)
+**Deviations**: One real defect found and fixed same-session by code review: `_deathLockSnapshot` had no `PlayerRemoving` cleanup (same leak class as `_loadedChunks`/`_floraDeltaCache`, fixed with the matching one-line clear + a static regression test). Advisory items logged: **TD-011** (`PlayerAdded`/`CharacterAdded` already-existing-instance races — design call needed), **TD-012** (textual monopoly grep is early-warning only; Story 016's H.39e lint must be robust to the documented evasion classes), **TD-010 extended** (`deathTimestamp` inherits the no-`_setTestClock`-seam caveat, same `_setNow` harness workaround). ADR-0004's N10 per-pass registry snapshot correctly deferred to Story 011 (stub per this story's own Out of Scope). Review hardenings applied: per-fire coroutine yield-free proof on the double-fire test, body-bounded ordering check, re-scoped `stripLuaComments` caveat.
+**Test Evidence**: `tests/integration/ecological-disturbance/humanoid-died-monopoly-onplayerdied-fanout_test.luau` — passing
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS (engine specialist: MINOR NOTES, ADR-0001/0004/0005 all COMPLIANT; QA: TESTABLE, zero blocking gaps)
