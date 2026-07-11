@@ -270,6 +270,21 @@ local BrickColor = _G.BrickColor
 		"PlayerControllerDeathSideEffectsLogic"
 	);
 	load_luau_file(
+		"src/gameplay/services/PlayerControllerPathBGraceLogic.luau",
+		gameplayFolder,
+		"PlayerControllerPathBGraceLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/PlayerControllerRenderScopeLogic.luau",
+		gameplayFolder,
+		"PlayerControllerRenderScopeLogic"
+	);
+	load_luau_file(
+		"src/gameplay/services/PlayerControllerRunEndLogic.luau",
+		gameplayFolder,
+		"PlayerControllerRunEndLogic"
+	);
+	load_luau_file(
 		"src/gameplay/services/DisturbanceConstants.luau",
 		gameplayFolder,
 		"DisturbanceConstants"

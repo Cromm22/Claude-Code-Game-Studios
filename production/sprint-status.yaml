@@ -10,7 +10,7 @@ goal: "Stand up the minimal cross-service spine (RunController arbiter, Ecologic
 start: "2026-07-06"
 end: "2026-07-20"
 generated: "2026-07-06"
-updated: "2026-07-09"
+updated: "2026-07-11"
 
 stories:
   # --- RunController (Must Have) ---
@@ -238,20 +238,20 @@ stories:
     name: "Path B Disconnect Predicate, Oxygen Grace Timer & Oxygen-Gated Respawn Wait"
     file: "production/epics/player-controller/story-006-path-b-oxygen-grace-timer.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1.5
-    blocker: "pc-4 done 2026-07-09 — hard blocker cleared; RM + PA still mocked per sprint plan. NOTE (TD-013): must close BOTH the PlayerRemoving teardown AND the H.39 orphan-check interaction for departed players"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-10"
   - id: "pc-7"
     name: "Dead-Player Input Locks & renderScope (S4/S5)"
     file: "production/epics/player-controller/story-007-dead-player-input-locks-renderscope.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1.0
-    blocker: "pc-4 + pc-5 done 2026-07-09 — blockers cleared. NOTE: read TD-014 first (OnPlayerDied payload must be widened with deathTimestamp/deathEventId before/with any HUD-facing consumer)"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-11"
   - id: "pc-8"
     name: "Minimal Spectator Camera"
     file: "production/epics/player-controller/story-008-minimal-spectator-camera.md"
@@ -259,17 +259,17 @@ stories:
     status: backlog
     owner: ""
     estimate_days: 1.5
-    blocker: "depends on pc-7"
+    blocker: "pc-7 done 2026-07-11 — blocker cleared. Consumes renderScope == dead-respawning + the retained spectatorCameraActive proxy; HRP guaranteed present at S4"
     completed: ""
   - id: "pc-9"
     name: "Run-End Contract (T7 Wipe / T8 Victory)"
     file: "production/epics/player-controller/story-009-run-end-contract.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1.5
-    blocker: "pc-4 + pc-5 done 2026-07-09, rc-1/rc-2 done — hard blockers cleared; Crafting & Items still mocked per sprint plan"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-11"
   - id: "pc-10"
     name: "RemoteEvent Trust Boundary Application (Canonical Order + Global Budget)"
     file: "production/epics/player-controller/story-010-remoteevent-trust-boundary.md"
@@ -277,7 +277,7 @@ stories:
     status: backlog
     owner: ""
     estimate_days: 1.0
-    blocker: "depends on pc-1, pc-2, pc-5, pc-9"
+    blocker: "pc-1/pc-2/pc-5/pc-9 all done 2026-07-11 — blockers cleared"
     completed: ""
   - id: "pc-11"
     name: "NetworkOwnership & Character Replication Bandwidth"

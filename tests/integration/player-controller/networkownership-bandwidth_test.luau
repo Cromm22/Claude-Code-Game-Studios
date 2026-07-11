@@ -133,7 +133,12 @@ return function()
 			local spawnBody = extractFunctionBody(
 				source,
 				"function PlayerControllerService:_wireCharacterSetup%(",
-				"function PlayerControllerService:_isAliveAndEligible%("
+				-- Story 007 (pc-7): pc-1/pc-2's `_isAliveAndEligible` stub was
+				-- renamed to its real ADR-0012 name, `_isEligibleForGameplayEvents`,
+				-- in the SAME file position (immediately after
+				-- `_wireCharacterSetup`) -- this boundary pattern updated in
+				-- lockstep, a legitimate pin update per pc-7's own report.
+				"function PlayerControllerService:_isEligibleForGameplayEvents%("
 			)
 			expect(spawnBody:find("humanoid%.WalkSpeed = LocomotionStaminaLogic%.GetMoveSpeed%(")).never.to.equal(nil)
 		end
@@ -180,16 +185,19 @@ return function()
 		)
 
 		local function test_walkspeed_write_site_count_is_exactly_two()
-			-- Exactly 2 write sites total (spawn + the shared transition
-			-- function) -- guards against a future stray/duplicate WalkSpeed
-			-- assignment being added outside the two audited, server-only call
-			-- sites.
+			-- Story 007 (pc-7) pin update: was exactly 2 write sites (spawn +
+			-- the shared locomotion-transition function) -- pc-7 legitimately
+			-- added a THIRD, `_exitToAliveRenderScope` (the T6/ADR-0012 restore
+			-- site, "restore at T6" per that story's own binding rules), so the
+			-- audited count is now 3. Still guards against a future stray/
+			-- duplicate WalkSpeed assignment being added outside these three
+			-- audited, server-only call sites.
 			local source = loadServiceSource()
 			local count = 0
 			for _ in source:gmatch("humanoid%.WalkSpeed = LocomotionStaminaLogic%.GetMoveSpeed%(") do
 				count += 1
 			end
-			expect(count).to.equal(2)
+			expect(count).to.equal(3)
 		end
 		it("test_walkspeed_write_site_count_is_exactly_two", function()
 			test_walkspeed_write_site_count_is_exactly_two()

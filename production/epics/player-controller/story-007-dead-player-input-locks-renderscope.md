@@ -1,7 +1,7 @@
 # Story 007: Dead-Player Input Locks & renderScope (S4/S5)
 
 > **Epic**: Player Controller
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Integration
 > **Manifest Version**: 2026-07-06
@@ -78,7 +78,7 @@
 
 **Story Type**: Integration
 **Required evidence**: `tests/integration/player-controller/dead-player-input-locks-renderscope_test.luau`
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing (part of the 23/23-file suite, `.tools/lune.exe run tests/run_tests.lua tests/unit tests/integration` → exit 0, re-verified 2026-07-11 after code-review fixes)
 
 ---
 
@@ -86,3 +86,12 @@
 
 - Depends on: Story 004, Story 005
 - Unlocks: Story 008, Story 009, Story 010, Story 012, Story 013
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-11
+**Criteria**: 4/4 passing. H.24's RequestEmote-accept and RequestPing-reject halves are structurally covered at the classification-table level with explicit pending-Story-012/013 in-file disclosures (no such handlers exist yet); H.34 deferred to Story 013 (client-side), disclosed in-file. The S5 strict-superset property is proven mechanically over the data-driven `S4_ALLOWED_EVENT_CLASSES` table (no second rejection list to drift). renderScope single-mint proven behaviorally (all 3 transitions, no-redundant-resend, placement-failure negative) + structurally (sole-mint-site, exactly-3-transition-sites, guard-is-step-1-in-every-handler pins).
+**Deviations**: **TD-017 logged** — the S4 input-lock is commit-gated per the GDD's own C.5.3 (a)–(f) ordering, so `renderScope` stays "alive" (inputs accepted) during a future async RM yield window: a genuine GDD-vs-ADR-0012 tension, faithfully implemented per the GDD, needs a design ruling bundled with TD-015's trigger. Review fixes applied same-session: jump lock switched to CAPTURE-AND-RESTORE of both `JumpPower` and `JumpHeight` (the modern `UseJumpPower=false`/`JumpHeight` rig mechanism would have made JumpPower-only zeroing a silent no-op; the unverified `DEFAULT_JUMP_POWER` constant was removed entirely; `UseJumpPower` per-rig state carried as a STUDIO VERIFICATION item); `_renderScope`/`_capturedJumpState` H.75 recreation leak disclosed in-code per the `_deathEffectsState` precedent; +5 test additions (S5 TryCommitGatherHold, PlayerRemoving-clears pin, nil-character S4/T6 grace, capture-not-default proof, `:FireAll` regression pin). ADR-0012's Key Interfaces sample should be annotated to the landed commit-gated timing and GDD C.9 should gain an `OnRenderScopeChanged` row (forward obligations, in TD-017's text). Guard rename `_isAliveAndEligible`→`_isEligibleForGameplayEvents` verified fully retired; both `networkownership-bandwidth_test.luau` pin updates verified legitimate and intent-preserving.
+**Test Evidence**: `tests/integration/player-controller/dead-player-input-locks-renderscope_test.luau` — passing (23/23 suite, exit 0)
+**Code Review**: Complete — engine specialist ISSUES FOUND (non-blocking, all tracked/fixed: TD-017 registered, capture-and-restore applied, disclosure added, pin added); QA TESTABLE with 4 gaps (all closed same-session); ADR-0012/0006 compliant with the disclosed commit-gating tension

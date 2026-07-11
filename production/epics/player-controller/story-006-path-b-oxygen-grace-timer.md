@@ -1,7 +1,7 @@
 # Story 006: Path B Disconnect Predicate, Oxygen Grace Timer & Oxygen-Gated Respawn Wait
 
 > **Epic**: Player Controller
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Manifest Version**: 2026-07-06
@@ -108,11 +108,20 @@
 
 **Story Type**: Logic
 **Required evidence**: `tests/unit/player-controller/path-b-oxygen-grace-timer_test.luau`
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing (part of the 22/22-file suite, `.tools/lune.exe run tests/run_tests.lua tests/unit tests/integration` → exit 0, re-verified 2026-07-10 after code-review fixes)
 
 ---
 
 ## Dependencies
 
-- Depends on: Story 004; Cross-epic: Resource Management epic's `OnPlayerOxygenExpired()`/`RequestSquadOxygenSpend` receiving-service; Predator AI epic's `lastPredatorDamageTimestamp`/`predatorCausedImminent` latch write-side
+- Depends on: Story 004; Cross-epic: Resource Management epic's `OnPlayerOxygenExpired()`/`RequestSquadOxygenSpend` receiving-service (mocked — injectable seams, pool default `math.huge` so no false deaths); Predator AI epic's `lastPredatorDamageTimestamp`/`predatorCausedImminent` latch write-side (mocked — 3 read seams, userId-keyed per TD-016's established convention)
 - Unlocks: Story 009
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-10
+**Criteria**: 8/8 passing (H.22b/c/d/f, H.43, H.44, H.65, H.12a clause — plus the GDD G.6 coupled-knob invariant `LATCH_MAX_AGE > HP_ARM_RECENT_WINDOW + 30.0` bound to H.12a clause (iii), which QA review established as a binding requirement this story owns since it authors both constants; implemented with the GDD's own worked examples as tests rather than deferred)
+**Deviations**: **TD-013 RESOLVED by this story** — PlayerRemoving teardown clears `deathInProgress`/`deathStartedAt`/pointer with correct pointer-vs-row semantics (uncommitted rows survive by deathEventId and late-commit orphan-remove; an already-Committed-at-teardown row is retired immediately — a case identified beyond TD-013's own corrected text), suppressing the departed-player T6 entirely. Review fixes applied same-session: the retirement test was found UNSOUND (passed even if the Path-B dispatch never fired) and hardened to capture-at-source; H.65's no-recharge clause got an explicit spend-count assertion; +the teammate-connected-but-dead gate test. Design decisions ratified by review: grace-expiry deaths dispatch via pathOrigin "A" (side-effect-correct — the resulting `deathCause="predator-kill"` naming inaccuracy for oxygen deaths is a disclosed pc-5-era constant-naming follow-up, see TD-014's payload work); H.22f's literal `row.playerName` satisfied via handler-cached locals (the ADR-frozen row shape was not widened); read-and-cache first-statement-block verified genuinely yield-free; the engine review's task.spawn ordering trace confirmed the pointer-vs-row design absorbs both the synchronous-stub-today and async-RM-later worlds.
+**Test Evidence**: `tests/unit/player-controller/path-b-oxygen-grace-timer_test.luau` — passing (22/22 suite, exit 0)
+**Code Review**: Complete — engine specialist CLEAN; QA GAPS (3 required fixes + 1 optional, ALL applied same-session); ADR-0005/0001 COMPLIANT

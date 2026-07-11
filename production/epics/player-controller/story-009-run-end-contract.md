@@ -1,7 +1,7 @@
 # Story 009: Run-End Contract (T7 Wipe / T8 Victory)
 
 > **Epic**: Player Controller
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Integration
 > **Manifest Version**: 2026-07-06
@@ -93,11 +93,20 @@
 
 **Story Type**: Integration
 **Required evidence**: `tests/integration/player-controller/run-end-contract_test.luau`
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing (part of the 24/24-file suite, `.tools/lune.exe run tests/run_tests.lua tests/unit tests/integration` → exit 0, re-verified 2026-07-11 after code-review fixes)
 
 ---
 
 ## Dependencies
 
-- Depends on: Story 004, Story 005; Cross-epic: RunController epic's `RunEndConditionRaised`/`RunEnded` arbiter implementation story; Crafting & Items epic's `OnEscapeBeaconActivated`/`OnBeaconWindowSurvived` producer story
+- Depends on: Story 004, Story 005; Cross-epic: RunController arbiter (**REAL — rc-1/rc-2 done; production wiring targets the live service, tests mock the seam**); Crafting & Items epic's `OnEscapeBeaconActivated`/`OnBeaconWindowSurvived` producers (**stubbed** — injectable emitters with the exact H.47 arities)
 - Unlocks: Story 010
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-11
+**Criteria**: 7/7 passing per named sub-case (QA verified every sub-case against the actual test file; deep-equal assertions confirmed genuinely recursive; fake RunEnded payloads confirmed matching the REAL arbiter's `{exitReason, squadState, timestamp, defeatReason?}` shape). Review-fix additions: self-heal→genuine-re-raise + guard-still-blocks pair, N+1-run wipe re-raise (AC-3's literal promise), solo-squad T7 (pure + Fake — engine review confirmed `squadSize > 0` matches the GDD's literal no-floor wording), the behavioral same-tick wipe-preempts-respawn race test, and the ForceSelfHeal traced-and-found-safe note.
+**Deviations**: Wired to the REAL arbiter payload over the GDD's stale `outcome ∈ {"victory","defeat"}` prose (engine-ratified; GDD C.9 inbound-row text needs a sync at next touch). **TD-018 logged** (RunControllerLogic's exported SquadStateSnapshot type still ADR-0002's `{aliveCount,totalCount}` placeholder vs the real userId-keyed shape PC sends — sync + ADR-0002 addendum before any HUD/analytics consumer). **TD-019 logged** (`Packages/` empty — Knit/Signal not vendored; Signal `:Fire()` synchronicity is load-bearing for the wipe-before-respawn Heartbeat ordering; verify at first Studio boot). Known out-of-scope gap per the story's own text: RunController lacks `RUN_END_DEFEAT_HOLD`/victory-over-wipe precedence (future RunController story — PC's raise-side contract is complete regardless). Scope-adjacent addition disclosed: `BEACON_LATCH_TIMEOUT` KnitInit config gate (range 180–600) added by codebase precedent. Raise-once design: independent `hasRaisedWipe`/`hasRaisedVictory` flags reset on RunEnded, deliberately NOT on self-heal (traced safe — a lost broadcast is not a fresh run).
+**Test Evidence**: `tests/integration/player-controller/run-end-contract_test.luau` — passing (24/24 suite, exit 0)
+**Code Review**: Complete — engine specialist MINOR NOTES (zero must-fix; ADR-0002/0005 PASS; composed-Heartbeat ordering + self-heal interaction traced sound); QA GAPS (2 medium composition gaps + 2 edges, ALL closed same-session)

@@ -1,16 +1,27 @@
 --!strict
 -- PlayerControllerService
 --
--- Implements: production/epics/player-controller/story-003-disturbance-emission-publisher.md
+-- Implements: production/epics/player-controller/story-009-run-end-contract.md
+--             production/epics/player-controller/story-007-dead-player-input-locks-renderscope.md
+--             production/epics/player-controller/story-003-disturbance-emission-publisher.md
 --             production/epics/player-controller/story-002-lantern-gather-gate.md
 --             production/epics/player-controller/story-001-locomotion-sprint-stamina-authority.md
 -- GDD: design/gdd/player-controller.md (C.2/C.2.5 sprint-state authority,
---      C.3.6 light-to-gather gate, C.7 tap-hold/proximity-gate, C.8/C.8.1/C.8.2
---      Disturbance System Contract (publisher), C.9 RemoteEvent surface, C.11
---      clock-injection seam contract, D.1-D.3 stamina formulas, D.4 pulse
---      emission magnitude, D.6 movement-delta sampling, E.D ghost-sprint guard)
--- ADR: docs/architecture/adr-0006-remoteevent-trust-boundary.md (canonical
---      6-step order every client-fired RemoteEvent handler follows)
+--      C.3.6 light-to-gather gate, C.5 item 4 "Inputs accepted while dead",
+--      C.7 tap-hold/proximity-gate, C.8/C.8.1/C.8.2 Disturbance System
+--      Contract (publisher), C.9 RemoteEvent surface, C.11 clock-injection
+--      seam contract, D.1-D.3 stamina formulas, D.4 pulse emission
+--      magnitude, D.6 movement-delta sampling, E.D ghost-sprint guard)
+-- ADR: docs/architecture/adr-0012-player-controller-death-spectator-state.md
+--      (THE LAW for Story 007 -- `renderScope` server-minted "alive" |
+--      "dead-respawning" | "post-run", pushed exactly once per transition,
+--      inside the same handler that performs the transition; S4 input locks
+--      via WalkSpeed=0/JumpPower=0 on the still-present character; S5 is a
+--      strict superset of S4's locks)
+--      docs/architecture/adr-0006-remoteevent-trust-boundary.md (canonical
+--      6-step order every client-fired RemoteEvent handler follows -- the
+--      step-1 alive/state guard IS `_isEligibleForGameplayEvents`, Story
+--      007's real ADR-0012 implementation)
 --      docs/architecture/adr-0001-knit-lifecycle-ordering-discipline.md
 --      (KnitInit builds / KnitStart connects; `Knit.GetService()` calls to
 --      other services belong in KnitStart, per Rule 1's own Key Interfaces
@@ -21,6 +32,14 @@
 --      docs/architecture/adr-0003-locomotion-driver.md (HumanoidRootPart.Position
 --      as the server-tracked position primitive this story's emission-position
 --      reads depend on)
+--      docs/architecture/adr-0002-runcontroller-architecture.md (the REAL, already-
+--      implemented arbiter -- `RunEndConditionRaised(conditionType, squadState,
+--      defeatReason?)` / `GetRunEndedSignal()` -- Story 009's production wiring calls
+--      the REAL `Knit.GetService("RunController")`, not a stub; PC never broadcasts
+--      `RunEnded` itself)
+--      docs/architecture/adr-0005-death-respawn-lifecycle.md (T7's whole-squad-wipe
+--      terminal is this ADR's D1 kill-criterion, reported via
+--      `RunController:RunEndConditionRaised("wipe", squadState)`)
 --
 -- SCOPE NOTE (Story 003 -- DONE, this file): the Sprint/Light disturbance-
 -- emission publisher. All magnitude/grace/cooldown/attenuation formulas live
@@ -82,6 +101,166 @@
 -- 006's PlayerRemoving teardown must close BOTH the raw table entries AND this
 -- orphan-detection interaction (tracked as TD-013 in docs/tech-debt-register.md).
 --
+-- SCOPE NOTE (Story 006 -- production/epics/player-controller/story-006-path-b-oxygen-
+-- grace-timer.md): adds the Path-B (`Players.PlayerRemoving`-while-imminent) 3-arm
+-- predicate dispatch, the squad-wide `OXYGEN_GRACE_DURATION` grace timer (C.5.1), and
+-- the oxygen-gated respawn wait (H.65, extending `_checkRespawnTimers`). All pure
+-- predicate/timer/peek math lives in the dependency-free PlayerControllerPathBGraceLogic
+-- module (zero require, see its own header SCOPE NOTE); this file only owns: the
+-- `Players.PlayerRemoving` read-and-cache-then-evaluate-then-dispatch sequencing (BEFORE
+-- this same handler's existing TD-013 teardown, per this story's binding ordering rule),
+-- the injectable PredatorService read seams (`lastPredatorDamageTimestamp`/
+-- `predatorCausedImminent`/`predatorCausedImminentSetTimestamp`, all userId-keyed --
+-- matching pc-5's own established PredatorService seam convention, TD-016) the predicate
+-- consumes, the injectable ResourceService seams (`OnPlayerOxygenExpired` subscription +
+-- squad-oxygen-pool read) the grace timer consumes, a FOURTH dedicated
+-- `RunService.Heartbeat` connection driving the grace-timer check, and the directly-
+-- callable `OnOxygenExpired()` entry point (mirrors `OnBindToClose`'s "directly callable,
+-- not exercisable via a real engine event under this harness" precedent).
+--
+-- TD-013 CLOSURE (this story's corrected obligation, `docs/tech-debt-register.md`): the
+-- `Players.PlayerRemoving` handler now ALSO clears `self._deathReconciliationState`'s
+-- `deathInProgress[player]` / `deathStartedAt[player]` / the `currentDeathRecord[player]`
+-- POINTER (never the `reconcileRows` entry itself, which is `deathEventId`-keyed and
+-- survives departure per the GDD's own rule -- UNLESS it is already `Committed` at
+-- teardown time, in which case it is retired immediately here too, since no live `Player`
+-- instance remains that could ever replay `Humanoid.Died` against it and no future T6 will
+-- arrive to remove it -- GDD C.5.3's own "per-player teardown" text). This suppresses the
+-- departed-player T6 entirely (no `deathStartedAt` entry -> `TryRespawn` never selects
+-- them again) and closes the permanent-row-retention class TD-013 named.
+--
+-- DEATH-CAUSE LABEL FOR GRACE-EXPIRY DEATHS (disclosed, NOT fixed by this story --
+-- flagged as a follow-up): a grace-expiry death (the squad oxygen pool is still empty
+-- when `OXYGEN_GRACE_DURATION` elapses) dispatches via `self:_beginDeathFlow(player, now,
+-- "A")` -- NOT a naive/unreasoned reuse: pathOrigin="A" is the SIDE-EFFECT-CORRECT choice,
+-- since (unlike Path B) the player is still connected and DOES enter S4 with a body,
+-- needing the FULL Path-A side-effect set ((d) grace-anchor reset for their next life, (e)
+-- spectator camera, (f) input lock, (h) the S4 no-re-acquire signal) -- Path B would
+-- incorrectly suppress all four. The one imperfection: the resulting `OnPlayerDied`
+-- broadcast's `deathCause` reads `PlayerControllerDeathSideEffectsLogic.DEATH_CAUSE_PATH_A`
+-- (`"predator-kill"` in this codebase's already-committed pc-5 constant), which is not
+-- accurate for an oxygen-caused death. Per the GDD's own C.9 `deathCause` enum, Path A's
+-- label should be the cause-agnostic `"died"` (any `Humanoid.Died`-sourced death,
+-- regardless of proximate cause) -- pc-5's more specific `"predator-kill"` naming is a
+-- pre-existing deviation from that enum, not something this story introduces or is
+-- permitted to fix (`PlayerControllerDeathSideEffectsLogic.luau` is outside this story's
+-- file-scope contract). Flagged as a follow-up: either rename `DEATH_CAUSE_PATH_A` back to
+-- a cause-agnostic label, or widen `PathOrigin`/`ResolveDeathCause` with a dedicated
+-- oxygen-death cause -- see this story's own final report.
+--
+-- SCOPE NOTE (Story 007 -- production/epics/player-controller/story-007-dead-
+-- player-input-locks-renderscope.md): adds the real `renderScope` server-minted
+-- enum ("alive"|"dead-respawning"|"post-run") + its single-mint `_setRenderScope`
+-- helper, the ADR-0012 step-1 guard `_isEligibleForGameplayEvents` (RENAMED from
+-- pc-1/pc-2's `_isAliveAndEligible` stub -- same call sites, real body now; the
+-- static/structural pin in tests/integration/player-controller/networkownership-
+-- bandwidth_test.luau was updated in lockstep, see this story's own final report),
+-- the S4 entry side effects (Humanoid.WalkSpeed=0/JumpPower=0 on the still-present
+-- character -- character NOT destroyed, Story 008 needs the HumanoidRootPart) wired
+-- into pc-5's existing `effects.lockClientInput` branch of
+-- `_applyPostCommitDeathSideEffects` (the real T5 commit-path hook, NOT a new call
+-- site), the S4-exit WalkSpeed/JumpPower restore + "alive" re-mint wired into
+-- `_completeRespawn`'s existing T6 hrp-confirmed branch, and the directly-callable
+-- `EnterPostRunScope(player)` S5 entry point (Story 009's forward call site, mirrors
+-- `OnBindToClose`'s "directly callable, not exercisable via a real engine event
+-- under this harness" precedent). All event-classification (which RemoteEvent
+-- "classes" S4 partially allows, e.g. the future RequestEmote) lives in the
+-- dependency-free PlayerControllerRenderScopeLogic module -- this file only owns
+-- the per-player `self._renderScope` table, the real `OnRenderScopeChanged`
+-- per-client targeted push, and the real Humanoid side effects.
+--
+-- SCOPE NOTE (Story 009 -- production/epics/player-controller/story-009-run-end-
+-- contract.md): adds the T7 (whole-squad-wipe) / T8 (victory) run-end raise contract.
+-- All pure predicate/latch/snapshot logic lives in the dependency-free
+-- PlayerControllerRunEndLogic module (see its own header SCOPE NOTE); this file only
+-- owns: the real `Knit.GetService("RunController")` cross-service call (KnitStart,
+-- mirroring Story 003's DisturbanceService precedent -- this is PC's SECOND cross-
+-- service call OUT), the real `GetRunEndedSignal():Connect(...)` inbound subscription,
+-- the injectable `self._requestRunEndConditionRaisedFn` seam (wraps the REAL, already-
+-- implemented `RunController:RunEndConditionRaised`, NOT a cross-epic stub -- rc-1/rc-2
+-- landed this service already), the injectable `self._subscribeToBeaconSignalsFn` seam
+-- (Crafting & Items epic does not exist yet -- SAME "sanctioned by the sprint plan"
+-- rationale as every other missing-epic stub in this file; SHARES
+-- `self._hasWarnedMissingCraftingService`, the same missing cross-epic dependency
+-- `OnSquadMemberAliveChanged` already stubs), the directly-callable
+-- `OnEscapeBeaconActivated(activatorPlayerId, timestamp, windowDurationSeconds)` /
+-- `OnBeaconWindowSurvived(timestamp)` entry points (exact arities per H.47 -- mirrors
+-- `OnOxygenExpired()`'s "directly callable, not exercisable via a real engine event
+-- under this harness" precedent, since Crafting's producers do not exist yet), the T7
+-- evaluation + `BEACON_LATCH_TIMEOUT` self-heal check folded into the EXISTING
+-- `_onDeathReconciliationHeartbeat` connection (no new Heartbeat, per the GDD's own
+-- "folded into the existing reconciliation-tick Heartbeat connection" text), and the
+-- real `self._runEndState` table (KnitInit).
+--
+-- BINDING RULE (control manifest, restated -- not this file's to relitigate): PC NEVER
+-- broadcasts `RunEnded` and never fires any run-end RemoteEvent -- it only ever calls
+-- `RunController:RunEndConditionRaised(conditionType, squadState, defeatReason)`. There
+-- is no `RunEnded` entry anywhere in this file's own `Client` table (declared above,
+-- KnitStart) -- the inbound `RunEnded` PC subscribes to is RunController's OWN signal
+-- (`GetRunEndedSignal()`), a server-internal Knit call, never a `Service.Client` member.
+--
+-- DESIGN DECISION -- squadState shape (flagged, not silently assumed): this story's own
+-- Implementation Notes specify `squadState = { [userId] = "alive" | "S4" | "S5" }`
+-- verbatim -- a concrete resolution of ADR-0002's own Open Question ("SquadStateSnapshot's
+-- concrete shape... deferred"). RunController itself never validates or branches on this
+-- shape (ADR-0002 Decision point 1: "opaque pass-through payload") -- PC is free to
+-- choose it, and this IS that choice, not a placeholder pending a future ADR addendum.
+--
+-- DESIGN DECISION -- raise-once guard mechanism (flagged, not silently assumed): T7 and
+-- T8 each get their OWN independent boolean guard (`_runEndState.hasRaisedWipe` /
+-- `.hasRaisedVictory`), not one shared "have I raised anything yet" flag. T7's squad
+-- condition can remain continuously true across many reconciliation ticks before an
+-- arbiter response ever arrives, so a per-condition-type guard is what makes "raises
+-- exactly once" hold (H.49/H.50/H.61) -- and H.50 requires BOTH a wipe raise AND a
+-- LATER, separate victory raise to each succeed exactly once for the SAME run, which a
+-- single shared flag would incorrectly conflate (the second raise would be silently
+-- swallowed by PC itself, when H.50's own AC requires PC to raise it and let the
+-- arbiter's own precedence/idempotency resolve the outcome -- that resolution is
+-- explicitly out of this story's scope, per RunController's ADR-0002).
+--
+-- DESIGN DECISION -- respawn-timer cancellation mechanism (flagged, not silently
+-- assumed): the inbound `RunEnded` handler calls
+-- `RunEndLogic.ForceCancelRespawnTimer(self._deathReconciliationState, player)`, a NEW
+-- pure function mirroring `PlayerControllerDeathReconciliationLogic.TryRespawn`'s own
+-- detach-bookkeeping but WITHOUT `TryRespawn`'s elapsed-`RESPAWN_DELAY` gate (a run-end
+-- forces every pending S4 player straight to S5, never back to S1, regardless of how
+-- much of the 30s timer has elapsed) -- `TryRespawn` itself is NOT reused directly
+-- (calling it would silently respawn-to-S1 semantics this handler does not want) and
+-- `PlayerControllerDeathReconciliationLogic.luau` is outside this story's file-scope
+-- contract, so the mirrored logic lives in the NEW `PlayerControllerRunEndLogic` module
+-- instead (structurally duck-typed against the same `ReconciliationState` shape, zero
+-- `require()` needed).
+--
+-- KNOWN GAP (disclosed, not silently papered over -- flagged for the RunController
+-- epic, not this story's to fix): the REAL, already-landed `RunController.luau`
+-- (rc-1/rc-2) implements ONLY the one-shot `_hasEnded` latch -- it does NOT yet
+-- implement `RUN_END_DEFEAT_HOLD` (GDD C.6/G.6: the 0.5s victory-over-wipe precedence
+-- window) or the raise-axis idempotency needed to let a same-frame-or-near-simultaneous
+-- victory raise override an already-latched wipe. This is EXPLICITLY out of this
+-- story's Out-of-Scope section ("its RUN_END_DEFEAT_HOLD precedence resolution
+-- (victory-over-wipe), and its raise-axis idempotency") -- PC's own raise-side contract
+-- (this story) is complete and correct regardless of when a future RunController story
+-- adds the hold window; this file's own tests mock the arbiter per the story's explicit
+-- instruction and therefore never depend on the hold window existing.
+--
+-- DESIGN DECISION -- `inputLocked`/`spectatorCameraActive` proxy reconciliation
+-- (flagged, not silently assumed -- see this story's own final report): pc-5's
+-- `self._deathEffectsState[player].inputLocked`/`.spectatorCameraActive` flags are
+-- NOT removed or collapsed into `renderScope` by this story. `renderScope` is now
+-- the SOLE source of truth `_isEligibleForGameplayEvents` (and therefore every real
+-- gameplay-rejection decision) consults -- the `inputLocked` proxy is technically
+-- redundant with `renderScope == "dead-respawning"` going forward, but is
+-- deliberately RETAINED because (a) it is already pc-5's own tested/pinned
+-- behavior (`_setDeathEffectFlag` fires unconditionally, including for a
+-- mid-yield-orphaned player per pc-5's own H.75 proxy guarantee -- touching that
+-- call site was out of this story's file-scope contract), (b) Story 008's
+-- spectator camera may want a narrower "camera-active" signal distinct from the
+-- full three-value `renderScope` enum, and (c) removing it would be a scope
+-- expansion into pc-5's own story, not this one's to make unilaterally. Both
+-- values persist; they are not expected to ever disagree (both are set together,
+-- only for Path-A initial dispatches, in the same `effects.lockClientInput`
+-- branch) -- flagged here as a known, accepted minor duplication.
+--
 -- SCOPE NOTE (Story 002 -- DONE): the lantern axis (S3a/S3b) and the
 -- light-to-gather gate. `PlayerState.locomotion` (LanternLogic's own stub
 -- field) is populated for real as of Story 001 below -- Story 002's own
@@ -120,6 +299,9 @@ local LocomotionStaminaLogic = require(script.Parent.PlayerControllerLocomotionS
 local EmissionPublisherLogic = require(script.Parent.PlayerControllerEmissionPublisherLogic)
 local DeathReconciliationLogic = require(script.Parent.PlayerControllerDeathReconciliationLogic)
 local DeathSideEffectsLogic = require(script.Parent.PlayerControllerDeathSideEffectsLogic)
+local PathBGraceLogic = require(script.Parent.PlayerControllerPathBGraceLogic)
+local RenderScopeLogic = require(script.Parent.PlayerControllerRenderScopeLogic)
+local RunEndLogic = require(script.Parent.PlayerControllerRunEndLogic)
 
 type PlayerState = LanternLogic.PlayerState
 type TumblingWindow = LanternLogic.TumblingWindow
@@ -132,6 +314,11 @@ type DeathPayload = { deadPlayer: Player, deathTimestamp: number, predatorWasLoc
 type DispatchOrigin = DeathSideEffectsLogic.DispatchOrigin
 type PathOrigin = DeathSideEffectsLogic.PathOrigin
 type DeathEffectFlags = { inputLocked: boolean?, spectatorCameraActive: boolean? }
+type RenderScope = RenderScopeLogic.RenderScope
+type RunEndState = RunEndLogic.RunEndState
+type SquadStateSnapshot = RunEndLogic.SquadStateSnapshot
+type ConditionType = RunEndLogic.ConditionType
+type RunEndedPayload = { exitReason: ConditionType, squadState: SquadStateSnapshot, timestamp: number, defeatReason: RunEndLogic.DefeatReason? }
 
 -- Minimum interval between OnStaminaChanged pushes to a single client (<=5Hz
 -- guardrail, ADR-0011 Decision #4 / GDD C.9: "<=5Hz", "never :FireAll").
@@ -157,6 +344,15 @@ local PlayerControllerService = Knit.CreateService({
 		-- ("emits only the server-side camera-state signal ... observed on the server") -- Story
 		-- 007 owns turning those into real client-facing behavior.
 		OnPlayerDied = Knit.CreateSignal(), -- S -> C broadcast, {deadPlayerUserId, deathCause}
+		-- Story 007 / ADR-0012: server-minted "alive"|"dead-respawning"|"post-run",
+		-- pushed to the OWNING client only (never :FireAll -- a squadmate's
+		-- renderScope is never broadcast), exactly once per S1/S4/S5 transition,
+		-- inside the SAME handler that performs the transition (`_setRenderScope`
+		-- below is the sole writer). NEVER inferred client-side (ADR-0012's
+		-- rejection of Alternative 2 -- deriving render state from
+		-- Humanoid.Health/local Died-event observation is the anti-pattern this
+		-- signal exists to close).
+		OnRenderScopeChanged = Knit.CreateSignal(), -- S -> owning C only, {renderScope}
 	},
 })
 
@@ -245,6 +441,40 @@ function PlayerControllerService:KnitInit(): ()
 			"PlayerControllerService config-validation FAILED: "
 				.. tostring(emissionConfigErr)
 				.. " Server bootstrap MUST catch this KnitInit-time error and call game:Shutdown() -- that catch handler is NOT implemented in this file (out of this story's scope)."
+		)
+	end
+
+	-- Story 006 (H.12a clause / ADR-0005 R7c-I4): OXYGEN_GRACE_DURATION's hard
+	-- config-validation floor. Same KnitInit-time hard-error pattern as the two gates
+	-- directly above -- VERIFIED this story (not re-implemented): the real server
+	-- bootstrap (src/core/ServerBootstrap.luau, wired by src/core/ServerInit.server.luau)
+	-- ALREADY calls `game:Shutdown()` from its `Knit.Start():catch(...)` handler, so no
+	-- bootstrap changes were needed to satisfy ADR-0005's binding pairing requirement --
+	-- see this story's own test file for the static pin proving this.
+	local graceConfigOk, graceConfigErr = PathBGraceLogic.ValidateConfig(PathBGraceLogic.OXYGEN_GRACE_DURATION)
+	if not graceConfigOk then
+		error(
+			"PlayerControllerService config-validation FAILED: "
+				.. tostring(graceConfigErr)
+				.. " Server bootstrap MUST catch this KnitInit-time error and call game:Shutdown() -- ALREADY implemented in src/core/ServerBootstrap.luau (verified this story)."
+		)
+	end
+
+	-- Story 006 (H.12a clause (iii) / GDD G.6 coupled-knob invariant, R13-F2, closes
+	-- R12-SD-7/AI-8): LATCH_MAX_AGE must exceed HP_ARM_RECENT_WINDOW by a strict
+	-- 30s-minimum margin -- a SEPARATE gate/call site from the OXYGEN_GRACE_DURATION
+	-- gate directly above (this invariant couples TWO different constants, not one),
+	-- mirroring the same two-call-site precedent the LanternLogic/EmissionPublisherLogic
+	-- gates already establish earlier in this function.
+	local latchInvariantOk, latchInvariantErr = PathBGraceLogic.ValidateLatchMaxAgeInvariant(
+		PathBGraceLogic.LATCH_MAX_AGE,
+		PathBGraceLogic.HP_ARM_RECENT_WINDOW
+	)
+	if not latchInvariantOk then
+		error(
+			"PlayerControllerService config-validation FAILED: "
+				.. tostring(latchInvariantErr)
+				.. " Server bootstrap MUST catch this KnitInit-time error and call game:Shutdown() -- ALREADY implemented in src/core/ServerBootstrap.luau (verified this story)."
 		)
 	end
 
@@ -349,6 +579,22 @@ function PlayerControllerService:KnitInit(): ()
 	-- Story 007 owns turning these into real client-facing behavior/rendering.
 	self._deathEffectsState = {} :: { [Player]: DeathEffectFlags }
 
+	-- Story 007 (ADR-0012): the server-minted renderScope table -- bootstrap
+	-- empty here; `_initPlayerState` below seeds each player's entry to
+	-- "alive" (mirrors every other per-player table's own init-then-populate
+	-- convention) and `Players.PlayerRemoving` clears it (below). The ONLY
+	-- site that ever transitions an existing entry to a NEW scope value
+	-- (rather than the fixed "alive" seed or a `nil` teardown clear) is
+	-- `_setRenderScope` -- the sole mint site, paired 1:1 with the
+	-- `OnRenderScopeChanged` push.
+	self._renderScope = {} :: { [Player]: RenderScope }
+
+	-- Story 007 (code-review fix, engine Finding 3): the S4-entry
+	-- capture-and-restore table for `Humanoid.JumpPower`/`JumpHeight` -- see
+	-- `_enterDeadRespawningRenderScope`'s own doc comment for why this
+	-- replaces a hardcoded jump-restore default.
+	self._capturedJumpState = {} :: { [Player]: { JumpPower: number, JumpHeight: number } }
+
 	-- Story 005 (GDD C.5.3 bootstrap enumeration -- "reconcileRows = {}, currentDeathRecord
 	-- = {}, lastServerTrackedPosition = {}, ..." -- all bootstrapped at the SAME site).
 	-- WRITE-SIDE SCOPE NOTE (flagged, not silently assumed): this story implements ONLY
@@ -370,6 +616,89 @@ function PlayerControllerService:KnitInit(): ()
 	end
 	self._onDeathCommitFn = function(row: ReconcileRow, dispatchOrigin: DispatchOrigin, player: Player?, pathOrigin: PathOrigin?): ()
 		self:_applyPostCommitDeathSideEffects(row, dispatchOrigin, player, pathOrigin)
+	end
+
+	-- Story 006: the squad-wide oxygen-grace-timer state (GDD C.5.1) -- ONE instance,
+	-- not per-player, per the GDD's own "the pool is squad-wide: there is no per-player
+	-- expiry ordering" text.
+	self._oxygenGraceState = PathBGraceLogic.NewGraceState()
+
+	-- Story 006: ResourceService cross-epic stubs (RM epic has no stories yet -- same
+	-- "sanctioned by the sprint plan" rationale as `_defaultRequestSquadOxygenSpend`
+	-- above; SHARES `self._hasWarnedMissingResourceService`, the same missing
+	-- cross-epic dependency). `_getSquadOxygenPoolFn` defaults to `math.huge` --
+	-- deliberately NOT `0` -- so that IF this were somehow reached without real RM
+	-- wiring (it cannot be in production: `_subscribeToOxygenExpiredFn`'s default is
+	-- also a no-op, so `OnOxygenExpired()` is never actually invoked without a real
+	-- subscription), the (dormant) grace-expiry death path could never spuriously
+	-- fire -- matches this file's own established "a stub must never manufacture a
+	-- false failure/death" precedent (see `_defaultRequestSquadOxygenSpend`'s own doc
+	-- comment).
+	self._getSquadOxygenPoolFn = function(): number
+		return self:_defaultGetSquadOxygenPool()
+	end
+	self._subscribeToOxygenExpiredFn = function(): ()
+		self:_defaultSubscribeToOxygenExpired()
+	end
+
+	-- Story 006: PredatorService cross-epic READ seams (Predator AI epic does not
+	-- exist yet -- SHARES `self._hasWarnedMissingPredatorService`, the same missing
+	-- cross-epic dependency pc-5's write-side seams already stub). userId-keyed,
+	-- matching pc-5's own established PredatorService seam convention (TD-016) rather
+	-- than introducing a second, competing (player)-keyed convention. Default to
+	-- nil/false (GDD C.5.3: "nil/false for any player the predator has not driven
+	-- sub-threshold this life") -- the Path-B predicate can never fire via these
+	-- inputs until PredatorService lands, which is the correct, safe default (no
+	-- forged imminent-death charge from a stub).
+	self._getLastPredatorDamageTimestampFn = function(userId: number): number?
+		return self:_defaultGetLastPredatorDamageTimestamp(userId)
+	end
+	self._getPredatorCausedImminentFn = function(userId: number): boolean
+		return self:_defaultGetPredatorCausedImminent(userId)
+	end
+	self._getPredatorCausedImminentSetTimestampFn = function(userId: number): number?
+		return self:_defaultGetPredatorCausedImminentSetTimestamp(userId)
+	end
+
+	-- Story 009 (H.12a clause / GDD G.6): BEACON_LATCH_TIMEOUT's hard config-validation
+	-- range gate -- same KnitInit-time hard-error pattern as every other PC knob gate
+	-- above. Server bootstrap (src/core/ServerBootstrap.luau) ALREADY calls
+	-- game:Shutdown() from its Knit.Start():catch(...) handler (verified by Story 006 --
+	-- no bootstrap changes needed here either).
+	local runEndConfigOk, runEndConfigErr = RunEndLogic.ValidateConfig(RunEndLogic.BEACON_LATCH_TIMEOUT)
+	if not runEndConfigOk then
+		error(
+			"PlayerControllerService config-validation FAILED: "
+				.. tostring(runEndConfigErr)
+				.. " Server bootstrap MUST catch this KnitInit-time error and call game:Shutdown() -- ALREADY implemented in src/core/ServerBootstrap.luau (verified this story)."
+		)
+	end
+
+	-- Story 009: the `_beaconActivated` latch + the two independent T7/T8 raise-once
+	-- guards. ONE instance for the whole server session (not per-player), reset (not
+	-- recreated) at every inbound `RunEnded` -- see RunEndLogic.ClearOnRunEnded's own
+	-- doc comment for why all four fields reset together.
+	self._runEndState = RunEndLogic.NewRunEndState()
+
+	-- Story 009: the injectable seam wrapping the REAL, already-implemented
+	-- `RunController:RunEndConditionRaised` (rc-1/rc-2 landed this service -- this is
+	-- NOT a cross-epic missing-dependency stub like `_requestSquadOxygenSpendFn` above;
+	-- it mirrors `_respawnPlayerAtAnchorFn`'s own "real API, still injectable for
+	-- testability" precedent instead). `self._runController` is assigned in KnitStart
+	-- (ADR-0001 Rule 1 -- cross-service `Knit.GetService()` calls belong in KnitStart).
+	self._requestRunEndConditionRaisedFn = function(conditionType: ConditionType, squadState: SquadStateSnapshot, defeatReason: RunEndLogic.DefeatReason?): ()
+		self._runController:RunEndConditionRaised(conditionType, squadState, defeatReason)
+	end
+
+	-- Story 009: Crafting & Items cross-epic stub (the epic does not exist yet -- SAME
+	-- "sanctioned by the sprint plan" rationale as every other missing-epic stub in
+	-- this file). SHARES `self._hasWarnedMissingCraftingService`, the same missing
+	-- cross-epic dependency `OnSquadMemberAliveChanged` already stubs. Default is a
+	-- warn-once no-op, so `OnEscapeBeaconActivated`/`OnBeaconWindowSurvived` are never
+	-- actually invoked in production via this path until the Crafting epic lands;
+	-- tests call them directly (mirrors `_subscribeToOxygenExpiredFn`'s own precedent).
+	self._subscribeToBeaconSignalsFn = function(): ()
+		self:_defaultSubscribeToBeaconSignals()
 	end
 end
 
@@ -399,6 +728,36 @@ function PlayerControllerService:KnitStart(): ()
 		self:_onPlayerDied(payload)
 	end)
 
+	-- Story 006 (C.5.1): the injectable ResourceService subscription seam -- default
+	-- is a warn-once no-op (ResourceService does not exist yet), so `OnOxygenExpired()`
+	-- is never actually invoked in production until the RM epic lands. Tests call
+	-- `OnOxygenExpired()` directly rather than relying on this seam.
+	self._subscribeToOxygenExpiredFn()
+
+	-- Story 009: PC's SECOND cross-service call OUT (Story 003's DisturbanceService
+	-- call above was the first). Safe here per ADR-0001 Rule 1 -- `RunEndConditionRaised`
+	-- and `GetRunEndedSignal()` only touch RunController's KnitInit-constructed
+	-- containers (`self._hasEnded`/`self._runEnded`), never anything RunController's own
+	-- KnitStart connects (RunController.luau declares no KnitStart at all), so this call
+	-- does not assume RunController's KnitStart has already run.
+	self._runController = Knit.GetService("RunController")
+
+	-- Story 009 (C.9 inbound `RunEnded` row): the ONLY declared clear-path for
+	-- `_beaconActivated` (besides the BEACON_LATCH_TIMEOUT self-heal) and the ONLY
+	-- channel by which an in-window (or pre-activation) run-end drives every squad
+	-- member's S4/alive -> S5 transition. Connects to the REAL RunController's Signal --
+	-- never a direct Roblox RemoteEvent, never anything on a `.Client` table.
+	self._runController:GetRunEndedSignal():Connect(function(payload: RunEndedPayload)
+		self:_onRunEnded(payload)
+	end)
+
+	-- Story 009: the injectable Crafting & Items cross-epic subscription seam -- default
+	-- is a warn-once no-op (the epic does not exist yet), so `OnEscapeBeaconActivated`/
+	-- `OnBeaconWindowSurvived` are never actually invoked in production via this path
+	-- until Crafting lands. Tests call them directly (mirrors
+	-- `_subscribeToOxygenExpiredFn`'s own precedent immediately above).
+	self._subscribeToBeaconSignalsFn()
+
 	Players.PlayerAdded:Connect(function(player: Player)
 		self:_initPlayerState(player)
 	end)
@@ -412,6 +771,88 @@ function PlayerControllerService:KnitStart(): ()
 	-- Required cleanup for every per-player table this service owns
 	-- (ADR-0004/ADR-0006 leak-prevention precedent).
 	Players.PlayerRemoving:Connect(function(player: Player)
+		-- ============================================================================
+		-- Story 006 -- FIRST STATEMENT BLOCK (load-bearing read-and-cache discipline,
+		-- GDD C.5.3): every input the Path-B imminent-death predicate needs is read
+		-- into a local HERE, before any other statement in this handler -- no
+		-- yield-capable call, no teardown write, nothing else runs first. The cached
+		-- locals below -- never a live re-read -- are what the predicate evaluates
+		-- (closes Race 1: a cross-service `PlayerRemoving` ordering race where
+		-- PredatorService's own teardown could clear its tables mid-handler; Knit
+		-- service `PlayerRemoving` connection ordering is non-deterministic by
+		-- framework contract).
+		-- ============================================================================
+		local cachedNow = self.getServerTime()
+		local cachedDamageTs = self._getLastPredatorDamageTimestampFn(player.UserId)
+		local cachedPredatorCausedImminent = self._getPredatorCausedImminentFn(player.UserId)
+		local cachedLatchSetTs = self._getPredatorCausedImminentSetTimestampFn(player.UserId)
+		-- H.22f / the mandated read-and-cache set (GDD C.5.3's own `deathContext.
+		-- playerName` precedent): cached here, used ONLY in the synchronous warn
+		-- immediately below (the live Player instance is still valid at this exact
+		-- point) -- NOT threaded into `_completeDispatch`'s shared async failure-log
+		-- warn line, which already logs via `row.userId` only and never dereferences
+		-- a live instance (see this story's own final report for why: threading a
+		-- new parameter through `_beginAndDispatch`/`_completeDispatch`'s call chain
+		-- would break the existing static pin on the reconciliation-tick call site
+		-- below, for a log-message improvement the AC's own fallback text says is
+		-- unnecessary -- "row.userId-only logging satisfies the intent").
+		local cachedPlayerName = player.Name
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local cachedHealth: number? = nil
+		if humanoid then
+			cachedHealth = humanoid.Health
+		end
+
+		local imminent = PathBGraceLogic.IsImminentDeath(
+			cachedHealth,
+			cachedDamageTs,
+			cachedPredatorCausedImminent,
+			cachedLatchSetTs,
+			cachedNow
+		)
+		if imminent then
+			warn(
+				("PlayerControllerService: Path B imminent-death predicate satisfied for %s (userId=%d), dispatching disconnect-while-damaged T5"):format(
+					cachedPlayerName,
+					player.UserId
+				)
+			)
+			self:_beginDeathFlow(player, cachedNow, "B")
+		end
+
+		-- ============================================================================
+		-- TD-013 (Story 006 obligation, corrected scope -- docs/tech-debt-register.md):
+		-- clear the reconciliation state's per-player bookkeeping AFTER the Path-B
+		-- predicate+dispatch above -- dying then tearing down, never the reverse.
+		-- ============================================================================
+		local reconState = self._deathReconciliationState
+		local departingDeathEventId = reconState.currentDeathRecord[player]
+		if departingDeathEventId then
+			local departingRow = reconState.reconcileRows[departingDeathEventId]
+			if departingRow and departingRow.state == "Committed" then
+				-- GDD C.5.3 "per-player teardown": an already-Committed row this
+				-- pointer referenced is retired NOW -- no live Player instance
+				-- remains that could ever replay Humanoid.Died against it, and no
+				-- future T6 will arrive to remove it (this player is departing
+				-- permanently). A still-Pending/InFlight row is left untouched here
+				-- -- it survives by deathEventId and reconciles independently
+				-- (the GDD's own rule: uncommitted records are NEVER deleted on
+				-- departure).
+				reconState.reconcileRows[departingDeathEventId] = nil
+			end
+		end
+		-- Clearing the POINTER (not the row) is what makes a LATE commit (a row
+		-- still Pending/InFlight at this exact moment, which later commits via a
+		-- reconciliation tick) correctly resolve as an orphan at commit time
+		-- (`TryCommitDispatch`'s own H.39 orphan check, pc-4) -- and suppresses the
+		-- departed-player T6 entirely, since `TryRespawn` is only ever consulted for
+		-- players with a live `deathStartedAt` entry (`_checkRespawnTimers`'s own
+		-- tracked-player scan).
+		reconState.currentDeathRecord[player] = nil
+		reconState.deathInProgress[player] = nil
+		reconState.deathStartedAt[player] = nil
+
 		self._playerState[player] = nil
 		self._globalEventCounts[player] = nil
 		self._lanternRateLimit[player] = nil
@@ -421,17 +862,26 @@ function PlayerControllerService:KnitStart(): ()
 		self._lastStaminaPushAt[player] = nil
 		self._emissionState[player] = nil
 
-		-- Story 005: per-player death-effect proxy state + position cache. NOTE
-		-- (disclosed, not silently assumed -- see this story's own final report):
-		-- this does NOT clear `self._deathReconciliationState`'s own per-player
-		-- tables (`deathInProgress`/`currentDeathRecord`/`deathStartedAt`) -- that
-		-- remains Story 006's explicit obligation (TD-013). A post-commit hook
-		-- firing AFTER this teardown (the H.75 mid-yield-departure case) simply
-		-- recreates `self._deathEffectsState[player]` -- see
-		-- `_applyPostCommitDeathSideEffects`'s own doc comment for why that is
-		-- intentional, not a bug.
+		-- Story 005 / Story 007: per-player death-effect proxy state, renderScope,
+		-- and position cache. ACCEPTED-RISK DISCLOSURE (H.75 mid-yield-departure
+		-- case, engine Finding 2, code-review 2026-07-10): a post-commit hook
+		-- firing AFTER this teardown -- an initial (Path A) dispatch whose player
+		-- departs mid-yield, per H.75's own established scenario -- simply
+		-- RECREATES both `self._deathEffectsState[player]` (pc-5's own documented
+		-- behavior) AND `self._renderScope[player]` (this story's addition, same
+		-- shape) with a fresh entry for a `Player` instance that will never
+		-- reconnect. Neither table is ever cleared again for that stale key --
+		-- this is the SAME Story-006-class bounded per-session leak TD-013 named
+		-- for the reconciliation tables, now also true of these two proxies. Not
+		-- fixed here: a liveness guard on the post-commit hook would change
+		-- pc-5's own tested H.75 semantics (the full initial side-effect set,
+		-- including these proxies, is REQUIRED to fire regardless of live-pointer
+		-- status). Flagged as an accepted, bounded cost awaiting any future
+		-- teardown sweep, not silently ignored.
 		self._deathEffectsState[player] = nil
 		self._lastServerTrackedPosition[player] = nil
+		self._renderScope[player] = nil
+		self._capturedJumpState[player] = nil
 	end)
 
 	self.Client.RequestLanternToggle:Connect(function(player: Player, raised: any)
@@ -484,6 +934,16 @@ function PlayerControllerService:KnitStart(): ()
 		self:_onDeathReconciliationHeartbeat()
 	end)
 
+	-- Story 006 (C.5.1): a FOURTH, dedicated RunService.Heartbeat connection driving
+	-- the squad-wide oxygen-grace-timer check -- separate from every Heartbeat
+	-- connection above. `_dt` is intentionally unused -- the grace-timer's expiry
+	-- decision is an absolute-timestamp comparison through the C.11 `getServerTime()`
+	-- seam, matching this file's own established "now computed once at the top"
+	-- discipline.
+	RunService.Heartbeat:Connect(function(_dt: number)
+		self:_onOxygenGraceHeartbeat()
+	end)
+
 	-- Story 004 (H.42, MANUAL-DEVICE): BindToClose -> Abandoned. A real
 	-- `game:BindToClose` firing cannot be exercised under the Lune test harness (no
 	-- live engine shutdown event) -- `OnBindToClose` is a directly-callable public
@@ -513,6 +973,12 @@ function PlayerControllerService:_initPlayerState(player: Player): ()
 	-- PlayerControllerEmissionPublisherLogic.luau's header SCOPE NOTE).
 	self._emissionState[player] = EmissionPublisherLogic.NewPlayerEmissionState()
 
+	-- Story 007 (ADR-0012): every player starts "alive" -- a fresh join has
+	-- no death/run-end history yet. This is a plain seed write, NOT a mint
+	-- (no OnRenderScopeChanged push -- the client already knows it just
+	-- spawned alive; there is no prior state for a push to be "relative to").
+	self._renderScope[player] = "alive"
+
 	self:_wireCharacterSetup(player)
 end
 
@@ -523,10 +989,10 @@ end
 --- stamina-tick and emission-pulse Heartbeat loops below, so nothing can drain/regen
 --- stamina or fire a phantom Sprint/Light pulse from a corpse for the whole S4 window --
 --- a strictly stronger guarantee than a single frozen-value snapshot. Deliberately does
---- NOT use `_isAliveAndEligible` (that stub is ADR-0012's own forward seam, out of this
---- story's scope per its own doc comment) -- this reads the reconciliation state's own
---- `deathStartedAt` table directly, which already exists and is exactly "is this player
---- currently in S4" without needing ADR-0012 to land first.
+--- NOT use `_isEligibleForGameplayEvents` (Story 007's real ADR-0012 guard, landed after
+--- this method) -- this reads the reconciliation state's own `deathStartedAt` table
+--- directly, which already exists and is exactly "is this player currently in S4"
+--- independent of the renderScope table's own bootstrap/teardown lifecycle.
 function PlayerControllerService:_isPlayerDead(player: Player): boolean
 	return self._deathReconciliationState.deathStartedAt[player] ~= nil
 end
@@ -571,21 +1037,134 @@ end
 -- ADR-0006 step 1 -- alive/state guard
 -- ============================================================================
 
-function PlayerControllerService:_isAliveAndEligible(player: Player): boolean
-	-- STUB SEAM (approved architecture decision, Story 002 review
-	-- 2026-07-06): Story 001 (Locomotion & Sprint-State Authority) and
-	-- ADR-0012 (Death & Spectator State) are not implemented yet, so there
-	-- is no real S4/S5 dead-state to check against. This always returns
-	-- true until a future story replaces this BODY with a real check
-	-- (e.g. against an ADR-0012-owned accessor or a field on
-	-- self._playerState[player]). The CALL SITE (step 1 of the 6-step
-	-- order) is already correctly wired -- only this function's
-	-- implementation needs to change later.
-	--
-	-- NOTE (Story 001): RequestSprintToggle/PlayerHeartbeat below also call
-	-- this same stub (two call sites now instead of one) -- the
-	-- implementation is unchanged; still always true until ADR-0012 lands.
-	return true
+--- Story 007 (ADR-0012): the REAL step-1 alive/state guard, replacing the
+--- pc-1/pc-2 `_isAliveAndEligible` stub (same name history documented in this
+--- story's own header SCOPE NOTE). `true` only while `renderScope[player] ==
+--- "alive"` -- `"dead-respawning"` (S4) and `"post-run"` (S5) both return
+--- `false` through the SAME boolean, per ADR-0012's own text: "no separate
+--- S5-specific rejection logic is needed since the same boolean covers both
+--- states." Every PC client-fired RemoteEvent handler calls this as its
+--- literal step-1 check, before any other check touches state (ADR-0006).
+function PlayerControllerService:_isEligibleForGameplayEvents(player: Player): boolean
+	return RenderScopeLogic.IsAliveScope(self._renderScope[player])
+end
+
+-- ============================================================================
+-- Story 007 (ADR-0012) -- renderScope single-mint discipline + S4/S5 transition
+-- side effects. `_setRenderScope` is the SOLE site that ever writes a NEW scope
+-- value into `self._renderScope[player]` (bootstrap/init seeds "alive" directly;
+-- PlayerRemoving clears to nil -- neither is a "transition") and the SOLE site
+-- that fires `OnRenderScopeChanged` -- every transition in this file routes
+-- through it, so "pushed exactly once per transition" reduces to "this function
+-- is called exactly once per real transition," which the call-site count below
+-- and this story's own test file both verify statically.
+-- ============================================================================
+
+--- Server-minted, pushed to the OWNING client only, exactly once per
+--- transition -- never inferred client-side (ADR-0012). Idempotent no-op if
+--- `scope` already matches the current value: belt-and-braces against a
+--- redundant re-fire (ADR-0012: "never polled or re-sent redundantly") --
+--- every real call site below only calls this at a genuine transition, so
+--- this guard should never actually trigger in production; it exists so a
+--- future call site cannot accidentally violate the single-mint contract by
+--- omission.
+function PlayerControllerService:_setRenderScope(player: Player, scope: RenderScope): ()
+	if self._renderScope[player] == scope then
+		return
+	end
+	self._renderScope[player] = scope
+	self.Client.OnRenderScopeChanged:Fire(player, scope)
+end
+
+--- S4 entry (ADR-0012 Decision, "S4 (Dead-Respawning) input locks"). Called
+--- from `_applyPostCommitDeathSideEffects`'s existing `effects.lockClientInput`
+--- branch (pc-5's real T5 commit-path hook -- Path A initial dispatch only,
+--- the SAME branch that already sets the `inputLocked` proxy flag) -- NOT a
+--- new call site. Movement is locked via `Humanoid.WalkSpeed = 0` on the
+--- STILL-PRESENT character (never destroyed -- Story 008's spectator camera
+--- needs the HumanoidRootPart). Nil-guarded (`player.Character and ...`) so
+--- this is a harmless no-op for a mid-yield-orphaned dispatch whose character
+--- may already be gone or never existed (H.75 -- the renderScope table write
+--- and OnRenderScopeChanged push, a per-client Fire, are themselves silent
+--- no-ops to a departed player on Roblox).
+---
+--- CAPTURE-AND-RESTORE jump lock (code-review fix, engine Finding 3):
+--- `Humanoid.JumpPower = 0` alone is a SILENT NO-OP on any rig where
+--- `Humanoid.UseJumpPower == false` -- the modern `JumpHeight` mechanism
+--- governs jump instead, and nothing in this codebase has ever touched
+--- `UseJumpPower`. Rather than also zero `JumpHeight` unconditionally (which
+--- would require a hardcoded "restore to what value?" default -- exactly the
+--- unverified-engine-default problem this fix removes), this method CAPTURES
+--- both `JumpPower` and `JumpHeight` as they actually are on THIS character
+--- at THIS moment, into `self._capturedJumpState[player]`, then zeroes both.
+--- `_exitToAliveRenderScope` restores the captured values verbatim -- no
+--- guessed constant anywhere in this path, regardless of which mechanism
+--- (`UseJumpPower` true or false) the rig actually uses.
+---
+--- STUDIO VERIFICATION REQUIRED: `Humanoid.UseJumpPower`'s actual per-rig
+--- value (R6 vs R15 avatars, and any custom rig this project ships) must be
+--- confirmed live in Studio before trusting that zeroing BOTH properties is
+--- sufficient to suppress jump in every case -- same "flag explicitly, verify
+--- before trusting in production" treatment this file already gives
+--- `Player:LoadCharacter()`'s synchronous-completion contract elsewhere.
+function PlayerControllerService:_enterDeadRespawningRenderScope(player: Player): ()
+	self:_setRenderScope(player, "dead-respawning")
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		self._capturedJumpState[player] = { JumpPower = humanoid.JumpPower, JumpHeight = humanoid.JumpHeight }
+		humanoid.WalkSpeed = 0
+		humanoid.JumpPower = 0
+		humanoid.JumpHeight = 0
+	end
+end
+
+--- S4 exit / T6 respawn (ADR-0012). Called from `_completeRespawn`'s existing
+--- hrp-confirmed branch (the SAME gate H.72's alive=true edge already uses --
+--- never fires before the respawned HumanoidRootPart actually exists).
+--- Restores WalkSpeed explicitly (belt-and-braces alongside
+--- `_wireCharacterSetup`'s own CharacterAdded-driven WalkSpeed write --
+--- `Player:LoadCharacter()`'s exact synchronous-completion contract is
+--- flagged STUDIO VERIFICATION REQUIRED elsewhere in this file, so this does
+--- not rely solely on that race resolving favorably).
+---
+--- CAPTURE-AND-RESTORE jump lock (code-review fix, engine Finding 3): restores
+--- whatever `JumpPower`/`JumpHeight` `_enterDeadRespawningRenderScope` actually
+--- captured for THIS player's OLD character -- never a hardcoded engine
+--- default. If nothing was captured (e.g. the character was nil at S4 entry,
+--- fix 5's nil-character case), this is a no-op and the FRESH
+--- `Player:LoadCharacter()`-produced Humanoid simply keeps its own
+--- already-sane instance defaults -- there is nothing to restore TO.
+--- `self._capturedJumpState[player]` is cleared unconditionally after this
+--- runs, whether or not a capture existed, so a stale capture can never leak
+--- into a LATER life.
+function PlayerControllerService:_exitToAliveRenderScope(player: Player, hrp: BasePart): ()
+	self:_setRenderScope(player, "alive")
+	local character = hrp.Parent
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		local locState = self._locomotionState[player]
+		humanoid.WalkSpeed = LocomotionStaminaLogic.GetMoveSpeed(locState and locState.locomotion or "S1")
+		local captured = self._capturedJumpState[player]
+		if captured then
+			humanoid.JumpPower = captured.JumpPower
+			humanoid.JumpHeight = captured.JumpHeight
+		end
+	end
+	self._capturedJumpState[player] = nil
+end
+
+--- S5 entry (ADR-0012 Decision, "S5 (Post-Run) input locks"). Directly
+--- callable, per-player -- Story 009's real `_onRunEnded` inbound handler (below)
+--- calls this once per squad member when the RunController arbiter broadcasts
+--- `RunEnded`, regardless of that player's S1-S4 status at that moment. Mirrors
+--- `OnBindToClose`'s "directly callable, not exercisable via a real engine
+--- event under this harness" precedent, so pc-7's own test file could already
+--- exercise S5 entry before Story 009 existed. No separate S5-specific
+--- rejection logic is needed anywhere else in this file -- every handler's
+--- existing `_isEligibleForGameplayEvents` step-1 check already returns
+--- `false` for `"post-run"`, the same boolean that already covers S4.
+function PlayerControllerService:EnterPostRunScope(player: Player): ()
+	self:_setRenderScope(player, "post-run")
 end
 
 -- ============================================================================
@@ -599,7 +1178,7 @@ end
 function PlayerControllerService:_handleLanternToggleRequest(player: Player, raised: any): (boolean, string?)
 	-- Step 1: Alive/state guard -- evaluated FIRST, before any other check
 	-- touches state.
-	if not self:_isAliveAndEligible(player) then
+	if not self:_isEligibleForGameplayEvents(player) then
 		return false, "not-alive-or-eligible"
 	end
 
@@ -691,7 +1270,19 @@ end
 --- Future call site: wherever tap-hold/proximity-gate arm is eventually
 --- wired (a later PC story, or the RN epic's arm signal). Enforces
 --- C3_6_CanArmGather at arm time.
+---
+--- Step 1 guard (Story 007 / ADR-0012): "RequestGather" is one of ADR-0012's
+--- own four named S4/S5-rejected events. No RemoteEvent is wired to this
+--- forward seam yet (Story 002's own approved architecture decision -- the RN
+--- epic's eventual RequestGather receive-side, or PC's own tap-hold wiring,
+--- will call this method at the real arm moment), but guarding it here now
+--- means that future wiring inherits correct S4/S5 rejection for free, and
+--- this story's own test file can exercise H.24's gather-rejection assertion
+--- against real production code today rather than an unreachable stub.
 function PlayerControllerService:BeginGatherHold(player: Player, nodeId: string, isDarkZone: boolean): boolean
+	if not self:_isEligibleForGameplayEvents(player) then
+		return false
+	end
 	local state = self._playerState[player]
 	if not state then
 		return false
@@ -702,7 +1293,16 @@ end
 --- Future call site: the RequestGather handler's own step 5/6 guard (RN
 --- epic). Rejects if the record was cancelled, never armed, or the nodeId
 --- doesn't match.
+---
+--- Step 1 guard (Story 007 / ADR-0012): see BeginGatherHold's own doc comment
+--- immediately above -- guarded here too, since a hold armed while alive but
+--- committed after a mid-hold death must still be rejected (a rejected commit
+--- must not mutate `state.gatherInProgress` either -- H.24's "no state
+--- mutation" rule applies to the commit step, not just the arm step).
 function PlayerControllerService:TryCommitGatherHold(player: Player, nodeId: string): boolean
+	if not self:_isEligibleForGameplayEvents(player) then
+		return false
+	end
 	local state = self._playerState[player]
 	if not state then
 		return false
@@ -721,7 +1321,7 @@ end
 function PlayerControllerService:_handleSprintToggleRequest(player: Player, sprint: any): (boolean, string?)
 	-- Step 1: Alive/state guard -- evaluated FIRST, before any other check
 	-- touches state.
-	if not self:_isAliveAndEligible(player) then
+	if not self:_isEligibleForGameplayEvents(player) then
 		return false, "not-alive-or-eligible"
 	end
 
@@ -790,7 +1390,7 @@ end
 --- observability. Production callers ignore the return value.
 function PlayerControllerService:_handlePlayerHeartbeat(player: Player): boolean
 	-- Step 1: alive/state guard.
-	if not self:_isAliveAndEligible(player) then
+	if not self:_isEligibleForGameplayEvents(player) then
 		return false
 	end
 
@@ -1126,12 +1726,27 @@ function PlayerControllerService:_completeDispatch(
 end
 
 --- Composed Heartbeat handler (Story 004's third dedicated Heartbeat connection,
---- KnitStart above): runs the reconciliation tick, then the respawn-timer (T6)
---- check. `now` is computed ONCE here, matching this file's own established
---- "now computed once at the top" discipline.
+--- KnitStart above): runs the BEACON_LATCH_TIMEOUT self-heal check, the reconciliation
+--- tick, the T7 whole-squad-wipe evaluation, then the respawn-timer (T6) check. `now`
+--- is computed ONCE here, matching this file's own established "now computed once at
+--- the top" discipline.
+---
+--- ORDERING (Story 009, load-bearing -- not an arbitrary sequence): the self-heal check
+--- runs FIRST so a stuck `_beaconActivated` can re-enable T7 within the SAME tick it
+--- times out. T7 is evaluated BEFORE `_checkRespawnTimers` so a same-tick whole-squad-
+--- wipe raise (which, against the REAL RunController, synchronously drives every S4
+--- player to S5 via the inbound `RunEnded` handler -- see `_onRunEnded` below) pre-empts
+--- `_checkRespawnTimers`'s own per-player scan for the SAME players this same tick --
+--- `_checkRespawnTimers` snapshots its tracked-player list from `deathStartedAt`, which
+--- `_onRunEnded` will have already cleared by the time control reaches it, per
+--- `PlayerControllerDeathReconciliationLogic.luau`'s own pc-4 "H.65 oxygen-gated
+--- respawn wait never withholds forever" text ("that case is Story 009's T7
+--- whole-squad-wipe raise to handle").
 function PlayerControllerService:_onDeathReconciliationHeartbeat(): ()
 	local now = self.getServerTime()
+	self:_checkBeaconLatchSelfHeal(now)
 	self:_runReconciliationTick(now)
+	self:_evaluateT7Wipe(now)
 	self:_checkRespawnTimers(now)
 end
 
@@ -1182,6 +1797,16 @@ end
 --- idempotent-guard clear, pc-4's own `TryRespawn`) EXTENDED with this story's real
 --- respawn payload (`_completeRespawn` below) -- per this story's own instruction,
 --- extends this method rather than duplicating pc-4's respawn-timer-elapsed check.
+---
+--- Story 006 (H.65, the oxygen-gated respawn wait): if the respawn timer has
+--- elapsed but the squad oxygen pool is `< 1` AND at least one squad member is
+--- still alive, the T6 transition is WITHHELD -- `DeathReconciliationLogic.TryRespawn`
+--- (the sole MUTATING respawn transition) is simply never called this Heartbeat, so
+--- `deathStartedAt` is untouched: no state change, no timer restart, no additional
+--- oxygen charge. The full condition is re-evaluated fresh on EVERY Heartbeat (this
+--- function's own per-tick scan IS that re-evaluation -- there is no separate cached
+--- "gated" flag that could go stale), so the player respawns via a normal T6 on the
+--- FIRST Heartbeat the pool reads >= 1.
 function PlayerControllerService:_checkRespawnTimers(now: number): ()
 	local reconState = self._deathReconciliationState
 
@@ -1195,10 +1820,182 @@ function PlayerControllerService:_checkRespawnTimers(now: number): ()
 	end
 
 	for _, player in trackedPlayers do
+		local startedAt = reconState.deathStartedAt[player]
+		if not PathBGraceLogic.HasRespawnTimerElapsed(startedAt, now, DeathReconciliationLogic.RESPAWN_DELAY) then
+			continue
+		end
+
+		if self:_isRespawnOxygenGated(player) then
+			continue
+		end
+
 		local respawned = DeathReconciliationLogic.TryRespawn(reconState, player, now, DeathReconciliationLogic.RESPAWN_DELAY)
 		if respawned then
 			self:_completeRespawn(player, now)
 		end
+	end
+end
+
+--- Story 006 (H.65): true if `player`'s respawn is currently withheld by the
+--- oxygen-gated respawn wait -- squad oxygen pool `< 1` AND at least one OTHER
+--- currently-connected player is alive (not tracked as dead). If NO teammate is
+--- alive (a whole-squad-wipe scenario), this returns `false` -- that case is
+--- Story 009's T7 whole-squad-wipe raise to handle, not this gate's to withhold
+--- forever (GDD E.E: "the wait state exists only while a teammate is alive").
+function PlayerControllerService:_isRespawnOxygenGated(player: Player): boolean
+	local poolNow = self._getSquadOxygenPoolFn()
+	if poolNow >= 1 then
+		return false
+	end
+
+	for _, other: Player in Players:GetPlayers() do
+		if other ~= player and not self:_isPlayerDead(other) then
+			return true
+		end
+	end
+	return false
+end
+
+-- ============================================================================
+-- Story 009 -- Run-End Contract (T7 whole-squad-wipe / T8 victory). All pure
+-- predicate/latch/snapshot logic lives in the dependency-free PlayerControllerRunEndLogic
+-- module (see its own header SCOPE NOTE); this section is the thin Knit-wrapper glue --
+-- see this file's own header SCOPE NOTE (Story 009) for the full call-site inventory.
+-- ============================================================================
+
+--- Builds a FRESH `squadState` snapshot (RunEndLogic.SquadStateSnapshot) from the
+--- CURRENT `Players:GetPlayers()` roster + this service's own `self._renderScope`
+--- table -- never a live reference (H.50: "a concrete per-member liveness snapshot
+--- (deep-equal, not shape-only)"). Called at BOTH raise sites (T7 wipe, T8 victory);
+--- each call produces its OWN independent table.
+function PlayerControllerService:_buildSquadStateSnapshot(): SquadStateSnapshot
+	local members: { RunEndLogic.SquadMemberEntry } = {}
+	for _, player: Player in Players:GetPlayers() do
+		table.insert(members, { userId = player.UserId, scope = self._renderScope[player] })
+	end
+	return RunEndLogic.BuildSquadStateSnapshot(members)
+end
+
+--- TR-pc-026 / GDD C.6 T7 row: evaluated every reconciliation-tick Heartbeat (folded
+--- into the EXISTING `_onDeathReconciliationHeartbeat` connection, no new Heartbeat).
+--- Squad size + S4 count are read fresh from `Players:GetPlayers()` every call --
+--- there is no cached "is the squad wiped" flag that could go stale. On a raise, PC
+--- calls `RunController:RunEndConditionRaised("wipe", squadState)` via the injectable
+--- `self._requestRunEndConditionRaisedFn` seam and marks the raise-once guard BEFORE
+--- making that call (transition-then-effect ordering, matching this file's own
+--- `BeginDispatch`-then-side-effect precedent elsewhere) -- PC itself NEVER broadcasts
+--- `RunEnded` and never mutates any run-end state beyond this guard + the squadState
+--- snapshot it hands to the arbiter (H.50 items 3-4).
+function PlayerControllerService:_evaluateT7Wipe(_now: number): ()
+	local squadSize = 0
+	local s4Count = 0
+	for _, player: Player in Players:GetPlayers() do
+		squadSize += 1
+		if self:_isPlayerDead(player) then
+			s4Count += 1
+		end
+	end
+
+	local squadOxygenBelowOne = self._getSquadOxygenPoolFn() < 1
+	local wholeSquadWiped = RunEndLogic.IsWholeSquadWiped(squadSize, s4Count, squadOxygenBelowOne)
+
+	if not RunEndLogic.ShouldRaiseWipe(self._runEndState, wholeSquadWiped) then
+		return
+	end
+
+	RunEndLogic.MarkWipeRaised(self._runEndState)
+	local squadState = self:_buildSquadStateSnapshot()
+	self._requestRunEndConditionRaisedFn("wipe", squadState, nil)
+end
+
+--- TR-pc-027 / GDD C.6 T8 row: PC's T8 consumer. Consumes `OnBeaconWindowSurvived`
+--- ONLY -- NEVER `OnEscapeBeaconActivated` (H.47's regression target; see
+--- `OnEscapeBeaconActivated` below, which touches only the latch, never this raise
+--- path). Directly callable (mirrors `OnOxygenExpired()`'s "directly callable, not
+--- exercisable via a real engine event under this harness" precedent) -- production
+--- wiring is the injectable `self._subscribeToBeaconSignalsFn` seam (KnitStart), whose
+--- default is a warn-once no-op until the Crafting & Items epic lands.
+function PlayerControllerService:OnBeaconWindowSurvived(_timestamp: number): ()
+	if not RunEndLogic.ShouldRaiseVictory(self._runEndState) then
+		return
+	end
+
+	RunEndLogic.MarkVictoryRaised(self._runEndState)
+	local squadState = self:_buildSquadStateSnapshot()
+	self._requestRunEndConditionRaisedFn("victory", squadState, nil)
+end
+
+--- GDD C.6 latch table (SET column) / C.9 inbound row: SETS the `_beaconActivated`
+--- run-lifecycle latch on Crafting's BCT3 window-START cue. Exact arity per H.47
+--- (`activatorPlayerId`, `timestamp`, `windowDurationSeconds`) -- PC reads NEITHER of
+--- the latter two for the latch's own timestamp: `_beaconActivatedAt` is recorded from
+--- PC's OWN `getServerTime()` C.11 seam (GDD: "the same statement records
+--- `_beaconActivatedAt = getServerTime()`"), never the payload's `timestamp` field, and
+--- `windowDurationSeconds` is read by NOTHING in this file (GDD: "PC IGNORES the
+--- payload's `windowDurationSeconds` ... PC computes no expected window-end from it").
+--- Both parameters are still accepted (not dropped) so this entry point's arity
+--- matches Crafting's declared producer signature exactly. `RunEndLogic.ActivateBeaconLatch`
+--- itself is idempotent ("set ONCE, never re-set within a run") -- a duplicate/replayed
+--- activation signal is a safe no-op here.
+function PlayerControllerService:OnEscapeBeaconActivated(_activatorPlayerId: number, _timestamp: number, _windowDurationSeconds: number): ()
+	RunEndLogic.ActivateBeaconLatch(self._runEndState, self.getServerTime())
+end
+
+--- GDD C.6 latch table (self-heal row) / G.6 `BEACON_LATCH_TIMEOUT` (R17-4): folded
+--- into the EXISTING reconciliation-tick Heartbeat connection (no new Heartbeat).
+--- Strict `>` comparator (per the GDD's own text) lives in
+--- `RunEndLogic.ShouldSelfHealBeaconLatch` -- this wrapper owns only the `warn()` call
+--- site (tag: `beacon-latch-timeout`, per this story's own instruction).
+function PlayerControllerService:_checkBeaconLatchSelfHeal(now: number): ()
+	if not RunEndLogic.ShouldSelfHealBeaconLatch(self._runEndState, now, RunEndLogic.BEACON_LATCH_TIMEOUT) then
+		return
+	end
+
+	RunEndLogic.ForceSelfHeal(self._runEndState)
+	warn(
+		("PlayerControllerService: beacon-latch-timeout: _beaconActivated force-cleared after exceeding BEACON_LATCH_TIMEOUT=%.1fs with no inbound RunEnded; T7 wipe terminal re-enabled."):format(
+			RunEndLogic.BEACON_LATCH_TIMEOUT
+		)
+	)
+end
+
+--- C.9 inbound `RunEnded` row / control manifest: the ONLY message-driven clear-path
+--- for `_beaconActivated` (besides the self-heal above). Drives EVERY currently
+--- alive-or-S4 squad member to S5 (`EnterPostRunScope`, Story 007's real S5 entry
+--- point) and force-cancels any in-flight respawn timer (`RunEndLogic.ForceCancelRespawnTimer`
+--- -- NOT `TryRespawn`, which would incorrectly respawn-to-S1 instead of forcing S5;
+--- see this file's own header SCOPE NOTE for why). Idempotent by construction: a
+--- second `RunEnded` for an already-resolved run finds every squad member already
+--- `"post-run"`, so the `scope == "alive" or scope == "dead-respawning"` guard below
+--- skips all of them -- byte-identical post-state (H.61c). Accesses no client-supplied
+--- state -- `payload` originates server-side from the REAL RunController only, and this
+--- handler does not even need to branch on `payload.exitReason` (both `"wipe"` and
+--- `"victory"` drive the SAME transition; the outcome distinction is HUD/analytics'
+--- own concern, not PC's).
+function PlayerControllerService:_onRunEnded(_payload: RunEndedPayload): ()
+	RunEndLogic.ClearOnRunEnded(self._runEndState)
+
+	for _, player: Player in Players:GetPlayers() do
+		local scope = self._renderScope[player]
+		if scope == "alive" or scope == "dead-respawning" then
+			RunEndLogic.ForceCancelRespawnTimer(self._deathReconciliationState, player)
+			self:EnterPostRunScope(player)
+		end
+	end
+end
+
+--- Story 009: Crafting & Items cross-epic stub -- SHARES
+--- `self._hasWarnedMissingCraftingService` (the same missing cross-epic dependency
+--- `OnSquadMemberAliveChanged` already stubs). A no-op: there is no real
+--- `OnEscapeBeaconActivated`/`OnBeaconWindowSurvived` producer to subscribe to yet, so
+--- neither entry point is ever invoked in production via this path until the Crafting
+--- epic lands; call them directly to exercise T7/T8 under test.
+function PlayerControllerService:_defaultSubscribeToBeaconSignals(): ()
+	if not self._hasWarnedMissingCraftingService then
+		self._hasWarnedMissingCraftingService = true
+		warn(
+			"PlayerControllerService: Crafting & Items cross-epic stub in use. TODO(Crafting & Items epic): OnEscapeBeaconActivated/OnBeaconWindowSurvived producers do not exist yet; call OnEscapeBeaconActivated(...)/OnBeaconWindowSurvived(...) directly to exercise T7/T8 under test."
+		)
 	end
 end
 
@@ -1213,6 +2010,74 @@ function PlayerControllerService:OnBindToClose(): ()
 				row.deathEventId
 			)
 		)
+	end
+end
+
+-- ============================================================================
+-- Story 006 -- the squad-wide oxygen-grace-timer (GDD C.5.1). All pure state
+-- transitions live in PlayerControllerPathBGraceLogic (see its own header SCOPE
+-- NOTE); this section is the thin Knit-wrapper glue: the directly-callable
+-- `OnOxygenExpired()` entry point (mirrors `OnBindToClose`'s "directly callable, not
+-- exercisable via a real engine event under this harness" precedent), and the
+-- FOURTH dedicated Heartbeat connection (KnitStart above) driving the mid-grace
+-- restore-cancel / expiry-fire check.
+-- ============================================================================
+
+--- TR-pc-024 entry point: the argument-less, squad-wide `OnPlayerOxygenExpired()`
+--- trigger (GDD C.5.1). Production wiring is the injectable
+--- `self._subscribeToOxygenExpiredFn` seam (KnitStart) -- since ResourceService does
+--- not exist yet, that seam's default is a warn-once no-op, so this method is never
+--- actually invoked in production until the RM epic lands; tests call it directly.
+--- Starting (or, per GDD C.5.1, RESTARTING) the timer always re-anchors the full
+--- `OXYGEN_GRACE_DURATION` from `now` -- "a fresh Empty entry restarts it."
+function PlayerControllerService:OnOxygenExpired(): ()
+	local now = self.getServerTime()
+	PathBGraceLogic.StartOrRestartGraceTimer(self._oxygenGraceState, now, PathBGraceLogic.OXYGEN_GRACE_DURATION)
+end
+
+function PlayerControllerService:_onOxygenGraceHeartbeat(): ()
+	local now = self.getServerTime()
+	self:_checkOxygenGraceTimer(now)
+end
+
+--- Story 006 (C.5.1): mid-grace Canister-restore cancellation is checked FIRST, on
+--- every Heartbeat the timer is active (not only at expiry) -- a pool read of `>= 1`
+--- at ANY point during the window cancels the pending deaths and the timer. Only
+--- once neither that nor expiry applies does this return without effect. At expiry,
+--- the SAME pool read already confirmed the pool is still `< 1` (no second,
+--- possibly-inconsistent read) before firing T5 for every still-alive player via
+--- `_beginDeathFlow(player, now, "A")` -- see this file's own header SCOPE NOTE for
+--- why pathOrigin="A" is the side-effect-correct choice for a still-connected,
+--- still-embodied player forced into S4 by oxygen depletion.
+function PlayerControllerService:_checkOxygenGraceTimer(now: number): ()
+	local graceState = self._oxygenGraceState
+	if not PathBGraceLogic.IsGraceTimerActive(graceState) then
+		return
+	end
+
+	local poolNow = self._getSquadOxygenPoolFn()
+
+	if poolNow >= 1 then
+		-- Mid-grace Canister restore cancels the pending deaths and the timer
+		-- (GDD C.5.1).
+		PathBGraceLogic.CancelGraceTimer(graceState)
+		return
+	end
+
+	if not PathBGraceLogic.HasGraceTimerExpired(graceState, now) then
+		return
+	end
+
+	-- Expiry, pool confirmed still < 1 by the SAME read above: fire T5 for every
+	-- still-alive player. One-shot -- consumed on fire (GDD C.5.1: "a fresh Empty
+	-- entry restarts it" -- a NEW OnOxygenExpired() call is what starts the NEXT
+	-- window, not a leftover active flag).
+	PathBGraceLogic.CancelGraceTimer(graceState)
+
+	for _, player: Player in Players:GetPlayers() do
+		if not self:_isPlayerDead(player) then
+			self:_beginDeathFlow(player, now, "A")
+		end
 	end
 end
 
@@ -1316,6 +2181,12 @@ function PlayerControllerService:_applyPostCommitDeathSideEffects(
 
 	if effects.lockClientInput and player then
 		self:_setDeathEffectFlag(player, "inputLocked", true)
+		-- Story 007 (ADR-0012): the REAL S4 entry -- renderScope mint +
+		-- Humanoid.WalkSpeed=0/JumpPower=0. Same branch/condition pc-5
+		-- already established for the proxy flag immediately above -- not a
+		-- new call site, per this story's own Implementation Notes ("S4
+		-- entry (called from Story 005's T5 handler)").
+		self:_enterDeadRespawningRenderScope(player)
 	end
 
 	if effects.releasePredatorLock then
@@ -1434,6 +2305,11 @@ function PlayerControllerService:_completeRespawn(player: Player, _now: number):
 		-- TR-pc-043) -- never unconditionally.
 		if hrp then
 			self._onSquadMemberAliveChangedFn(player.UserId, true)
+			-- Story 007 (ADR-0012): the REAL S4 exit -- renderScope re-mint to
+			-- "alive" + WalkSpeed/JumpPower restore. Gated on the SAME `hrp`
+			-- confirmation as the alive=true edge immediately above (never
+			-- fires before the respawned HumanoidRootPart actually exists).
+			self:_exitToAliveRenderScope(player, hrp)
 		end
 	end)
 end
@@ -1535,6 +2411,78 @@ function PlayerControllerService:_defaultRespawnPlayerAtAnchor(player: Player, a
 	end
 	hrp.CFrame = CFrame.new(anchorPosition)
 	return hrp
+end
+
+-- ============================================================================
+-- Story 006 -- cross-epic stub defaults (Resource Management / Predator AI epics do
+-- not exist yet). Same "warn once per instance, then proceed as a safe no-op" shape
+-- Story 004/005 already establish -- see `_defaultRequestSquadOxygenSpend`'s own doc
+-- comment for the full rationale.
+-- ============================================================================
+
+--- SHARES `self._hasWarnedMissingResourceService` (the same missing cross-epic
+--- dependency `_defaultRequestSquadOxygenSpend` already stubs). Returns `math.huge`
+--- (NOT `0`) -- see this story's own KnitInit comment for why: a stub must never
+--- manufacture a false death.
+function PlayerControllerService:_defaultGetSquadOxygenPool(): number
+	if not self._hasWarnedMissingResourceService then
+		self._hasWarnedMissingResourceService = true
+		warn(
+			"PlayerControllerService: ResourceService squad-oxygen-pool-read stub in use. TODO(RM epic): ResourceService does not exist yet; returning a large sentinel so the (currently unreachable without a real OnPlayerOxygenExpired subscription) oxygen-grace-expiry death path can never spuriously fire."
+		)
+	end
+	return math.huge
+end
+
+--- SHARES `self._hasWarnedMissingResourceService`. A no-op: there is no real
+--- `OnPlayerOxygenExpired()` signal to subscribe to yet, so `OnOxygenExpired()` is
+--- never invoked in production via this path until the RM epic lands.
+function PlayerControllerService:_defaultSubscribeToOxygenExpired(): ()
+	if not self._hasWarnedMissingResourceService then
+		self._hasWarnedMissingResourceService = true
+		warn(
+			"PlayerControllerService: ResourceService OnPlayerOxygenExpired subscription stub in use. TODO(RM epic): ResourceService does not exist yet; the squad-wide oxygen-grace timer never starts via this path in production yet; call OnOxygenExpired() directly to exercise it under test."
+		)
+	end
+end
+
+--- SHARES `self._hasWarnedMissingPredatorService` (the same missing cross-epic
+--- dependency pc-5's write-side PredatorService seams already stub). Returns `nil`
+--- -- GDD C.5.3: `lastPredatorDamageTimestamp[player]` is `nil` for any player who
+--- has not yet received predator damage this life.
+function PlayerControllerService:_defaultGetLastPredatorDamageTimestamp(_userId: number): number?
+	if not self._hasWarnedMissingPredatorService then
+		self._hasWarnedMissingPredatorService = true
+		warn(
+			"PlayerControllerService: PredatorService cross-epic READ stub in use. TODO(Predator AI epic): PredatorService does not exist yet; lastPredatorDamageTimestamp/predatorCausedImminent/predatorCausedImminentSetTimestamp reads default to nil/false, so the Path B imminent-death predicate can never fire via these until PredatorService lands."
+		)
+	end
+	return nil
+end
+
+--- SHARES `self._hasWarnedMissingPredatorService`. Returns `false` -- GDD C.5.3:
+--- `predatorCausedImminent[player]` is `nil`/`false` for any player the predator has
+--- not driven sub-threshold this life.
+function PlayerControllerService:_defaultGetPredatorCausedImminent(_userId: number): boolean
+	if not self._hasWarnedMissingPredatorService then
+		self._hasWarnedMissingPredatorService = true
+		warn(
+			"PlayerControllerService: PredatorService cross-epic READ stub in use. TODO(Predator AI epic): PredatorService does not exist yet; lastPredatorDamageTimestamp/predatorCausedImminent/predatorCausedImminentSetTimestamp reads default to nil/false, so the Path B imminent-death predicate can never fire via these until PredatorService lands."
+		)
+	end
+	return false
+end
+
+--- SHARES `self._hasWarnedMissingPredatorService`. Returns `nil` -- the arm-3 outer
+--- staleness ceiling's `~= nil` conjunct short-circuits before any subtraction.
+function PlayerControllerService:_defaultGetPredatorCausedImminentSetTimestamp(_userId: number): number?
+	if not self._hasWarnedMissingPredatorService then
+		self._hasWarnedMissingPredatorService = true
+		warn(
+			"PlayerControllerService: PredatorService cross-epic READ stub in use. TODO(Predator AI epic): PredatorService does not exist yet; lastPredatorDamageTimestamp/predatorCausedImminent/predatorCausedImminentSetTimestamp reads default to nil/false, so the Path B imminent-death predicate can never fire via these until PredatorService lands."
+		)
+	end
+	return nil
 end
 
 return PlayerControllerService
