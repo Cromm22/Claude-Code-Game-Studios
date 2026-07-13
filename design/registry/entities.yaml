@@ -1,168 +1,1275 @@
-# Game World Entity Registry
+# Terranova — Entity Registry
 #
-# PURPOSE: Single source of truth for all named game-world facts that appear
-# in more than one document. Skills check this before writing new content to
-# detect cross-doc inconsistencies at authoring time.
+# Cross-system facts. Single source of truth for any value referenced by more than
+# one GDD. New GDDs check this file before naming an entity, item, formula, or
+# constant. Conflicts must be surfaced before the conflicting GDD is locked.
 #
-# RULES:
-#   - Only register facts that cross system boundaries. Internal-only facts
-#     (a formula used in one GDD only) do NOT need to be registered.
-#   - Never delete entries — set status: deprecated instead.
-#   - When a value changes: update the value, set revised: to today's date,
-#     and add a comment with the old value and which GDD changed it.
-#   - source: is the authoritative GDD — the one that "owns" this fact.
-#     Other GDDs that reference it list themselves in referenced_by.
-#   - When a new GDD references an existing entry, append its path to
-#     referenced_by. Do not create a duplicate entry.
+# Created: 2026-04-29 — seeded by /design-system ecological-disturbance
+# Maintained by: /design-system (writes new entries) + /consistency-check (audits)
 #
-# WRITTEN BY: /design-system (Phase 5 — after GDD sections are approved)
-#             /consistency-check (when resolving conflicts)
-# READ BY:    /design-system (Phase 2 — before authoring begins, and after
-#               Section C/D writes to conflict-check new entities/formulas)
-#             /consistency-check (primary input — grep-first, GDD-second)
-#             /review-all-gdds (Phase 1 — baseline for Phase 2 checks)
-#             /architecture-review (data structure and interface validation)
-#
-# SEARCH PATTERNS (for skills using Grep):
-#   All entity names:        Grep pattern="^  - name:" path="design/registry/entities.yaml"
-#   Specific entity:         Grep pattern="  - name: goblin" path="design/registry/entities.yaml"
-#   All items:               Grep pattern="^  - name:" path="design/registry/entities.yaml" (items section)
-#   What combat.md owns:     Grep pattern="source: design/gdd/combat.md"
-#   What inventory.md uses:  Grep pattern="referenced_by.*inventory"
-#   All gold values:          Grep pattern="value_gold:"
-#   Deprecated entries:      Grep pattern="status: deprecated"
-#
-# FORMAT: YAML. Consistent indentation is critical for grep reliability.
-#   Sections: entities | items | formulas | constants
-#   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
+# Schema per entry:
+#   - name: string                      # globally unique within its category
+#     category: enum                    # constant | formula | entity | item | enum
+#     value: <typed>                    # the canonical value
+#     unit: string (optional)           # e.g. "studs", "seconds", "Hz"
+#     source: string                    # owning GDD relative path
+#     referenced_by: [string]           # GDD paths that consume this value
 
-version: 1
-last_updated: ""
+constants:
+  - name: TENSE_THRESHOLD
+    category: constant
+    value: 0.30
+    unit: dimensionless (t in [0,1])
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/player-controller.md]
+    notes: "Locked by art bible §4.3 flora tier table. Any change requires art-bible revision."
 
-# ─── ENTITIES ────────────────────────────────────────────────────────────────
-# Named game-world objects: enemies, NPCs, characters, factions, bosses.
-# Register an entity here when it appears in more than one GDD — e.g., an
-# enemy defined in combat.md that also drops items listed in inventory.md.
-#
-# Required fields: name, status, source, referenced_by, added
-# Attribute fields: any key stats that could appear in another GDD
-#   (health, damage, drops, faction, etc.)
+  - name: HUNT_THRESHOLD
+    category: constant
+    value: 0.65
+    unit: dimensionless (t in [0,1])
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md]
+    revised: 2026-05-01
+    notes: "Locked by art bible §4.3. referenced_by updated 2026-05-01 by /consistency-check (Crafting D.3 worked example uses HUNT_THRESHOLD = 0.65 for the multi-crafter Beacon completion-burst case)."
 
-entities: []
+  - name: RETREAT_THRESHOLD
+    category: constant
+    value: 1.00
+    unit: dimensionless (t in [0,1])
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md]
+    revised: 2026-05-01
+    notes: "Hard ceiling — clamped, not adjustable. referenced_by updated 2026-05-01 by /consistency-check (Crafting cross-GDD value-lock paragraph cites this constant as ED-owned)."
 
-# Example (remove when first real entry is added):
-#
-# entities:
-#   - name: goblin
-#     status: active              # active | deprecated
-#     source: design/gdd/combat.md
-#     referenced_by:
-#       - design/gdd/combat.md
-#       - design/gdd/inventory.md
-#     health: 40
-#     damage: 8
-#     drops:
-#       - item: goblin_arm        # must match an entry in items section
-#         qty: 1
-#         drop_rate: 0.8          # 0.0–1.0
-#     added: 2026-03-26
-#     revised: ""
+  - name: HYSTERESIS_BAND
+    category: constant
+    value: 0.03
+    unit: dimensionless
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md]
+    revised: 2026-05-01
+    notes: "Applied on downward tier transitions only. Range: 0.02-0.05. referenced_by updated 2026-05-01 by /consistency-check (Crafting cross-GDD value-lock paragraph cites this constant as ED-owned)."
 
+  - name: STANDARD_HALF_LIFE
+    category: constant
+    value: 30
+    unit: seconds
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: []
+    notes: "Half-life for Gather, Sprint, Light emissions. Range: 15-60s."
 
-# ─── ITEMS ───────────────────────────────────────────────────────────────────
-# Named collectables, equipment, consumables, crafting materials, currency.
-# Register an item when its name or value appears in more than one GDD.
-#
-# Required fields: name, status, source, referenced_by, added
-# Attribute fields: value_gold, weight, stackable, category, and any stat
-#   modifiers that another system (e.g., economy, crafting) might reference.
+  - name: BEACON_HALF_LIFE
+    category: constant
+    value: 90
+    unit: seconds
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Half-life for Beacon emission. Range: TIGHTENING to 64-128s (was 45-180s). CROSS-GDD LOCK RESOLVED (round-5, CD ruling R4-1, 2026-06-02; Crafting G.6 / OQ.14 CLOSED): BEACON_SURVIVAL_WINDOW = BEACON_HALF_LIFE * log2(0.95/0.65) = BEACON_HALF_LIFE * 0.5476 (at 90s -> ~49s). The Crafting survival-window design-safe band [35,70]s requires BEACON_HALF_LIFE in [64,128]s; the old [45,180]s produced windows ~[25,99]s (too short to demand aid at the low end, dead-wait at the high end). CD ruled: ED TIGHTENS BEACON_HALF_LIFE to [64,128]s; Crafting does NOT decouple (the 'window = ED lure interval' identity is preserved). ED applies the registry range edit at its next revision (forward obligation, Crafting F.4 ED row). Default 90s is inside the new band. ROUND-9 (2026-06-03, Crafting Blocker #7): Crafting now enforces a fail-fast INIT ASSERTION (Crafting G.6 / H.105) that the DERIVED window = BEACON_HALF_LIFE * 0.5476 falls in [35,70]s, refusing to start otherwise — so an as-yet-unapplied ED range edit cannot reach a live run with a degenerate (~25s bunker-through or ~99s dead-wait) window. The authoritative range tightening to [64,128]s remains ED's to apply (ED-owned constant; Crafting reads it and asserts, but does not edit it unilaterally per coordination rules)."
 
-items: []
+  - name: MAGNITUDE_FLOOR
+    category: constant
+    value: 0.02
+    unit: dimensionless
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Source expires when m(t, age) reaches this value."
 
-# Example:
-#
-# items:
-#   - name: goblin_arm
-#     status: active
-#     source: design/gdd/combat.md   # drop defined in combat GDD
-#     referenced_by:
-#       - design/gdd/combat.md
-#       - design/gdd/inventory.md    # inventory GDD lists its weight/stack rules
-#       - design/gdd/economy.md      # economy GDD references its sell price
-#     value_gold: 5
-#     weight: 1
-#     stackable: true
-#     category: crafting_material
-#     added: 2026-03-26
-#     revised: ""
+  - name: INFLUENCE_RADIUS
+    category: constant
+    value: 24
+    unit: studs
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Hard distance cutoff for emission contribution. ~2× player lantern radius (intentional asymmetry)."
 
+  - name: FIELD_UPDATE_HZ
+    category: constant
+    value: 5
+    unit: Hz
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Server disturbance update loop tick rate. Range: 2-10 Hz."
 
-# ─── FORMULAS ────────────────────────────────────────────────────────────────
-# Named calculations with defined variables and output ranges.
-# Register a formula when its output feeds into another system's input,
-# or when another GDD references it by name.
-#
-# Required fields: name, status, source, referenced_by, variables[],
-#   output_range[min, max], added
-# Optional: expression (the actual formula), notes
+  - name: HOTSPOT_DEDUP_GRID_SIZE
+    category: constant
+    value: 4
+    unit: studs
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Snap radius for D.6 hotspot candidate de-duplication. Range: 2-8 studs."
 
-formulas: []
+  - name: MAX_LIVE_SOURCES
+    category: constant
+    value: 500
+    unit: count
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: []
+    notes: "Safety valve cap (E.12). Eviction policy TBD in DisturbanceService ADR — recommended default: drop-new-from-same-player."
 
-# Example:
-#
-# formulas:
-#   - name: damage_formula
-#     status: active
-#     source: design/gdd/combat.md
-#     referenced_by:
-#       - design/gdd/combat.md
-#       - design/gdd/progression.md   # progression GDD scales attack variable
-#     variables:
-#       - attack
-#       - defense
-#       - crit_chance
-#       - crit_multiplier
-#     output_range: [0, 999]
-#     expression: "max(0, attack - defense) * (1 + crit_chance * crit_multiplier)"
-#     notes: "Output feeds into health-system damage intake. Min is 0 (armour
-#       can absorb all damage). Max is uncapped in formula but tuning knob
-#       damage_cap in combat.md clamps at 999."
-#     added: 2026-03-26
-#     revised: ""
+  - name: MAX_ATTRIBUTION_ARCHIVE_ENTRIES
+    category: constant
+    value: 4000
+    unit: count
+    source: design/gdd/ecological-disturbance.md (C.1.11 + G.4)
+    referenced_by: []
+    added: 2026-07-05
+    notes: "Registered 2026-07-05 (cross-review C6 — introduced by ED round-24/PF-1 but never registered). Archive count cap parallel to MAX_LIVE_SOURCES; safe range 2000–8000; FIFO-oldest eviction, predator-lock-referenced entries exempt, ops-logged; ~7% headroom over the ~3,720 natural 20-min worst case (bounds pathology, never trims natural play). Fenced as ED H.36a workload 11."
 
+  - name: MAX_ACTIVE_BEACONS
+    category: constant
+    value: 3
+    unit: count
+    source: design/gdd/crafting-and-items.md (BCT3 publish-site cap; enforcement AC H.131)
+    referenced_by: [design/gdd/ecological-disturbance.md]
+    added: 2026-07-05
+    notes: "Registered 2026-07-05 (cross-review C3 — ED F.6's Crafting-MAX_BEACON mandate, open since round-15). Bidirectionally locked with ED H.36's perf-PASS scope clause (activeBeacons ≤ 3): raising this value INVALIDATES ED's measured perf envelope and makes ED's R11-I8 grid-mandate binding. Crafting rejects over-cap Beacon activations at the publish site with error code E_BEACON_CAP before the emission reaches DisturbanceService:Emit."
 
-# ─── CONSTANTS ───────────────────────────────────────────────────────────────
-# Named numerical values referenced across multiple systems.
-# Register a constant when it is defined in one GDD but another GDD must
-# agree with it (e.g., gold carry limit defined in economy but checked in
-# inventory, or base inventory slots defined in inventory but displayed in HUD).
-#
-# Required fields: name, status, source, referenced_by, value, unit, added
+  - name: ATTRIBUTION_ARCHIVE_TTL
+    category: constant
+    value: 1200
+    unit: seconds
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: []
+    notes: "Attribution archive entry retention (C.1.11). Range: 600-1800s. Bounds archive growth without losing attribution during a typical 5-20 min run."
 
-constants: []
+  # CHUNK_SNAPSHOT_RATE_LIMIT removed 2026-04-29 round-3 revision.
+  # The GetChunkFieldSnapshot RemoteFunction it gated was removed in round-2 (server-pushed
+  # FloraChunkInitialSnapshot now replaces it per C.3.5). The constant has no live referent.
 
-# Example:
-#
-# constants:
-#   - name: gold_carry_limit
-#     status: active
-#     source: design/gdd/economy.md
-#     referenced_by:
-#       - design/gdd/economy.md
-#       - design/gdd/inventory.md   # inventory enforces the carry limit
-#       - design/gdd/ui.md          # HUD displays current gold vs limit
-#     value: 9999
-#     unit: gold
-#     added: 2026-03-26
-#     revised: ""
-#
-#   - name: base_inventory_slots
-#     status: active
-#     source: design/gdd/inventory.md
-#     referenced_by:
-#       - design/gdd/inventory.md
-#       - design/gdd/progression.md  # progression unlocks additional slots
-#     value: 20
-#     unit: slots
-#     added: 2026-03-26
-#     revised: ""
+  - name: SPRINT_PULSE_INTERVAL
+    category: constant
+    value: 2
+    unit: seconds
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/player-controller.md]
+    notes: "Recurring Sprint emission cadence while sprinting."
+
+  - name: LIGHT_PULSE_INTERVAL
+    category: constant
+    value: 4
+    unit: seconds
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/player-controller.md]
+    notes: "Recurring Light emission cadence while lantern raised."
+
+  - name: MAGNITUDE_GATHER_LIGHT
+    category: constant
+    value: 0.15
+    unit: dimensionless (t)
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
+    notes: "Light-node Gather emission magnitude. RN is the publisher — fires this at the node on gather completion per ED.C.3.1 (RN CR.2/CR.4)."
+
+  - name: MAGNITUDE_GATHER_MEDIUM
+    category: constant
+    value: 0.25
+    unit: dimensionless (t)
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
+    notes: "Medium-node Gather emission magnitude. RN is the publisher (RN CR.2/CR.4)."
+
+  - name: MAGNITUDE_GATHER_HEAVY
+    category: constant
+    value: 0.40
+    unit: dimensionless (t)
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
+    notes: "Heavy/loud-node Gather emission magnitude. RN is the publisher (RN CR.2/CR.4)."
+
+  - name: MAGNITUDE_SPRINT_PULSE
+    category: constant
+    value: 0.10
+    unit: dimensionless (t)
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md]
+    notes: "Single Sprint pulse magnitude. 4 pulses (8s sprint) crosses Tense — intentional."
+
+  - name: MAGNITUDE_LIGHT_PULSE
+    category: constant
+    value: 0.08
+    unit: dimensionless (t)
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/player-controller.md]
+    notes: "Single Light pulse magnitude."
+
+  - name: MAGNITUDE_BEACON
+    category: constant
+    value: 0.95
+    unit: dimensionless (t)
+    source: design/gdd/ecological-disturbance.md
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Beacon emission magnitude. Reserved range [0.85, 1.00] enforced by C.1.2."
+
+  # Round-2 + round-3 additions (encoded 2026-04-29 round-3 revision).
+
+  - name: EMITTER_MOVEMENT_DELTA_FLOOR
+    category: constant
+    value: 1
+    unit: studs
+    source: design/gdd/ecological-disturbance.md (G.5)
+    referenced_by: [design/gdd/player-controller.md]
+    notes: "Q9 stationary attenuation gate. Sprint/Light pulses below this XZ-distance delta in the previous pulse interval are attenuated by STATIONARY_EMISSION_FACTOR. Range: 0.5-4 studs. Player Controller GDD owns the movement-delta detection."
+
+  - name: STATIONARY_EMISSION_FACTOR
+    category: constant
+    value: 0.30
+    unit: dimensionless (multiplier)
+    source: design/gdd/ecological-disturbance.md (G.5)
+    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md]
+    notes: "Q9 stationary attenuation magnitude multiplier applied to recurring Sprint/Light pulses below EMITTER_MOVEMENT_DELTA_FLOOR. Range: 0.10-0.60. First pulse on state-entry is exempt. Config-validation gate (Player Controller H.12a clause (vi), round-30 systems): PC validates this ED-owned constant it consumes in D.4 — within [0.10, 0.60], rejected at <= 0 or > 1. A value of 0/negative zeroes/inverts the Light-axis stationary attenuation (a stationary raised lantern emits 0.08*0 = 0.0 — a free stealth-lantern Pillar-1 hole; the Sprint axis is protected by its max(SPRINT_HOLD_FLOOR,...) floor, the Light axis is not — PC H.81)."
+
+  - name: SPATIAL_GRID_CELL_SIZE
+    category: constant
+    value: 32
+    unit: studs
+    source: design/gdd/ecological-disturbance.md (C.1.6, G.3)
+    referenced_by: []
+    notes: "Mandatory 2D spatial grid cell size per C.1.6. Range: 16-64 studs. INVARIANT: SPATIAL_GRID_CELL_SIZE >= INFLUENCE_RADIUS (G.7) — startup validation MUST enforce. Backs both fieldValue queries AND GetHottestHotspot candidate enumeration. Implementation hint, not contractual; existence of grid IS contractual."
+
+  - name: MAX_FLORA_PER_CHUNK
+    category: constant
+    value: 8
+    unit: count
+    source: design/gdd/ecological-disturbance.md (G.4) + design/art/art-bible.md (§6.5)
+    referenced_by: []
+    notes: "Maximum flora nodes per chunk. Anchored to art-bible §6.5 default density. Range: 4-16. Chunk dimensions are 64x64 studs (Roblox StreamingEnabled engine-set). Drives H.36 query-position count and H.37 bandwidth desk-calc."
+
+  - name: EXPIRY_MAINTENANCE_INTERVAL
+    category: constant
+    value: 3
+    unit: seconds
+    source: design/gdd/ecological-disturbance.md (G.4, C.1.12)
+    referenced_by: []
+    notes: "Cadence at which expired sources (m < MAGNITUDE_FLOOR) are culled from the live-source list. Range: 1-10s. Not every Heartbeat — low-frequency lazy maintenance pass."
+
+  - name: FLORA_UPDATE_DELTA_THRESHOLD
+    category: constant
+    value: 0.02
+    unit: dimensionless (t-delta)
+    source: design/gdd/ecological-disturbance.md (C.1.13, G.4)
+    referenced_by: []
+    notes: "Minimum t-change before a flora node receives a FloraChunkUpdate push. Range: 0.01-0.05. Throttles per-flora bandwidth. Empty arrays not fired (eliminates dead-fire overhead)."
+
+  # Round-5 additions (encoded 2026-04-30 round-5 revision pass per ecological-disturbance-round-5-blockers.md).
+
+  - name: BEACON_STATIONARY_PROXIMITY_RADIUS
+    category: constant
+    value: 16
+    unit: studs
+    source: design/gdd/ecological-disturbance.md (C.3.6, G.5)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Tier-1 #10 Beacon decoy mitigation Option A — radius around an active Beacon within which connected players are counted as 'nearby' for the Hunt-floor cap rule. Range: 8-24 studs. Half of INFLUENCE_RADIUS by default to keep the cap rule scoped to true beacon-proximity rather than mere influence-overlap. See E.25 + H.41 series."
+
+  - name: BEACON_STATIONARY_MOVE_DELTA
+    category: constant
+    value: 4
+    unit: studs
+    source: design/gdd/ecological-disturbance.md (C.3.6, G.5)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Tier-1 #10 Beacon decoy mitigation Option A — XZ-distance threshold over BEACON_STATIONARY_WINDOW seconds below which a nearby player is counted as 'stationary' for the Hunt-floor cap rule. Range: 1-12 studs. Distinct from EMITTER_MOVEMENT_DELTA_FLOOR (which gates pulse-firing magnitude); the two operate on different time scales."
+
+  - name: BEACON_STATIONARY_WINDOW
+    category: constant
+    value: 3.0
+    unit: seconds
+    source: design/gdd/ecological-disturbance.md (C.3.6, G.5)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Tier-1 #10 Beacon decoy mitigation Option A — sliding window over which BEACON_STATIONARY_MOVE_DELTA is evaluated for stationary-status. Range: 1.0-8.0s. Server-side per-player position-history ring buffer at 5 Hz (FIELD_UPDATE_HZ cadence) — 15 samples at default."
+
+  - name: BEACON_STATIONARY_CAP_FIELD_VALUE
+    category: constant
+    value: 0.65
+    unit: dimensionless (t)
+    source: design/gdd/ecological-disturbance.md (C.3.6, G.5)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Tier-1 #10 Beacon decoy mitigation Option A — the Hunt-floor value to which fieldValue(beacon-position) is clamped when the cap engages. Default = HUNT_THRESHOLD = 0.65 (Hunt floor exactly). Range: 0.30-0.85 — values below 0.30 break beacon's design role as a guaranteed lure; values above 0.85 permit Retreat-tier under stationary-squad and reopen the degenerate strategy."
+
+  - name: FIRST_PULSE_GRACE_WINDOW
+    category: constant
+    value: 1.0
+    unit: seconds
+    source: design/gdd/ecological-disturbance.md (C.1.1, G.5)
+    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md]
+    notes: "Tier-2 #16 — state-entry grace window during which Sprint/Light pulses fire at full magnitude regardless of EMITTER_MOVEMENT_DELTA_FLOOR. Replaces the prior 'first pulse only' exemption with a time-bounded window for forward-compatibility against future pulse-interval reductions. Range: 0.0-2.0s. At default tunings (SPRINT_PULSE_INTERVAL=2s, LIGHT_PULSE_INTERVAL=4s), the window covers exactly the first pulse — behaviour unchanged. Player Controller GDD owns the state-entry timer."
+
+  # Player Controller additions (encoded 2026-04-30 from /design-system player-controller).
+
+  - name: WALK_SPEED
+    category: constant
+    value: 12
+    unit: studs/s
+    source: design/gdd/player-controller.md (C.1, G.1)
+    referenced_by: []
+    notes: "Default move speed. Walk publishes no Sprint emission. Range: 8-16. Roblox Humanoid default of 16 was rejected as too brisk for the 'fragile body' fantasy."
+
+  - name: SPRINT_SPEED
+    category: constant
+    value: 20
+    unit: studs/s
+    source: design/gdd/player-controller.md (C.1, G.1)
+    referenced_by: []
+    notes: "Sprint state speed. 1.67x walk. Range: 16-28 studs/s. Above 24, mobile touch precision degrades."
+
+  - name: STAMINA_MAX
+    category: constant
+    value: 100
+    unit: dimensionless (units)
+    source: design/gdd/player-controller.md (C.2, G.2)
+    referenced_by: [design/gdd/hud.md]
+    notes: "Maximum stamina. Abstract units, not seconds, preserve drain/regen tuning independence. Range: 60-200. Config-validation gate (round-28 T-4, systems NEW-1, H.12a clause (v)): rejected at <= 0 (and below the 60 range floor). A negative STAMINA_MAX makes the D.1/D.2 math.clamp(x, 0, STAMINA_MAX) evaluate min > max and THROW on every Heartbeat tick — a hard per-frame crash; STAMINA_MAX = 0 is a permanent forced-walk degenerate. Previously only STAMINA_DRAIN_RATE was sign-gated."
+
+  - name: STAMINA_DRAIN_RATE
+    category: constant
+    value: 12.5
+    unit: units/s
+    source: design/gdd/player-controller.md (C.2, D.1, G.2)
+    referenced_by: []
+    notes: "Drain rate while sprinting. 100 / 12.5 = 8s of full sprint at max stamina. Range: 8-20. Coupled with STAMINA_REGEN_RATE — adjust as a pair. Config-validation gate (Player Controller H.12a clause (ii)): STAMINA_DRAIN_RATE > 0 is a load-bearing sign-gate, rejected at <= 0 (D.3 T_sprint = s_0 / STAMINA_DRAIN_RATE / C.2.2 time-to-empty divide-by-zero). round-30 systems-IMPORTANT: this annotation aligns the row with its three stamina siblings (STAMINA_MAX/REGEN_RATE/REGEN_DELAY), which each already document their H.12a clause (v) gate — DRAIN_RATE is the original sign-gate but was the only stamina knob whose row omitted the gate annotation."
+
+  - name: STAMINA_REGEN_RATE
+    category: constant
+    value: 10
+    unit: units/s
+    source: design/gdd/player-controller.md (C.2, D.2, G.2)
+    referenced_by: []
+    notes: "Regen rate while not sprinting and past STAMINA_REGEN_DELAY. Intentionally slower than drain (ratio 0.8). Range: 5-18. Config-validation gate (round-28 T-4, H.12a clause (v); threshold reconciled round-28 systems-B1): rejected below the G.2 range floor (< 5) — a < 0 value silently DRAINS stamina during rest, a 0-4 value is below-range degraded/never-recovering. (Prior note said 'rejected at < 0', which disagreed with the H.12a >= 5 floor.)"
+
+  - name: STAMINA_REGEN_DELAY
+    category: constant
+    value: 1.5
+    unit: seconds
+    source: design/gdd/player-controller.md (C.2, D.2, G.2)
+    referenced_by: []
+    notes: "Wait window after sprint stops, before regen begins. Prevents bar-twitch on tap-sprint micro-inputs. Range: 0.5-4.0s. Resets on each sprint-end event (no banking of partial delay progress). Boundary comparator (R6-I1): regen begins when (t - t_sprint_end) is STRICTLY GREATER THAN this value, i.e. the D.2 gate is `> STAMINA_REGEN_DELAY`, not `>=` — at exactly t_sprint_end + 1.5s the player is still in the delay window (regen begins on the first tick strictly past the boundary). Biases toward the player having paid the full delay before recovery starts. Config-validation gate (round-28 T-4, H.12a clause (v); threshold reconciled round-28 systems-B2): rejected below the G.2 range floor (< 0.5) — a < 0 value is a nonsensical pre-emptive regen, a 0-0.49 value is the below-range bar-twitch degenerate. (Prior note said 'rejected at < 0', which disagreed with the H.12a >= 0.5 floor.)"
+
+  - name: LANTERN_VISIBILITY_RADIUS
+    category: constant
+    value: 20
+    unit: studs
+    source: design/gdd/player-controller.md (C.3, G.3)
+    referenced_by: []
+    notes: "Player-side rendering radius for lantern PointLight. Hard-edged pool per art-bible Principle 1. Range: 12-40 studs."
+
+  - name: PING_RAYCAST_RANGE
+    category: constant
+    value: 80
+    unit: studs
+    source: design/gdd/player-controller.md (C.4.1, G.4)
+    referenced_by: []
+    notes: "Maximum quick-ping raycast range. Range: 40-200 studs."
+
+  - name: PING_ORIGIN_TOLERANCE
+    category: constant
+    value: 8
+    unit: studs
+    source: design/gdd/player-controller.md (C.4.1, C.9, G.4)
+    referenced_by: []
+    notes: "First-pass PLACEHOLDER (value tuning deferred to Theme 2). Max allowed distance between the client-supplied ping ray origin and the player's server-tracked HumanoidRootPart.Position for the ping to be accepted; absorbs client/server position replication lag. Replaces the unenforceable camera-angle plausibility clause (R6-B4 / round-5 CD option a) -- the server validates origin-position plausibility plus re-runs the raycast server-side (client candidateTargetId advisory). Range: 4-16 studs."
+
+  - name: PING_DISPLAY_DURATION
+    category: constant
+    value: 8
+    unit: seconds
+    source: design/gdd/player-controller.md (C.4.1, G.4)
+    referenced_by: []
+    notes: "Quick-ping marker on-screen persistence. Range: 3-15s."
+
+  - name: PING_COOLDOWN_PER_PLAYER
+    category: constant
+    value: 1.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.4.1, G.4)
+    referenced_by: []
+    notes: "Per-player quick-ping cooldown. Range: 0.5-3.0s. Boundary check uses >= (not >) to accept exact-expiry pings (E.F.1)."
+
+  - name: PING_BURST_CAP
+    category: constant
+    value: 3
+    unit: count
+    source: design/gdd/player-controller.md (C.4.1, G.4)
+    referenced_by: []
+    notes: "Maximum quick-pings per PING_BURST_WINDOW per player. Range: 2-6."
+
+  - name: PING_BURST_WINDOW
+    category: constant
+    value: 1.5
+    unit: seconds
+    source: design/gdd/player-controller.md (C.4.1, G.4)
+    referenced_by: []
+    notes: "Sliding window for PING_BURST_CAP. Range: 1.0-5.0s."
+
+  - name: EMOTE_COOLDOWN_PER_PLAYER
+    category: constant
+    value: 3.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.4.2, G.4)
+    referenced_by: []
+    notes: "Per-player emote cooldown. Range: 1.0-10.0s."
+
+  - name: EMOTE_BURST_CAP
+    category: constant
+    value: 5
+    unit: count
+    source: design/gdd/player-controller.md (C.4.2, G.4)
+    referenced_by: []
+    notes: "Maximum emotes per EMOTE_BURST_WINDOW per player. Range: 3-10."
+
+  - name: EMOTE_BURST_WINDOW
+    category: constant
+    value: 15.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.4.2, G.4)
+    referenced_by: []
+    notes: "Sliding window for EMOTE_BURST_CAP. Range: 10.0-60.0s."
+
+  - name: EMOTE_DISPLAY_DURATION
+    category: constant
+    value: 4
+    unit: seconds
+    source: design/gdd/player-controller.md (C.4.2, G.4)
+    referenced_by: []
+    notes: "On-screen emote indicator persistence. Animation plays to completion (1.5-2.5s). Range: 2-8s."
+
+  - name: RESPAWN_DELAY
+    category: constant
+    value: 30
+    unit: seconds
+    source: design/gdd/player-controller.md (C.5, G.6)
+    referenced_by: [design/gdd/resource-management.md, design/gdd/hud.md]
+    notes: "Server-authoritative respawn timer. Locked at game-concept level. Range: 10-60s. Validate by playtest (PC OQ.6). RM CR.5 cites it: respawn after this delay is free (no separate oxygen cost beyond DEATH_OXYGEN_COST)."
+
+  - name: RECONCILIATION_TICK_INTERVAL
+    category: constant
+    value: 5.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.5.3, C.11, G.6)
+    referenced_by: []
+    notes: "Death-cost reconciliation tick period on RunService.Heartbeat (R5-B2 retry surface). Governs the Pillar-2 SLA: a failed death-cost deduction is recovered within at most 2x this value (10.0 s worst case) of the original death event. Read of server-time for the tick interval gate MUST route through the C.11 getServerTime() seam. Range: 2-10s. Too Low: tick overhead grows + reconciliation thrash; Too High: the 2x-interval recovery bound exceeds RESPAWN_DELAY=30s, so a Path-A player could respawn before the squad cost is reconciled — a delayed-notification UX gap only, NOT a correctness gap (the Pending row is deathEventId-keyed and survives T6 per the round-9 record refactor; reconciliation-before-respawn is advisory per G.6). ADVISORY: keep 2x value < RESPAWN_DELAY for notification UX."
+
+  - name: SPRINT_CLIENT_TIMEOUT
+    category: constant
+    value: 3
+    unit: seconds
+    source: design/gdd/player-controller.md (E.D, G.6, H.33a)
+    referenced_by: []
+    notes: "Server-side ghost-sprint safeguard: any S2 state with (now - _lastHeartbeatTime[player]) > this value reverts to S1 via T2. Heartbeat signal is the dedicated zero-payload PlayerHeartbeat RemoteEvent at HEARTBEAT_SEND_RATE = 1 Hz; PlayerHeartbeat is NOT a sprint-authorization signal (sprint terminates at stamina=0 regardless). Round-2 Theme 1 N2 made this enforceable (round-1 left the heartbeat signal undefined). Range: 1-10s."
+
+  - name: DEATH_SFX_MAX_VOICES
+    category: constant
+    value: 2
+    unit: count
+    source: design/gdd/player-controller.md (V/A.3, V/A.4a, G.6)
+    referenced_by: []
+    notes: "Death SFX polyphony cap (R11-D4 / R12-AD-B2): maximum concurrent positional Death SFX emitters in a death burst. Deaths beyond the cap drop their positional voice and coalesce into a single non-positional UI-channel squad-wide overflow cue (one per overflow batch of DEATH_SFX_BATCH_WINDOW — accessibility parity with the V/A.4a caption queue, which still lists every death individually, deduped by deathEventId). Range: 2-4 (floor raised 1->2 per the round-14 audio ruling, applied round-16 at all 3 sites [G.6, V/A.3, here]: at 1 voice a 2-player near-simultaneous wipe sheds the second death's positional voice — the spatial-identity regression the floor forbids; squad is at most 4, so >4 is meaningless). Registered round-13 per R12-AD-B2; value 2 carried from the round-11 V/A.3 provisional."
+
+  - name: TAP_HOLD_COMMIT_DURATION
+    category: constant
+    value: 0.5
+    unit: seconds
+    source: design/gdd/player-controller.md (C.7, G.5)
+    referenced_by: [design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
+    notes: "Tap-hold gather commit duration. Wall-clock, NOT frames (defining in frames would make PC fire 2x as fast as mobile). 500ms is Apple HIG long-press floor. Range: 0.3-0.8s. RN's two-phase gather: this is phase 1 (commit), then RN runs the per-tier NODE_EXTRACT_TIME_* (RN CR.4)."
+
+  - name: GATHER_PROXIMITY_RADIUS
+    category: constant
+    value: 4
+    unit: studs
+    source: design/gdd/player-controller.md (C.7, G.5)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Proximity-gate threshold for mobile gather affordance. Range: 2-8 studs. RN re-validates server-side: gather rejected if server-measured distance > GATHER_PROXIMITY_RADIUS + GATHER_JITTER_TOLERANCE (RN CR.5/H.5)."
+
+  # Resource Node constants (encoded 2026-06-17 from the RN GDD authoring pass — design/gdd/resource-node.md).
+  - name: NODE_YIELD_LIGHT
+    category: constant
+    value: 1
+    unit: count
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "BIOMASS units granted per completed Light-node gather. Range: 1-2 (G). Yield 2 = 1 gather/Canister, which breaks the canisterCycleTime floor unless extract compensates (RN D.1 coupled-knob note)."
+
+  - name: NODE_YIELD_MEDIUM
+    category: constant
+    value: 1
+    unit: count
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "MINERAL units granted per completed Medium-node gather. Range: 1-2 (G)."
+
+  - name: NODE_YIELD_HEAVY
+    category: constant
+    value: 1
+    unit: count
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "RESONANT units granted per completed Heavy-node gather. Range: 1-2 (G)."
+
+  - name: NODE_EXTRACT_TIME_LIGHT
+    category: constant
+    value: 3.5
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, D.1, G)
+    referenced_by: [design/gdd/resource-management.md, design/gdd/hud.md]
+    notes: "Server-side extraction timer for Light nodes (phase 2 of the two-phase gather). LOAD-BEARING: backs the canisterCycleTime HARD floor — 2 x (TAP_HOLD_COMMIT_DURATION + this) + CRAFT_TIME_CANISTER must be > 9.09 s (RN D.1/H.12). At 3.5 s cycle = 10.0 s (+0.91 s margin). Range: 3.1-8.0 (G); <3.05 violates the floor."
+
+  - name: NODE_EXTRACT_TIME_MEDIUM
+    category: constant
+    value: 5.0
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: [design/gdd/hud.md]
+    notes: "Server-side extraction timer for Medium nodes. Range: 3.5-10.0 (G)."
+
+  - name: NODE_EXTRACT_TIME_HEAVY
+    category: constant
+    value: 8.0
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: [design/gdd/hud.md]
+    notes: "Server-side extraction timer for Heavy (RESONANT) nodes. Preferred lever for RESONANT scarcity (raise this, not node count). Range: 6.0-15.0 (G)."
+
+  - name: NODE_RESPAWN_TIME_LIGHT
+    category: constant
+    value: 30
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: []
+    notes: "Depleted->Available respawn delay for Light nodes. Range: 15-60 (G). Too low = oxygen pressure evaporates."
+
+  - name: NODE_RESPAWN_TIME_MEDIUM
+    category: constant
+    value: 60
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, G)
+    referenced_by: []
+    notes: "Depleted->Available respawn delay for Medium nodes. Range: 30-120 (G)."
+
+  - name: NODE_RESPAWN_TIME_HEAVY
+    category: constant
+    value: 120
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.2, CR.7, G)
+    referenced_by: []
+    notes: "Depleted->Available respawn delay for Heavy (RESONANT) nodes. With min 4 Heavy nodes and 3 RESONANT needed for the Beacon, this gates exploration without forcing a revisit-lockout under normal play. If RESONANT feels impossible, lower toward 90 (not add nodes). Range: 60-240 (G)."
+
+  - name: GATHER_LOCK_TIMEOUT_BUFFER
+    category: constant
+    value: 2.0
+    unit: seconds
+    source: design/gdd/resource-node.md (CR.6, G)
+    referenced_by: []
+    notes: "Safety-valve margin beyond NODE_EXTRACT_TIME_tier before a stuck gather lock is force-released to Available (no yield, no emit) (RN T5/H.21). Range: 1.0-5.0 (G)."
+
+  - name: GATHER_JITTER_TOLERANCE
+    category: constant
+    value: 1.5
+    unit: studs
+    source: design/gdd/resource-node.md (CR.5, G)
+    referenced_by: []
+    notes: "Server proximity tolerance added to GATHER_PROXIMITY_RADIUS for the gather range gate + range-exit watcher (RN CR.5/H.5/H.11). Range: 1.0-2.0 (G); >2.0 opens teleport-adjacency."
+
+  - name: PING_TWO_FINGER_WINDOW
+    category: constant
+    value: 0.15
+    unit: seconds
+    source: design/gdd/player-controller.md (C.7, G.4)
+    referenced_by: []
+    notes: "Two-finger touch detection window for quick-ping gesture. Third-finger contact within this window cancels and suppresses the ping (no cooldown charged). Range: 0.08-0.30s."
+
+  - name: MOBILE_ANALOG_DRIFT_THRESHOLD
+    category: constant
+    value: 2
+    unit: studs
+    source: design/gdd/player-controller.md (C.7, D.4, G.5)
+    referenced_by: []
+    notes: "Tier-2 #17 — touch-only floor. XZ-displacement below this over the previous pulse interval is treated as zero for emission-attenuation. Distinct from EMITTER_MOVEMENT_DELTA_FLOOR (this is a Player-Controller-side input cleanup; that is the ED-side stationary gate). Range: 1-4 studs. Applied only when platform == 'touch'."
+
+  # Player Controller round-2 Theme 1 additions (encoded 2026-05-01 from /design-system player-controller round-2 Pillar 1 closure).
+
+  - name: HP_IMMINENT_THRESHOLD
+    category: constant
+    value: 25
+    unit: HP
+    source: design/gdd/player-controller.md (C.5.3, E.E, G.6)
+    referenced_by: []
+    notes: "Health arm of the imminent-death predicate (C.5.3 Path B). On Players.PlayerRemoving, if Humanoid.Health < this value, the disconnecting player pays the squad oxygen cost. Composite OR with DAMAGE_RECENT_WINDOW. Range: 10-50 HP. Round-2 Theme 1 N1 closure. Boundary semantics (B11 round-4): comparator is strict '<', NOT '<='. HP exactly equal to 25.0 does NOT fire arm 1. Asymmetric with E.F PING_COOLDOWN >= precedent — imminent-death cost attribution favors squad-friendly rejection at boundary (off-by-one over-charges are worse than off-by-one under-charges for Pillar 2 cost legitimacy)."
+
+  - name: DAMAGE_RECENT_WINDOW
+    category: constant
+    value: 3.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.5.3, E.E, G.6)
+    referenced_by: []
+    notes: "Recent-damage arm (arm 2) of the imminent-death predicate (C.5.3 Path B). On Players.PlayerRemoving, if (now - lastPredatorDamageTimestamp[player]) < this value, disconnecting player pays squad oxygen cost. Composite OR with HP_IMMINENT_THRESHOLD-bound arm 1. Range: 1.5-5.0s. Round-2 Theme 1 N1 closure. Reads from PredatorService-owned table (cross-system invariant per F.4). Boundary semantics (B11 round-4): comparator is strict '<', NOT '<='. Elapsed time exactly equal to 3.0s does NOT satisfy arm 2."
+
+  - name: HP_ARM_RECENT_WINDOW
+    category: constant
+    value: 30.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.5.3, E.E, G.6)
+    referenced_by: []
+    notes: "Time-bound on arm 1 (HP arm) of the imminent-death predicate (C.5.3 Path B). Arm 1 fires only if Humanoid.Health < HP_IMMINENT_THRESHOLD AND lastPredatorDamageTimestamp[player] ~= nil AND (now - lastPredatorDamageTimestamp[player]) < HP_ARM_RECENT_WINDOW. Range: 15-60s. Round-3 Pillar 2 closure — closes the stale-graze false-positive (a 10-minute-old predator graze plus oxygen-depletion death no longer triggers Path B). Reads from PredatorService-owned table (cross-system invariant per F.4). Boundary semantics (B11 round-4): comparator is strict '<', NOT '<='. Elapsed time exactly equal to 30.0s does NOT satisfy arm 1's recency check."
+
+  - name: GRACE_REENTRY_COOLDOWN
+    category: constant
+    value: 6.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.8.1, C.8.2, D.4, E.C, G.6)
+    referenced_by: []
+    notes: "Per-axis cooldown between grace-exempt first pulses for Sprint and Light emissions. Closes round-1 G1 grace-window first-pulse cadence exploit (Sprint ~31% cost cycle; Light 10x exploit factor). Per-axis tracking: t_lastGracePulse_sprint, t_lastGracePulse_light. Reset to nil on T5 (Humanoid.Died) per Pillar 4 fairness. Range: 4.0-12.0s. Floor justification: max(SPRINT_PULSE_INTERVAL + STAMINA_REGEN_DELAY, LIGHT_PULSE_INTERVAL) = 4.0s. Round-2 Theme 1 G1 closure. Eligibility comparator is INCLUSIVE >= (a state-entry exactly GRACE_REENTRY_COOLDOWN seconds after the last grace-exempt pulse IS eligible again -- matches the D.4 grace_eligible expression). Intentionally inclusive, unlike the strict-< HP_IMMINENT_THRESHOLD / HP_ARM_RECENT_WINDOW / DAMAGE_RECENT_WINDOW comparators (B11): denying a legitimate first pulse at the exact boundary is poor UX, consistent with the PING_COOLDOWN_PER_PLAYER >= accept-at-boundary precedent (R6-B3)."
+
+  - name: HEARTBEAT_SEND_RATE
+    category: constant
+    value: 1
+    unit: Hz
+    source: design/gdd/player-controller.md (E.D, C.9, G.6, H.33a/b/c)
+    referenced_by: []
+    notes: "PlayerHeartbeat RemoteEvent send rate. Client fires while in S2 (sprinting) only; server drops while in S1/S4/S5. Defines the SPRINT_CLIENT_TIMEOUT enforcement floor — 3 heartbeats fit in the 3s window. Bandwidth: ~160 B/s worst case at 4 sprinting players. Round-2 Theme 1 N2 closure (closes round-1 ghost-sprint exploit; heartbeat is NOT a sprint-authorization signal — sprint terminates at stamina=0 regardless). Range: 0.5-2 Hz."
+
+  # Player Controller round-16 additions (encoded 2026-06-11 from the round-16 authoring pass — R16-1/R16-2 + registry-staleness B6 closure).
+
+  - name: SPRINT_HOLD_FLOOR
+    category: constant
+    value: 0.09
+    unit: dimensionless (t)
+    source: design/gdd/ecological-disturbance.md (G.5) + design/gdd/player-controller.md (C.8.1, D.4 Step 2, G.7)
+    referenced_by: []
+    notes: "Sprint-axis-ONLY stationary hold-floor (R10-6 floor-and-feel; value raised 0.06 -> 0.09 per [R13-F1], user-ruled 2026-06-10): applied as max(SPRINT_HOLD_FLOOR, computed) AFTER the stationary attenuation, so holding sprint stationary publishes 0.09 instead of the near-free 0.03. NOT applied to the Light axis (Light stationary stays 0.024). ED-REGISTRY-OWNED per the G.7 magnitude-ownership rule — LANDED in ED G.5 round-20 (user-ruled 2026-06-14, CD 'fix this pass'); PC no longer carries it as a bare provisional. OPEN (routed to ED Session B/C review): ED's D.7 stationary-sprint stress-test still derives off the stale 0.030 — a binding correction flag at ED D.7 routes the asymptote (~0.664 -> ~1.99/Retreat) + cascading source-count/perf-budget re-derivation + the design-intent conflict (ED 'recoverable barely-Hunt' vs PC 'holding sprint is loud') to ED + creative-director. Range: (0.08, 0.10) EXCLUSIVE. MACHINE-CHECKABLE INVARIANT (config-validation gate, H.12a): 0.08 < SPRINT_HOLD_FLOOR < 0.10 — i.e. MAGNITUDE_LIGHT_PULSE (0.08) < SPRINT_HOLD_FLOOR < MAGNITUDE_SPRINT_PULSE (0.10), both comparisons strict (preserves the Pillar-1 emission hierarchy AND the moving-vs-holding gradient). Registered round-16 (was a B6 registry-staleness item — the GDD carried it since round-11/13 with no registry row)."
+
+  - name: LATCH_MAX_AGE
+    category: constant
+    value: 120.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.5.3, F.4, E.E, G.6)
+    referenced_by: []
+    notes: "Arm-3 outer staleness ceiling on the predatorCausedImminent latch (R10-1, user-ruled; [R13-F2] user-ruled 2026-06-10: stays 120 s). Arm 3 of the imminent-death predicate fires only while (now - predatorCausedImminentSetTimestamp[player]) < LATCH_MAX_AGE — strict '<', elapsed exactly 120.0 s does NOT fire (H.44 exact-boundary pair). Timestamp renewed on each qualifying predator damage application (damage > 0, round-16 ai qualifier) while sub-threshold. Range: 60-180 s, SUBJECT TO the coupled invariant below. MACHINE-CHECKABLE INVARIANT (config-validation gate, [R13-F2], closes the degenerate 60/60 corner): LATCH_MAX_AGE > HP_ARM_RECENT_WINDOW + 30.0 (margin >= 30 s, strict — at HP_ARM_RECENT_WINDOW's 60 s range max, any LATCH_MAX_AGE <= 90 s is rejected). Registered round-16 (B6 registry-staleness item)."
+
+  - name: RUN_END_DEFEAT_HOLD
+    category: constant
+    value: 0.5
+    unit: seconds
+    source: design/gdd/player-controller.md (C.6 T7, C.5.8, F.4, G.6)
+    referenced_by: []
+    notes: "Arbiter defeat-hold window (R10-5/N-6, registered in G.6 round-13 per R12-SD-5): the RunController arbiter holds a raised 'wipe' for this window before broadcasting defeat; a 'victory' arriving during the hold discards the wipe (victory precedence). PROVISIONAL / RunController-OWNED — PC introduced it; this row is the registration of record until the RunController GDD is authored. Degenerate at 0 (defeat pre-empts an adjacent-tick BCT4 victory); the 0.25 s floor spans ~15 Heartbeats at 60 Hz. Range: 0.25-1.0 s (above 1.0 s the post-wipe beat-of-silence reads as a freeze). NOTE (round-16 [R16-1]/H.61): this hold covers adjacent-tick skew ONLY — the post-activation all-dead case is handled by PC's whole-lifecycle suppression keyed on beaconActivated == true, not by this window. Registered in yaml round-16 (B6 registry-staleness item)."
+
+  - name: DEATH_SFX_BATCH_WINDOW
+    category: constant
+    value: 0.25
+    unit: seconds
+    source: design/gdd/player-controller.md (V/A.3, G.6)
+    referenced_by: []
+    notes: "Round-16 audio — overflow 'batch' boundary for the squad-wide death overflow cue (previously undefined): overflow deaths whose deathTimestamps fall within this window of the batch's first overflow death coalesce into ONE non-positional UI cue; a later overflow death starts a new batch (and a new single cue). Range: 0.1-0.5 s."
+
+  - name: EMOTE_WHEEL_IDLE_TIMEOUT
+    category: constant
+    value: 4.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.4.2, G.4)
+    referenced_by: []
+    notes: "Round-16 game/UX — accidental-open lockout: an open emote wheel with no slot selection auto-closes after this timeout (no emote fired, no cooldown charged, T9 touch gather lock released). Bounds how long an accidental open can hold the T9 gather lockout. Range: 2-8 s."
+
+  # Player Controller round-18 additions (encoded 2026-06-13 from the round-18 authoring pass — R17-2 audio-feedback floors + WALK_FOOTSTEP_VOLUME_FLOOR registration).
+
+  - name: WALK_FOOTSTEP_VOLUME_FLOOR
+    category: constant
+    value: 0.20
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (V/A.3, V/A.6, G.9, H.57a)
+    referenced_by: []
+    notes: "Round-18 — non-zero audible minimum for walk-footstep playback volume; a cosmetic timbre swap MUST NOT drive walk audio below this (an inaudible walk silently removes the squad's 'where is my teammate' proximity-awareness cue — a player-information regression). NOT a predator-perception input (OQ.1 closed; walk audio is player-feedback only). First-pass design-intent, art-bible-calibrated, NOT playtest-validated (G.8.1). Referenced in V/A.3 since round-15 but UNREGISTERED until round-18 (round-17 audio IMPORTANT). Config-validation asserts > 0 (H.57a Part 1). Range: 0.10-0.40."
+
+  - name: SPRINT_PULSE_EXERTION_VOLUME_FLOOR
+    category: constant
+    value: 0.25
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (V/A.3, V/A.6, G.9, H.57a)
+    referenced_by: []
+    notes: "Round-18 R17-2 (user-ruled) — non-zero audible minimum for BOTH variants of the sprint-pulse exertion UI cue (full/hold). A mix can never render the exertion cue inaudible, which would silently delete the moving(0.10)-vs-holding(0.09) gradient's only audio channel. UI/non-positional channel only — never crosses the audio-perception boundary (V/A.3 boundary note). First-pass design-intent, art-bible-calibrated, NOT playtest-validated. Config-validation asserts > 0 and rejects a config whose authored hold-variant volume is below this (H.57a Part 1); mix-review evidence (H.57a Part 2) confirms audible on iPhone SE-class hardware. Range: 0.10-0.50."
+
+  - name: SPRINT_PULSE_EXERTION_MIN_DELTA_DB
+    category: constant
+    value: 4.0
+    unit: dB
+    source: design/gdd/player-controller.md (V/A.3, V/A.6, G.9, H.57a)
+    referenced_by: []
+    notes: "Round-20 R17-2 (user-ruled 2026-06-14 — RAISED from 2.0; the 2.0 default sat below JND under iPhone-SE ambient/speaker masking (3-4 dB masked / 4-6 dB same-timbre), so the moving-vs-holding gradient was imperceptible on the baseline device — round-19 audio-AD-B2). Minimum dB by which the FULL exertion variant (moving/grace pulse, 0.10) exceeds the HOLD variant (stationary hold-floor pulse, 0.09), so the gradient stays perceivable rather than collapsing into one indistinguishable cue. Paired with a non-loudness timbre/rhythm differentiator (V/A.3) that carries the gradient when masking eats the dB step — which is why the dB delta need not be pushed into alarm territory. An EXERTION difference between own-player UI cues, NOT a danger-radius escalation (does not cross the audio-perception boundary). First-pass design-intent, art-bible-calibrated, NOT playtest-validated. Config-validation asserts > 0 and rejects a config whose authored full-hold delta is below this (H.57a Part 1). Range: 3.0-6.0 dB (below 3.0 risks collapse under same-timbre mobile masking; above ~6 dB reads as alarm/escalation even with the timbre hook — Pillar-1 mental-model risk). Round-22: yaml synced to the round-20-applied R17-2 value (was stale 2.0 / 1.0-4.0)."
+
+  # Player Controller round-20 + round-22 additions (encoded 2026-06-14 — R17-4 BEACON_LATCH_TIMEOUT registration + R17-1/R21-1 world-response cue floor).
+
+  - name: BEACON_LATCH_TIMEOUT
+    category: constant
+    value: 300.0
+    unit: seconds
+    source: design/gdd/player-controller.md (C.6 latch table, C.9 inbound RunEnded, G.6, F.4)
+    referenced_by: []
+    notes: "Round-20 R17-4 (user-ruled 2026-06-14) — bounded-timeout self-heal for PC's _beaconActivated run-lifecycle latch. The latch's intended clear-path is the arbiter's inbound RunEnded broadcast, but the RunController is unauthored (F.4) and a dropped/never-sent broadcast would wedge the run (T7 wipe terminal permanently suppressed — a Pillar-4 'the run can always end' violation). A single server-internal guard folded into the reconciliation-tick Heartbeat (C.5.3, no new connection) force-clears the latch when _beaconActivated AND (getServerTime() - _beaconActivatedAt) > BEACON_LATCH_TIMEOUT, logs a beacon-latch-timeout warning, and re-enables T7. SAFETY BACKSTOP ONLY — never the normal terminal. Floor (180 s) MUST stay above the longest legitimate activation->RunEnded span (BEACON_HALF_LIFE 128 s window-max per Crafting H.105 band [35.0,70.1] s + RUN_END_DEFEAT_HOLD + arbiter latency, well under 120 s); default 300 s is the ~2.5x margin; above ~600 s a genuinely lost broadcast leaves the run wedged too long. PROVISIONAL / RunController-coupled (the arbiter is unauthored). Reads route through the C.11 clock seam (H.61c determinism). Verified by H.61c (timeout release + paired no-premature-self-heal + straggler-RunEnded no-op). Range: 180-600 s. Round-22: registered (round-21 found it unregistered)."
+
+  - name: WORLD_RESPONSE_CUE_VOLUME_FLOOR
+    category: constant
+    value: 4.0
+    unit: dB above the Hunt-tier ambient bed
+    source: design/gdd/player-controller.md (V/A.3, V/A.6, G.9, H.78a)
+    referenced_by: []
+    notes: "Round-22 R21-3 (user-ruled 2026-06-14, +4.0 dB above ambient) — audibility floor for the R17-1 world-response cue (the in-run loop-closer: a non-positional ambient swell played to living squad on an UPWARD Ecological-Disturbance band-crossing, V/A.3). Defined as dB-ABOVE-AMBIENT (parity with SPRINT_PULSE_EXERTION_MIN_DELTA_DB), NOT a 0-1 Sound.Volume scalar: the cue is a rarer event (~2-4/run) that plays over ESCALATED (louder) disturbance-tier ambient, so a fixed scalar would be masked at high ambient tiers — the floor must track the ambient it plays over. Baseline is the same named Hunt-tier ambient bed H.57a Part 2 uses. The cue carries NO direction/distance/predator-position (V/A.3 anti-pillar) — it says 'your noise raised the heat', never 'the predator is there'. Config-validation asserts the floor constant is in its registered range >= 3.0 (round-28 T-4 fix — the stale '> 0' was the wrong domain: this is a dB-above-ambient value with range 3.0-6.0 dB, so any value < 3.0 is itself a misconfiguration, not merely a non-positive one; matches H.78a Part 1's round-24 correction) AND rejects a config whose authored worldResponseCueGainDb (the per-mix swell level, G.9.1) is below the floor (H.78a Part 1); mix-review isolate-test confirms perceptible against the Hunt-tier baseline on iPhone SE-class hardware (H.78a Part 2). First-pass design-intent, art-bible-calibrated, NOT playtest-validated (G.8.1). Range: 3.0-6.0 dB."
+
+  # Player Controller round-28 additions (encoded 2026-06-16 from the round-28 template authoring pass — T-4 systems NEW-3: declaration sites for the authored mix fields the G.9 floors gate against, closing the consumed-never-produced gap; see PC G.9.1).
+
+  - name: sprintPulseExertionHoldVolume
+    category: config_field
+    value: null
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (G.9.1, V/A.3, H.57a)
+    referenced_by: []
+    notes: "Round-28 T-4 (systems NEW-3). Authored per-mix playback volume of the HOLD sprint-pulse exertion variant (stationary hold-floor pulse, 0.09). The field H.57a Part 1 compares against SPRINT_PULSE_EXERTION_VOLUME_FLOOR (0.25) — config-validation rejects a value below the floor. Declared here so the gate has a real field to read (previously consumed-by-the-gate, produced-nowhere). Authored value set at mix time (art-bible-calibrated); value: null = not yet authored. NOT client-exposed (G.8.4)."
+
+  - name: sprintPulseExertionFullVolume
+    category: config_field
+    value: null
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (G.9.1, V/A.3, H.57a)
+    referenced_by: []
+    notes: "Round-28 T-4 (systems NEW-3). Authored per-mix playback volume of the FULL sprint-pulse exertion variant (moving/grace pulse, 0.10). H.57a Part 1 gates: >= SPRINT_PULSE_EXERTION_VOLUME_FLOOR (0.25) AND the (full - hold) dB delta >= SPRINT_PULSE_EXERTION_MIN_DELTA_DB (4.0). Declared here to close the consumed-never-produced gap. value: null = not yet authored. NOT client-exposed."
+
+  - name: walkFootstepVolume
+    category: config_field
+    value: null
+    unit: Sound.Volume scalar (0-1)
+    source: design/gdd/player-controller.md (G.9.1, V/A.3, H.57a)
+    referenced_by: []
+    notes: "Round-28 T-4 (systems NEW-3). Authored per-mix walk-footstep playback volume — the squad-proximity-awareness cue a cosmetic timbre swap must not drive inaudible. H.57a Part 1 gates >= WALK_FOOTSTEP_VOLUME_FLOOR (0.20). Declared here to close the consumed-never-produced gap. value: null = not yet authored. NOT client-exposed."
+
+  - name: worldResponseCueGainDb
+    category: config_field
+    value: null
+    unit: dB above the Hunt-tier ambient bed
+    source: design/gdd/player-controller.md (G.9.1, V/A.3, H.78a)
+    referenced_by: []
+    notes: "Round-28 T-4 (round-26 flagged it for this field; systems NEW-3 found the class is 4 fields). Authored per-mix swell level of the R17-1 world-response cue (the in-run loop-closer), expressed dB-above-the-named-Hunt-tier-ambient-bed (domain-consistent with the floor, NOT a 0-1 scalar). H.78a Part 1 gates >= WORLD_RESPONSE_CUE_VOLUME_FLOOR (4.0 dB); governs the SUSTAINED portion of the swell (V/A.3 R23-1(b)). Declared here to close the consumed-never-produced gap. value: null = not yet authored. NOT client-exposed."
+
+  # Crafting & Items additions (encoded 2026-04-30 from /design-system crafting-and-items).
+
+  - name: MAGNITUDE_CRAFT_XS
+    category: constant
+    value: 0.10
+    unit: dimensionless (t)
+    source: design/gdd/crafting-and-items.md (C.2, G.4)
+    referenced_by: []
+    notes: "Craft-emission burst magnitude for Oxygen Canister (recipe 1). XS tier per VA.1. Range: 0.05-0.18 (G.4). Below 0.05 makes oxygen canister 'free' (Pillar 1 weakens); at 0.18 lapses into LIGHT tier."
+
+  # MAGNITUDE_CRAFT_LIGHT removed 2026-06-01 round-2 patch.
+  # It was the burst magnitude (0.12) for the Composite Patch + Quiet Step Wrap recipes,
+  # both cut in the round-2 catalog revision (crafting-and-items.md C.2). No surviving recipe
+  # sits in the LIGHT band; the constant has no live referent.
+
+  - name: MAGNITUDE_CRAFT_MID
+    category: constant
+    value: 0.18
+    unit: dimensionless (t)
+    source: design/gdd/crafting-and-items.md (C.2, G.4)
+    referenced_by: []
+    notes: "Craft-emission burst magnitude for Dampener Coil (recipe 2) and Signal Anchor (recipe 3). MID tier per VA.1. Range: 0.12-0.30 (G.4). Equals MAGNITUDE_CRAFT_BEACON_MIDPULSE at default but conceptually distinct (separate constants per G.4). History: round-2 (2026-06-01) catalog cut to 5 recipes; round-3 merged Squad Relay's burst to MID (retired MAGNITUDE_CRAFT_RELAY); round-5 (2026-06-02, R4-2) CUT the Squad Relay recipe entirely — only Coil + Anchor remain in the MID tier (4-recipe catalog)."
+
+  # MAGNITUDE_CRAFT_RELAY — RETIRED 2026-06-01 (round-3). Was 0.20 (RELAY tier).
+  # The Squad Relay's completion burst is merged into MAGNITUDE_CRAFT_MID = 0.18 — the
+  # 0.20 sub-tier sat inside HYSTERESIS_BAND of MID and bought no balance differentiation
+  # (the Relay's distinct value is its position-ping broadcast + RM-owned oxygen transfer,
+  # not a louder burst). Constant deleted; name NOT reused. See Crafting C.2/G.4/VA.1.
+
+  - name: MAGNITUDE_CRAFT_HEAVY
+    category: constant
+    value: 0.35
+    unit: dimensionless (t)
+    source: design/gdd/crafting-and-items.md (C.2, G.4)
+    referenced_by: []
+    notes: "Craft-emission burst magnitude for Escape Beacon completion (recipe 5) — the loudest pre-activation craft burst. HEAVY tier per VA.1. Range: 0.25-0.55 (G.4). MAGNITUDE_BEACON (0.95) is the Beacon's separate ACTIVATION emission, not its completion burst. Beacon stays recipe #5 (number not reused); catalog is 4 live recipes post-round-5 (Squad Relay #4 cut 2026-06-02, R4-2; was 5 post-round-2)."
+
+  - name: MAGNITUDE_CRAFT_BEACON_MIDPULSE
+    category: constant
+    value: 0.18
+    unit: dimensionless (t)
+    source: design/gdd/crafting-and-items.md (C.2, D.7, G.4)
+    referenced_by: []
+    notes: "Beacon mid-craft warning pulse magnitude. Fires once per Beacon craft session at CRAFT_BEACON_MIDPULSE_PROGRESS = 0.5. Equals MAGNITUDE_CRAFT_MID at default but kept as a separate constant for future divergent tuning. Range: 0.10-0.35 (G.4)."
+
+  - name: MAGNITUDE_CANISTER_INWINDOW_USE
+    category: constant
+    value: 0.18
+    unit: dimensionless (t)
+    source: design/gdd/crafting-and-items.md (C.2, C.6, C.11, G.4)
+    referenced_by: []
+    notes: "Round-7 Group-B bunker counter (CD Group-B ruling, Hybrid A+B), the bunker-counter that makes 'stack ~10 Canisters and wait out the window quietly' non-free. Emitted as a 'Craft' burst (emissionType 'Craft', MID tier default) when an Oxygen Canister is USED while the beacon is in BC4 (gated server-side by `beaconActivated && not runOutcomeResolved`, round-17 — fires through victory AND defeat-edge resolution, silent outside BC4). Round-11 EC-3 ruling: the emission fires at RunSession.beaconWorldPosition (NOT the using player's position, NOT benchPosition) so in-window oxygen spend concentrates at the beacon and cannot bait the predator off the hold; sourcePlayerId is the using player. Tunes jointly with the RM OXYGEN_DRAIN_BC4_FLOOR forward obligation (OQ.13). Does NOT touch the beacon completion/attribution path. Range: 0.10-0.35 (G.4). Verified by H.93 / E.32. (Round-20: removed a duplicate `notes:` key that carried the pre-EC-3 emission position [using player's HumanoidRootPart.Position] and the round-17-superseded `beaconActivated && !beaconWindowSurvived` guard — a YAML duplicate key resolved to the stale value.)"
+
+  - name: BENCH_MAX_CRAFTERS
+    category: constant
+    value: 2
+    unit: count
+    source: design/gdd/crafting-and-items.md (C.3.5, C.8, G.1)
+    referenced_by: []
+    notes: "Hard CEILING on the squad-scaled effective per-bench crafter cap (round-2): benchMaxCraftersEffective = min(BENCH_MAX_CRAFTERS, ceil(squadSize/2)), computed once at run start (C.3.5). squad 2 -> effective cap 1; squad 3-4 -> effective cap 2. Range: 1-4 (G.1). At 1, multi-crafter dwell-reduction loop in D.2 disappears. At 3+, completion-emission stack in D.3 risks ED.C.1.2 reserved-band breach. Round-2 (2026-06-01): cap now scales with squad size to fix the 2-player 'nobody watches' collision (round-1 B19)."
+
+  - name: CRAFT_JOIN_CUTOFF
+    category: constant
+    value: 0.85
+    unit: progress fraction
+    source: design/gdd/crafting-and-items.md (C.3.5, G.1, E.3)
+    referenced_by: []
+    notes: "Strict less-than threshold above which a second crafter cannot join an in-progress craft. Range: 0.50-0.95 (G.1). At 0.95 the deserter-exploit (E.5) reopens. Boundary contract per H.6: must be < (not <=)."
+
+  - name: BENCH_RANGE_TOLERANCE
+    category: constant
+    value: 2
+    unit: studs
+    source: design/gdd/crafting-and-items.md (C.8, G.1, E.13)
+    referenced_by: []
+    notes: "Tolerance margin beyond GATHER_PROXIMITY_RADIUS for BT4/BT5 range-exit detection. At 1, network jitter creates false out-of-range cancellations. At 4+, players sprint freely without losing craft progress. Server-side proximity watcher per E.13 + G5 enforces."
+
+  - name: MATERIAL_STACK_MAX
+    category: constant
+    value: 20
+    unit: count
+    source: design/gdd/crafting-and-items.md (C.4, G.2)
+    referenced_by: [design/gdd/resource-node.md]
+    notes: "Per-material per-player personal inventory cap. Surplus on gather is silently discarded (E.1, H.1). Range: 10-50 (G.2). At 10 every other gather forces a bench round-trip; at 50+ one player can hoard squad materials. RN rejects gather pre-lock when at cap (RN E.4/H.14); overflow mid-extract still depletes+emits, Crafting discards (RN E.4/H.25)."
+
+  - name: SQUAD_INVENTORY_TYPE_CAP
+    category: constant
+    value: 8
+    unit: count
+    source: design/gdd/crafting-and-items.md (C.4, G.2)
+    referenced_by: []
+    notes: "Maximum distinct item types in squad shared pool. 4 distinct types exist in MVP post-round-5 (Oxygen Canister, Dampener Coil, Signal Anchor, Beacon); cap of 8 leaves headroom. Range: 5-12 (G.2). Was 7 pre-round-2 (Composite Patch + Quiet Step Wrap cut 2026-06-01); 5 post-round-2; 4 post-round-5 (Squad Relay cut 2026-06-02, R4-2)."
+
+  - name: ITEM_STACK_MAX
+    category: constant
+    value: 10
+    unit: count
+    source: design/gdd/crafting-and-items.md (C.4, G.2)
+    referenced_by: []
+    notes: "Per-stack cap for consumables in squad shared pool. Beacon is single-instance regardless of cap. Range: 3-25 (G.2)."
+
+  - name: DAMPENER_DURATION
+    category: constant
+    value: 60
+    unit: seconds
+    source: design/gdd/crafting-and-items.md (C.6, D.6, G.5)
+    referenced_by: []
+    notes: "Dampener Coil active window. Coil also expires on bench-visit (per gap-resolution G6) or owner death. Range: 20-180s (G.5). At 180+ effectively permanent silent-lantern; at 20 below 5 Light pulse intervals."
+
+  - name: DAMPENER_REDUCTION
+    category: constant
+    value: 0.50
+    unit: multiplier
+    source: design/gdd/crafting-and-items.md (C.6, D.6, G.5)
+    referenced_by: []
+    notes: "Multiplicative reduction on equipped player's Light pulse magnitude while Coil is active (effective_light = base * (1 - DAMPENER_REDUCTION)). Range: INTERIM 0.30-0.56 (round-11, systems BLOCK-3); 0.30-0.70 post-PC. The 0.70 ceiling's 'a moving Coil player is silenced' rationale only holds once PC applies the D.6a Stage-2 stationary factor (PC in MAJOR REVISION, unverified-until-PC); until then a moving Coil player at 0.70 emits 0.024 > MAGNITUDE_FLOOR (not silent), so the tunable ceiling is held at 0.56, with 0.70 the post-PC ceiling. Non-linear interaction with PC.D.4 stationary attenuation per H.38/D.6a."
+
+  # QUIET_STEP_WRAP_REDUCTION removed 2026-06-01 round-2 patch.
+  # It was the 0.50 sprint-pulse reduction multiplier for the Quiet Step Wrap recipe,
+  # cut in the round-2 catalog revision (crafting-and-items.md C.2; formula D.5 removed).
+  # The constant has no live referent.
+
+  - name: SIGNAL_ANCHOR_LIFETIME
+    category: constant
+    value: 45
+    unit: seconds
+    source: design/gdd/crafting-and-items.md (C.6, C.7, G.5, E.16)
+    referenced_by: []
+    notes: "Signal Anchor lifetime in world after placement. Single-shot trip; no re-trigger. Range: 15-120s (G.5). At 120+ Anchor approaches base-building (game-concept anti-pillar); single-Anchor-at-a-time rule (E.16) is the primary brake."
+
+  - name: SIGNAL_ANCHOR_DETECTION_RADIUS
+    category: constant
+    value: 30
+    unit: studs
+    source: design/gdd/crafting-and-items.md (C.7, G.5)
+    referenced_by: []
+    notes: "Predator-proximity threshold that fires Anchor trip event. Range: 12-60 (G.5). At 60+ approaches predator-tracking minimap. Sensor check at SENSOR_CHECK_HZ cadence (false-negative on fast predator transits is accepted per H.66)."
+
+  - name: SENSOR_CHECK_HZ
+    category: constant
+    value: 5
+    unit: Hz
+    source: design/gdd/crafting-and-items.md (C.7, G.5)
+    referenced_by: []
+    notes: "Anchor proximity-check cadence. Recommended to match FIELD_UPDATE_HZ (5) for consistency. Range: 2-10 (G.5)."
+
+  - name: CRAFT_BEACON_MIDPULSE_PROGRESS
+    category: constant
+    value: 0.5
+    unit: progress fraction
+    source: design/gdd/crafting-and-items.md (D.7, G.6)
+    referenced_by: []
+    notes: "Progress fraction at which Beacon mid-craft pulse fires (D.7). At default 10s craft time gives wall-clock 5s. Range: 0.4-0.6 (G.6) — outside this range halftime-beat cadence breaks. Wall-clock CRAFT_BEACON_MIDPULSE_TIME is derived, not independently tunable."
+
+  - name: BEACON_PLACE_MAX_RANGE
+    category: constant
+    value: 8
+    unit: studs
+    source: design/gdd/crafting-and-items.md (C.15, G.6)
+    referenced_by: []
+    notes: "Maximum distance from player to placement position for RequestBeaconPlace. Range: 4-16 (G.6). At 4 placement feels overconstrained; at 16+ ritual-placement framing breaks."
+
+  - name: BEACON_HOLD_RADIUS
+    category: constant
+    value: 12
+    unit: studs
+    source: design/gdd/crafting-and-items.md (C.5.6a, C.9, G.6)
+    referenced_by: [design/gdd/hud.md]
+    notes: "Round-3 (B1); CONTINUOUS-HOLD round-13 (fail-fast); TIGHTENED 30=>12 round-15 (2026-06-05, SENTRY fix). Proximity radius around the placed/activated beacon within which at least requiredHolders (= ceil(#aliveMembers/2), round-15) squad members must be ALIVE AND present CONTINUOUSLY through the survival window for victory (BCT4). Round-13 reversed the round-3/9 window-end-only check; round-15 raised the threshold from >=1 to ceil(#aliveMembers/2) (the SENTRY fix — one of four can no longer hold for the rest) and shrank the radius 30=>12 so 'in-radius' == 'on the beacon' AND the 3s line-break grace is mobile-traversable. The instant fewer than requiredHolders are within radius the squad enters a line-break; if the snapshot stays below threshold for BEACON_LINE_BREAK_GRACE (members alive) => scatter-defeat (E.27); if aliveMembers empty => immediate wipe-defeat (precedence over scatter, B-1). Victory = window elapses while held (>= requiredHolders). Range: 8-20 (G.6). Server tests dist3D(member.HRP, beaconWorldPosition) <= 12 EVERY BC4 Heartbeat (STRICT <=, no hysteresis — BEACON_HOLD_HYSTERESIS applies only to the presentation OnBeaconHoldStateChanged signal, never the win snapshot)."
+
+  - name: BEACON_HOLD_MIN_HOLDERS
+    category: derived
+    value: "requiredHolders = min(requiredHoldersBaseline, #aliveMembers); requiredHoldersBaseline = ceil(peakAliveCount/2) FROZEN at BCT3 (round-19 R18-1 — from the max-alive-so-far ratchet, NOT the activation snapshot)"
+    unit: members
+    source: design/gdd/crafting-and-items.md (C.5.6a, C.9, C.10, G.6)
+    referenced_by: []
+    notes: "Round-15 (2026-06-05, SENTRY fix) introduced requiredHolders = ceil(#aliveMembers/2). Round-16 (2026-06-06, R16-1 FREEZE) made it FROZEN at activation. Round-19 (2026-06-06, R18-1 RATCHET) changed the frozen denominator's SOURCE from the activation-snapshot alive count to the run's high-water alive count peakAliveCount (new RunSession field, ratcheted max(peakAliveCount,#aliveMembers) every tick from RunStarted): requiredHoldersBaseline = ceil(peakAliveCount/2) computed ONCE at BCT3, per-tick requiredHolders = min(requiredHoldersBaseline, #aliveMembers) — the min clamps DOWN to current alive (lone-survivor win via min(baseline,1)=1; never demand more holders than alive) but NEVER UP. held <=> #windowAliveInRadius >= requiredHolders. Baseline values: 1,1,2,2 for high-water alive=1,2,3,4 ('at least half the LARGEST squad the run fielded holds'). Closes BOTH the round-16 respawn-raises-bar fantasy violation (freeze) AND the round-18 activate-late-for-low-baseline lane (ratchet — delaying activation until teammates die cannot lower the bar, since peakAliveCount already recorded the bigger squad). The BASELINE is monotone-frozen; the live requiredHolders is non-monotone (2->1->2) by design via the min clamp. Closes the round-14 SENTRY line. No range (structural). Denominator source is LOCKED (round-19), no longer a pending swap. See E.33 + H.118 (freeze) + H.124 (enumeration) + H.129 (ratchet)."
+
+  - name: BEACON_HOLD_HYSTERESIS
+    category: constant
+    value: 3
+    unit: studs
+    source: design/gdd/crafting-and-items.md (C.9, C.10, C.14, G.6)
+    referenced_by: []
+    notes: "Round-11 (Convergence #4). Schmitt-trigger band on the PRESENTATION-ONLY OnBeaconHoldStateChanged HUD signal: a member enters the shown-in-radius set at dist <= BEACON_HOLD_RADIUS and leaves only at dist > BEACON_HOLD_RADIUS + BEACON_HOLD_HYSTERESIS; inside the band they keep prior state. Debounces boundary jitter so a player at the 12-stud edge (round-15) no longer floods events. NEVER affects the win snapshot (strict <= BEACON_HOLD_RADIUS, C.9/H.92). Range: 1-8 (G.6)."
+
+  - name: BEACON_HOLD_ESCALATION_LEAD
+    category: constant
+    value: 10
+    unit: seconds
+    source: design/gdd/crafting-and-items.md (UI.1 surface 13, C.14, G.6)
+    referenced_by: []
+    notes: "Round-11 (Convergence #5); repurposed round-13 (continuous-hold). Presentation-only: in the survival window's final BEACON_HOLD_ESCALATION_LEAD seconds, a HOLDING squad sees a calmer 'HOLD - Xs to go' confirmation so the finale's end is legible. (Round-13: the primary urgency cue is now the BROKEN regroup grace countdown driven by OnBeaconLineBreak, not this lead; the round-3/9 'single-frame window-end check' the lead was originally written for is retired.) Never changes the win evaluation (C.9). Range: 4-20 (G.6)."
+
+  - name: BEACON_LINE_BREAK_GRACE
+    category: constant
+    value: 3
+    unit: seconds
+    source: design/gdd/crafting-and-items.md (C.5.6a, C.9 step b, C.10, G.6)
+    referenced_by: []
+    notes: "Round-13 (B1 fail-fast); range CAPPED 0-6 => 0-4 round-15 (game-designer anti-kiting). Continuous-hold grace: during BC4, if the strict windowAliveInRadius snapshot is BELOW requiredHolders while >=1 member is alive (a scatter/displacement/sentry line-break), a grace clock (_lineBreakSince, RunSession — RENAMED from _lineBreakEmptySince round-15 since the trigger is 'below threshold', not 'empty') starts; if the snapshot stays below threshold for BEACON_LINE_BREAK_GRACE seconds, BCT-DEFEAT(reason=scatter) fires (computed in C.9 step b, fired in step c after the drains, gated on aliveMembers non-empty — B-1). Enough members re-entering (>= requiredHolders) resets the grace. WIPE (aliveMembers empty) ignores the grace and fires immediately (precedence). With BEACON_HOLD_RADIUS tightened to 12 (round-15) the 3s grace is mobile-traversable. Range: 0-4 (G.6); 0 degenerates to an instant line-break, >4 partially reopens the scatter line. Win-relevant (gates the scatter terminal)."
+
+  - name: BEACON_LINE_BREAK_RESTORE_DEBOUNCE
+    category: constant
+    value: 6
+    unit: ticks
+    source: design/gdd/crafting-and-items.md (C.9 step d, C.10, C.14, G.6)
+    referenced_by: []
+    notes: "Round-15 (2026-06-05, quadruple-lens debounce fix); round-16 (2026-06-06, R16-2) added the broken=true edge-trigger. PRESENTATION-ONLY: governs the squad-level OnBeaconLineBreak HUD banner via the two-state edge machine _lineBreakBroadcast (RunSession field). broken=true fires immediately on the HOLDING->BROKEN edge (the FIRST below-threshold tick, when _lineBreakBroadcast was false) and sets it true — it does NOT re-fire on subsequent below-threshold ticks (the round-16 fix to the round-15 per-tick re-fire — H.119/H.95 assert 'at most one broken=true'). broken=false fires only after BEACON_LINE_BREAK_RESTORE_DEBOUNCE consecutive at-threshold ticks (counter _lineBreakRestoreTicks) on the BROKEN->HOLDING edge, setting _lineBreakBroadcast false. Stops a sole boundary-holder oscillating at the 12-stud radius from flapping the win-state banner at up to 60 Hz (WCAG 2.3.1 / round-14 N14-B2). The terminal grace clock _lineBreakSince is UNAFFECTED (strict per-tick test). Range: 1-30 (G.6). Verified by H.95/H.119."
+
+  - name: POSITION_SETTLED_EPSILON
+    category: constant
+    value: 1.0
+    unit: studs
+    source: design/gdd/crafting-and-items.md (C.10, G.6)
+    referenced_by: []
+    notes: "Round-15 (2026-06-05, B-3 re-add positioned predicate). Observable predicate for 'the respawned HumanoidRootPart has been positioned': hrp.Position.Magnitude > POSITION_SETTLED_EPSILON (an unplaced root part reads world origin (0,0,0); a placed character is at a SpawnLocation away from origin). Gates the buffered respawn re-add (_enqueueReadd) so windowAliveInRadius never reads an unplaced member. Range: 0.5-4 (G.6). Assumes Terranova spawns are not near world origin."
+
+  - name: MIN_SQUAD_SIZE
+    category: constant
+    value: 2
+    unit: count
+    source: design/gdd/crafting-and-items.md (C.17, F.1, F.7, G.8)
+    referenced_by: []
+    notes: "Round-3 (2026-06-01). Minimum squad size at run start. OWNED UPSTREAM (run-start / matchmaking gate, out of Crafting scope per F.7); Crafting READS it for the benchMaxCraftersEffective cap (C.3.5) and a defence-in-depth init assertion (H.84). Solo-play (squadSize=1 at start) is UNSUPPORTED. A run may still drop to 1 alive mid-run (lone survivor, E.30) — that is normal and handled, not solo-play."
+
+  - name: CRAFTING_GLOBAL_RATE_LIMIT
+    category: constant
+    value: 8
+    unit: events/s/player
+    source: design/gdd/crafting-and-items.md (C.15, G.7)
+    referenced_by: []
+    notes: "Per-player global cap across ALL Crafting RemoteEvents combined. Game-concept-level network budget defense against spam-multiple-low-rate-limited-events bypass pattern (per H.26). Range: 4-16 (G.7). Burst window: 16 events / 2s."
+
+formulas:
+  - name: magnitudeDecay
+    category: formula
+    expression: "m(t, age) = initialMagnitude * exp(-lambda * math.max(0, age))"
+    variables: [initialMagnitude, age, lambda]
+    output_range: [0.0, 1.0]
+    source: design/gdd/ecological-disturbance.md (D.1)
+    referenced_by: []
+    notes: "Server clock MUST be workspace:GetServerTimeNow() (Roblox monotonic server clock; documented not to jump backward). os.clock(), os.time(), and tick() are FORBIDDEN as canonical sources per D.1. math.max(0, age) guard is defense-in-depth against same-Heartbeat-frame equal-timestamp edge cases. Updated 2026-04-29 round-3 revision (round-2 D.1 ruling propagated to registry)."
+
+  - name: squadAggregateT
+    category: formula
+    expression: "GetSquadAggregateT(excludePlayer: Player?) -> squadT = if remainder(connectedPlayers minus excludePlayer) is empty then (if connectedPlayers is empty then 0.0 else max over ALL connected players) else max(fieldValue(pi.position) for pi in the remainder); nil argument -> unfiltered max over all connected players"
+    variables: [pi, excludePlayer]
+    output_range: [0.0, 1.0]
+    source: design/gdd/ecological-disturbance.md (D.5 exclusion-form paragraph, D.6b)
+    referenced_by: [design/gdd/predator-ai.md, design/gdd/hud.md]
+    revised: 2026-07-05
+    notes: "UPDATED 2026-07-05 (cross-review C6 — the prior zero-arg entry was the pre-round-23 form whose lack of exclusion made PA's Hunt→Disengage structurally unreachable, ED round-23 B1). Exclusion form (round-23): PA's quiet-check reads GetSquadAggregateT(excludeLockedPlayer); nil → unfiltered D.5 max (HUD path unchanged); empty remainder → UNFILTERED max (lone player's own T, PA H.57 solo semantics — never 0/nil on a non-empty server); zero connected players → 0.0 (E.15/H.22b); D.5/playerT finiteness guards apply (ED round-22/24). Verified by ED H.22c. Server-internal only, never on Service.Client."
+
+  - name: canisterCycleTime
+    category: formula
+    expression: "canisterCycleTime_best = BIOMASS_PER_CANISTER * (TAP_HOLD_COMMIT_DURATION + NODE_EXTRACT_TIME_LIGHT) + CRAFT_TIME_CANISTER"
+    variables: [BIOMASS_PER_CANISTER, TAP_HOLD_COMMIT_DURATION, NODE_EXTRACT_TIME_LIGHT, CRAFT_TIME_CANISTER]
+    output_range: [9.1, 18.0]
+    source: design/gdd/resource-node.md (D.1)
+    referenced_by: [design/gdd/resource-management.md]
+    notes: "Best-case (zero-travel) gather->craft->use cycle for one Oxygen Canister. HARD floor (RM D.6): must exceed CRAFT_CONCURRENCY_CAP * CANISTER_RESTORE_OXYGEN / OXYGEN_DRAIN_BC3 = 2*10/2.2 = 9.09 s. At defaults = 10.0 s (+0.91 s margin). Server-init assert (RN H.12). Supersedes RM's stale ~8 s dependency-table provisional (RM line 241, OQ.7). BIOMASS_PER_CANISTER=2, CRAFT_TIME_CANISTER=2 s both Crafting-locked."
+
+  - name: spatialFalloffContribution
+    category: formula
+    expression: "contribution(P, S) = m(t, age) * max(0, 1 - dist2D(P, S) / INFLUENCE_RADIUS)^2"
+    variables: [m, dist2D, INFLUENCE_RADIUS]
+    output_range: [0.0, 1.0]
+    source: design/gdd/ecological-disturbance.md (D.2)
+    referenced_by: []
+
+  - name: fieldValueAtPosition
+    category: formula
+    expression: "fieldValue(P) = min(1.0, sum over live sources of contribution(P, Si))"
+    variables: [P, Si]
+    output_range: [0.0, 1.0]
+    source: design/gdd/ecological-disturbance.md (D.3)
+    referenced_by: []
+
+  # Player Controller formulas (encoded 2026-04-30).
+
+  - name: staminaDrain
+    category: formula
+    expression: "stamina_new = clamp(stamina - STAMINA_DRAIN_RATE * dt, 0, STAMINA_MAX)"
+    variables: [stamina, STAMINA_DRAIN_RATE, dt, STAMINA_MAX]
+    output_range: [0, 200]
+    source: design/gdd/player-controller.md (D.1)
+    referenced_by: []
+    notes: "Per-Heartbeat stamina deduction while in S2 (Alive-Sprinting). dt sourced from RunService.Heartbeat event arg (typical 1/60s server, up to 1/30s on slow servers; dt = math.max(0, dt) negative-dt guard per R12-SD-6). Clamp to 0 prevents negative on lag spike. output_range upper bound = STAMINA_MAX across the G.2 product space (range 60-200; 0-100 at the default STAMINA_MAX = 100) — round-16 B6d un-pinned it from the default."
+
+  - name: staminaRegen
+    category: formula
+    expression: "stamina_new = clamp(stamina + STAMINA_REGEN_RATE * dt, 0, STAMINA_MAX)"
+    variables: [stamina, STAMINA_REGEN_RATE, dt, STAMINA_MAX]
+    output_range: [0, 200]
+    source: design/gdd/player-controller.md (D.2)
+    referenced_by: []
+    notes: "Per-Heartbeat stamina recovery while NOT in S2 AND past STAMINA_REGEN_DELAY (strict '>' gate, R6-I1). Delay is gated by caller, not by this formula. dt = math.max(0, dt) negative-dt guard per R12-SD-6. output_range upper bound = STAMINA_MAX across the G.2 product space (range 60-200; 0-100 at the default STAMINA_MAX = 100) — round-16 B6d un-pinned it from the default."
+
+  - name: effectiveSprintDuration
+    category: formula
+    expression: "T_sprint(s_0) = s_0 / STAMINA_DRAIN_RATE"
+    variables: [s_0, STAMINA_DRAIN_RATE]
+    output_range: [0.0, 25.0]
+    source: design/gdd/player-controller.md (D.3)
+    referenced_by: []
+    notes: "Seconds of uninterrupted sprint until forced-walk, given starting stamina. 8.0 s at default config (s_0 = STAMINA_MAX = 100, drain 12.5); TRUE MAXIMUM across the combined G.2 product space is 25.0 s (STAMINA_MAX = 200 / STAMINA_DRAIN_RATE = 8) — round-16 B6b corrected the default-pinned 8.0 upper bound. STAMINA_DRAIN_RATE > 0 is a load-bearing config-validation floor (R12-SD-3 — division by zero at 0)."
+
+  - name: pulseEmissionMagnitude
+    category: formula
+    expression: "axis = emissionType; grace_eligible = (t_lastGracePulse[axis] == nil) OR ((t_0 - t_lastGracePulse[axis]) >= GRACE_REENTRY_COOLDOWN); if grace_eligible: record t_lastGracePulse[axis] = t_0 (Step 0a anchor-on-eligibility, B9 -- recorded at eligibility resolution regardless of whether the first pulse fires within FIRST_PULSE_GRACE_WINDOW); effective_d = (d_xz < MOBILE_ANALOG_DRIFT_THRESHOLD AND platform == 'touch') ? 0 : d_xz; if grace_eligible AND (t - t_0) <= FIRST_PULSE_GRACE_WINDOW: magnitude_out = magnitude_base; elif effective_d < EMITTER_MOVEMENT_DELTA_FLOOR: magnitude_out = magnitude_base * STATIONARY_EMISSION_FACTOR; else: magnitude_out = magnitude_base; if axis == 'Sprint': magnitude_out = max(SPRINT_HOLD_FLOOR, magnitude_out) (Step 2 Sprint hold-floor, R10-6/[R13-F1])"
+    variables: [t, t_0, d_xz, effective_d, axis, t_lastGracePulse, MOBILE_ANALOG_DRIFT_THRESHOLD, EMITTER_MOVEMENT_DELTA_FLOOR, FIRST_PULSE_GRACE_WINDOW, GRACE_REENTRY_COOLDOWN, magnitude_base, STATIONARY_EMISSION_FACTOR, SPRINT_HOLD_FLOOR, platform]
+    output_range: [0.024, 0.10]
+    source: design/gdd/player-controller.md (D.4)
+    referenced_by: []
+    notes: "Pulse magnitude sent to DisturbanceService:Emit for Sprint or Light pulses. Discrete output set: {0.024, 0.08, 0.09, 0.10} — Sprint stationary = 0.09 via the Step-2 hold-floor max(SPRINT_HOLD_FLOOR, 0.10 x 0.30 = 0.03) per R10-6 at the [R13-F1] value; the pre-R10-6 0.03 output is UNREACHABLE (round-16 B6a removed the dead 0.03 from this set and added the missing Step-2 max() to the expression). Light stationary stays 0.024 (no floor — Light axis). Drift floor applies on touch only (PC/gamepad bypass to avoid false-stationary classification). Round-2 Theme 1 G1 closure: grace_eligible preflight gates the grace-window branch via per-axis cooldown (t_lastGracePulse[axis], GRACE_REENTRY_COOLDOWN = 6.0s default). Without preflight, round-1 micro-cadence exploits cycled at 31% cost-per-pulse for Sprint, 10x for Light. The OnSprintPulse {variant} transport (PC C.9, round-16 B1) reports which branch fired to the emitting client."
+
+  - name: xzDisplacement
+    category: formula
+    expression: "d_xz = sqrt((x_n - x_{n-1})^2 + (z_n - z_{n-1})^2)"
+    variables: [x_n, z_n, x_{n-1}, z_{n-1}]
+    output_range: [0.0, infinity]
+    source: design/gdd/player-controller.md (D.6)
+    referenced_by: []
+    notes: "XZ-plane displacement of HumanoidRootPart between consecutive pulse fire events. Y/vertical motion discarded (jump-in-place produces 0). First-pulse special case: previous position = state-entry position; result is consumed by D.4 grace branch and unused."
+
+  # Crafting & Items formulas (encoded 2026-04-30).
+
+  - name: craftProgress
+    category: formula
+    expression: "craftProgress = clamp(progressAtRateAnchor + ((_clock() - rateAnchorClock) * crafterSpeedMultiplier_N) / CRAFT_BASE_DWELL_TIME, 0, 1)  # clock-elapsed closed form (round-5 R4-3 + qa-gate refinement); piecewise across rate changes (BT2/BT4 reset progressAtRateAnchor=craftProgress, rateAnchorClock=_clock())"
+    variables: [progressAtRateAnchor, rateAnchorClock, _clock, crafterSpeedMultiplier_N, CRAFT_BASE_DWELL_TIME]
+    output_range: [0.0, 1.0]
+    source: design/gdd/crafting-and-items.md (D.1, D.2)
+    referenced_by: []
+    notes: "CLOCK-ELAPSED CLOSED FORM (round-5 R4-3 2026-06-02, refined per the round-5 qa-lead gate). REPLACED the per-tick accumulator `craftProgress + craftRate*dt` (drifted +/-1-2 ULP over 300-600 additions — round-4 IEEE-754 finding). The qa-gate found the CD's literal `stepCount*dt` form was ALSO (a) incorrect under variable Heartbeat dt (storedSteps*currentDt != true elapsed time) and (b) not provably exact (600*(1/60)/10 may not == 1.0 in IEEE-754 double). FIX: drive progress from elapsed server time (_clock() - rateAnchorClock), NOT step*dt. Each Heartbeat: recompute craftProgress fresh from _clock() (no accumulation, no stored step count). On a rate change (BT2 join / BT4 depart): progressAtRateAnchor = current craftProgress, rateAnchorClock = _clock(). Division is BY CRAFT_BASE_DWELL_TIME, NOT a multiply by a precomputed 1/dwell reciprocal. crafterSpeedMultiplier_N = crafterSpeedMultiplier(N) per D.2 (the single canonical name; this was the old `effective_N`). Tested exact via the C.16 _clock seam set to exact dwell boundaries (10.0/10.0, 5.0*2/10.0, 2.0/2.0 — all exactly representable) by H.27/H.28/H.30/H.31/H.41. Clamp to 1.0 prevents BT3 double-fire (H.29). Consistent with the survival-window timer C.5.6 (_clock() - beaconActivationTime)."
+
+  - name: multiCrafterDwellRate
+    category: formula
+    expression: "effective_N = min(N, benchMaxCraftersEffective) where N = |CraftSession.crafters| and benchMaxCraftersEffective = min(BENCH_MAX_CRAFTERS, ceil(squadSize/2))"
+    variables: [N, benchMaxCraftersEffective, BENCH_MAX_CRAFTERS, squadSize]
+    output_range: [1, 2]
+    source: design/gdd/crafting-and-items.md (D.2, C.3.5)
+    referenced_by: []
+    notes: "Multi-crafter dwell-time scalar. NAMING (round-5 unification per qa-gate): `effective_N` here == the GDD's `crafterSpeedMultiplier(N)` (D.2) == the `crafterSpeedMultiplier_N` factor in the craftProgress closed form — ONE quantity, three historical names; canonical name is `crafterSpeedMultiplier(N)`. N=1 gives 1× rate; N=2 gives 2× rate (half wall-clock dwell). Clamped at the squad-scaled benchMaxCraftersEffective (round-2 2026-06-01: was a flat BENCH_MAX_CRAFTERS) to enforce E.2 over-cap rejection. In a 2-player squad the effective cap is 1, so the speedup is unavailable (BS3 unreachable). Progress preserved when N changes mid-craft (per H.31)."
+
+  - name: multiCrafterEmissionDispatch
+    category: formula
+    expression: "for crafter in CraftSession.crafters: DisturbanceService:Emit(emissionType='Craft', position=benchPosition, initialMagnitude=recipeBurstMagnitude, sourcePlayerId=crafter.UserId)"
+    variables: [CraftSession.crafters, recipeBurstMagnitude, benchPosition]
+    output_range: [N independent emissions where N = |crafters| at BT3 moment]
+    source: design/gdd/crafting-and-items.md (D.3)
+    referenced_by: []
+    notes: "BT3 dispatch loop. N independent ED emissions at same position, distinct sourcePlayerId per crafter. Iterates the array AT BT3 moment (snapshot, not historical — per H.50 deserter-exploit closure). N <= BENCH_MAX_CRAFTERS = 2 enforces ED.C.1.2 reserved-band compliance (each emission < 0.85)."
+
+  # compositePatchDowngrade (D.4) removed 2026-06-01 round-2 patch — Composite Patch recipe cut.
+  #   RN no longer applies any gather-magnitude downgrade; it emits the nominal node-tier magnitude.
+  # quietStepWrapReduction (D.5) removed 2026-06-01 round-2 patch — Quiet Step Wrap recipe cut.
+  #   The Dampener Coil (dampenerCoilReduction below) is the only surviving emission modifier; its
+  #   single interaction with PC stationary attenuation is the canonical order-of-operations (D.6a).
+
+  - name: dampenerCoilReduction
+    category: formula
+    expression: "magnitude_out = magnitude_base * (1 - DAMPENER_REDUCTION) (= 0.08 * (1 - 0.50) = 0.04 at default); applied to ALL Light pulses by equipped player while Coil active; Coil NOT consumed per pulse (consumed on equip, expires on duration/bench-visit/death)"
+    variables: [magnitude_base, DAMPENER_REDUCTION, DAMPENER_DURATION]
+    output_range: [0.024, 0.056]
+    source: design/gdd/crafting-and-items.md (D.6)
+    referenced_by: []
+    notes: "Light-pulse magnitude reduction applied by Dampener Coil while active. DAMPENER_REDUCTION is a FRACTIONAL reduction (the multiplier is (1 - DAMPENER_REDUCTION)), per GDD D.6 — NOT a direct multiplier. At default 0.50 the multiplier is 0.50, but over the tuning range [0.30, 0.70] the output spans [0.056, 0.024] (higher DAMPENER_REDUCTION = stronger reduction = lower output). output_range corrected 2026-06-01 (round-2 re-review BLOCKING-1: prior `* DAMPENER_REDUCTION` form diverged from the GDD at every non-default tuning). Stationary Coil-equipped players' effective pulse: 0.08 * (1 - 0.50) * STATIONARY_EMISSION_FACTOR = 0.012 < MAGNITUDE_FLOOR = 0.02 — discarded by ED, Coil NOT consumed for that pulse (per H.38)."
+
+  - name: beaconMidpulseTrigger
+    category: formula
+    expression: "if not CraftSession.midpulseFired and craftProgress >= CRAFT_BEACON_MIDPULSE_PROGRESS: DisturbanceService:Emit('Craft', CraftSession.benchPosition, MAGNITUDE_CRAFT_BEACON_MIDPULSE, CraftSession.primaryCrafterId); CraftSession.midpulseFired = true"
+    variables: [craftProgress, CRAFT_BEACON_MIDPULSE_PROGRESS, MAGNITUDE_CRAFT_BEACON_MIDPULSE]
+    output_range: [single emission per Beacon craft session]
+    source: design/gdd/crafting-and-items.md (D.7)
+    referenced_by: []
+    notes: "Edge-detected one-shot midpulse for Beacon recipe only. Idempotent via midpulseFired flag (per H.39). Attribution: CraftSession.primaryCrafterId = the stable BT1 initiator (round-2 B7 2026-06-01 — NOT crafters[1], which can shift if the initiator departs via BT4; per H.41). Position: CraftSession.benchPosition (schema field added round-2 B8)."
+
+enums:
+  - name: emissionType
+    category: enum
+    values: [Gather, Sprint, Light, Beacon, Craft]
+    reserved_slots: 3 (for future Crafting-driven types; 1 of original 4 consumed 2026-04-30 by `Craft` per crafting-and-items.md C.11 + F.4)
+    source: design/gdd/ecological-disturbance.md (C.1.2)
+    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md, design/gdd/resource-node.md]
+
+  - name: tier
+    category: enum
+    values: [Calm, Tense, Hunt, Retreat]
+    source: design/gdd/ecological-disturbance.md (C.1.7, C.2)
+    referenced_by: [design/gdd/player-controller.md]
+
+  # Player Controller enums (encoded 2026-04-30).
+
+  - name: platform
+    category: enum
+    values: [pc, touch, gamepad]
+    source: design/gdd/player-controller.md (D.4)
+    referenced_by: []
+    notes: "Source of player input — used to gate the MOBILE_ANALOG_DRIFT_THRESHOLD floor in D.4 (applies only when platform == 'touch'). Most-recent-input-event-type wins on hybrid devices (E.D)."
+
+  - name: pingCategory
+    category: enum
+    values: [Danger, Resource, Navigate, Untagged]
+    source: design/gdd/player-controller.md (C.4.1)
+    referenced_by: []
+    notes: "Quick-ping marker categories. Color-coded per art-bible §7.5: Danger=violet, Resource=teal, Navigate=yellow, Untagged=white. Server resolves category from raycast hit's tag (enemy / resource / door|exit) or marks Untagged when no tag matches."
+
+  - name: emoteSlot
+    category: enum
+    values: [Quiet, FollowMe, Danger, AllClear, Wait, HelpSOS]
+    source: design/gdd/player-controller.md (C.4.2)
+    referenced_by: []
+    notes: "Six emote-wheel slots. Slots 1-3 (Quiet, FollowMe, Danger) are functionally locked. Slots 4-6 (AllClear, Wait, HelpSOS) are cosmetically replaceable via Robux purchases (animation-swap with semantic preservation)."
+
+  # Crafting & Items enums (encoded 2026-04-30).
+
+  - name: onSignalAnchorExpiredReason
+    category: enum
+    values: [replaced, lifetime, tripped]
+    source: design/gdd/crafting-and-items.md (gap-resolution G8, E.16, H.16, H.21, H.23, H.51)
+    referenced_by: []
+    notes: "Distinguishes the three reasons a Signal Anchor lifecycle ends. `replaced` = a second Anchor placement cancelled this one. `lifetime` = SIGNAL_ANCHOR_LIFETIME = 45 s elapsed without trip. `tripped` = single-shot trigger fired (Anchor is spent). HUD GDD must branch on this for distinct UI feedback."
+
+  - name: onCraftCancelledReason
+    category: enum
+    values: [player-initiated, out-of-range, insufficient-materials, death, bench-destroyed]
+    source: design/gdd/crafting-and-items.md (C.8 BT5/BT6, E.6, E.7, E.12, E.13, H.42)
+    referenced_by: []
+    notes: "Distinguishes mid-craft cancellation reasons. `player-initiated` = explicit RequestCraftCancel. `out-of-range` = E.13 server-side proximity watcher fired. `insufficient-materials` = E.6 BT6 atomic deduction failure. `death` = all crafters died (E.7, E.12). `bench-destroyed` reserved for future content. HUD GDD must distinguish from OnCraftRejected (pre-craft) per E.6."
+
+  - name: onCraftRejectedReason
+    category: enum
+    values: [not-alive, out-of-range, insufficient-materials, beacon-already-crafted, item-unavailable, bench-full, too-late-to-join, unknown-recipe, recipe-mismatch, already-equipped]
+    source: design/gdd/crafting-and-items.md (C.15, E.10, E.20, E.21, H.3, H.4, H.6, H.11, H.47, H.88, H.96)
+    referenced_by: []
+    notes: "Pre-craft validation rejection reasons. `not-alive` = PC.S4. `out-of-range` = beyond GATHER_PROXIMITY_RADIUS + BENCH_RANGE_TOLERANCE. `insufficient-materials` = E.21 schema-level defense. `beacon-already-crafted` = E.10 once-per-run gate. `item-unavailable` = E.20 RequestUseItem before BT3. `bench-full` = E.2 BENCH_MAX_CRAFTERS cap. `too-late-to-join` = E.3 boundary. `unknown-recipe` = whitelist failure (qa-lead H.4 / E.21). `recipe-mismatch` = round-7 BT2 join with a different recipe than the active session (H.96). `already-equipped` = round-5/7 RequestEquipItem when the player already has an active instance of that equippable (H.88)."
+
+  - name: onBeaconRejectedReason
+    category: enum
+    values: [beacon-not-placed, already-activated, not-alive, invalid-placement, unreachable-placement]
+    source: design/gdd/crafting-and-items.md (C.5.5, C.15, E.22, E.28, H.49, H.83)
+    referenced_by: []
+    notes: "RequestBeaconActivate + RequestBeaconPlace validation rejection reasons. `beacon-not-placed` = E.22 false-victory attempt. `already-activated` = once-per-run guard. `not-alive` = activator must be alive at handler entry (E.9 alive guard). `invalid-placement` = clamped candidate failed raycast-to-floor / overlap (C.5.5). `unreachable-placement` = round-3 B4: LOS reachability raycast player->candidate obstructed by a wall (E.28 / H.83 cross-wall exploit closure)."
+
+  # Resource Management constants (encoded 2026-06-17). Candidate values — all tunable per RM Section G.
+
+  - name: OXYGEN_POOL_START
+    category: constant
+    value: 600
+    unit: oxygen units (1 unit = 1 s of BC1 drain)
+    source: design/gdd/resource-management.md (CR.1, D.1, G)
+    referenced_by: [design/gdd/player-controller.md, design/gdd/crafting-and-items.md, design/gdd/hud.md]
+    notes: "Single squad-shared oxygen pool ceiling = run-start value. PC reads it for the DP-2 config gate (DEATH_OXYGEN_COST/pool in [0.10,0.15]); Crafting H.106 economy references the pool. ~10 min at BC1 baseline; primary run-length knob. Range: 300-900 (G)."
+
+  - name: OXYGEN_DRAIN_BC1
+    category: constant
+    value: 1.0
+    unit: oxygen units/second
+    source: design/gdd/resource-management.md (CR.2, D.1, G)
+    referenced_by: [design/gdd/hud.md]
+    notes: "Baseline (Beacon Charge Tier 1) drain rate. UNIT ANCHOR — 1 oxygen unit is defined as 1 second of BC1 drain, so this is 1.0 by definition. Do not retune freely (rescales every oxygen value). Flat within band, flat headcount."
+
+  - name: OXYGEN_DRAIN_BC2
+    category: constant
+    value: 1.5
+    unit: oxygen units/second
+    source: design/gdd/resource-management.md (CR.2, D.1, G)
+    referenced_by: [design/gdd/hud.md]
+    notes: "BC2 drain rate. Must keep BC1 < BC2 < BC3 < BC4. Range: 1.1-1.8 (G)."
+
+  - name: OXYGEN_DRAIN_BC3
+    category: constant
+    value: 2.2
+    unit: oxygen units/second
+    source: design/gdd/resource-management.md (CR.2, D.1, G)
+    referenced_by: [design/gdd/hud.md]
+    notes: "BC3 drain rate. Monotonic band order. Range: 1.8-2.8 (G)."
+
+  - name: OXYGEN_DRAIN_BC4_FLOOR
+    category: constant
+    value: 3.5
+    unit: oxygen units/second
+    source: design/gdd/resource-management.md (CR.2, D.1, D.5, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "BC4 (Beacon survival window) drain — the fastest, a FLOOR. Crafting H.106 references it: 10 x CANISTER_RESTORE_OXYGEN < 35 x this (100 < 122.5). Range: 3.0-5.0 (G)."
+
+  - name: DEATH_OXYGEN_COST
+    category: constant
+    value: 72
+    unit: oxygen units
+    source: design/gdd/resource-management.md (CR.4, D.3, D.4, G)
+    referenced_by: [design/gdd/player-controller.md]
+    notes: "Shared-pool units deducted per validated death (RM-owned; PC H.87 only constrains the ratio + 'terminal = RM-owned'). DP-2: 72/600 = 0.12 in [0.10,0.15]; MUST stay > CANISTER_RESTORE_OXYGEN. Range: [0.10,0.15] x pool = 60-90 (G)."
+
+  - name: CANISTER_RESTORE_OXYGEN
+    category: constant
+    value: 10
+    unit: oxygen units
+    source: design/gdd/resource-management.md (CR.6, D.2, D.5, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Oxygen restored per Oxygen Canister use (the single faucet). RM owns the restore math (ignores the event amount param). Constraints: < DEATH_OXYGEN_COST (72) AND 10 x this < 35 x OXYGEN_DRAIN_BC4_FLOOR (H.106). ~3 s-at-BC4-equiv. Range: 4-12 (G); re-tune vs RN BIOMASS_GATHER_TIME (OQ.6)."
+
+  - name: OXYGEN_CRITICAL_THRESHOLD
+    category: constant
+    value: 35
+    unit: oxygen units
+    source: design/gdd/resource-management.md (States, G)
+    referenced_by: []
+    notes: "Pool value at/below which the squad-wide state is Critical (HUD red-warning). Healthy requires strict P > 35; recovery to Healthy requires P > 37 (+2 hysteresis). Range: 20-60 (G)."
+
+  - name: OXYGEN_SYNC_HZ
+    category: constant
+    value: 2
+    unit: Hz
+    source: design/gdd/resource-management.md (CR.1, G)
+    referenced_by: []
+    notes: "Minimum client sync cadence for the read-only pool projection (delta-suppressed; immediate on state transitions). Client display tolerance +/-0.5 units. Range: 1-5 (G)."
+
+  - name: OXYGEN_BC4_ENTRY_CAP
+    category: constant
+    value: 15
+    unit: oxygen units
+    source: design/gdd/resource-management.md (CR.9, D.5, G)
+    referenced_by: [design/gdd/crafting-and-items.md]
+    notes: "Shared-pool BC4 anti-bunker fence: on the rising edge into BC4 (Beacon survival window opens), P is clamped once to min(P, this). Shared-pool restatement of Crafting F.2/H.106's per-member anti-bunker contract. Both D.5 fences must hold at the 35 s window: 15 + 10 x CANISTER_RESTORE_OXYGEN (100) = 115 < 35 x OXYGEN_DRAIN_BC4_FLOOR (122.5), and 15 < 122.5. Margin only 7.5 (fragile — see OQ.9). Range: 5-25 (G)."

@@ -31,6 +31,9 @@ builds/
 bin/
 obj/
 out/
+
+# === Locally-downloaded toolchain binaries (not committed; CI installs its own via Foreman) ===
+.tools/
 dist/
 *.exe
 *.dll

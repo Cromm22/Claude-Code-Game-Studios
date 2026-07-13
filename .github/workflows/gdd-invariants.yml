@@ -1,0 +1,64 @@
+name: GDD Invariant Checks
+
+# Blocking CI gate for the executable GDD-static invariants in tools/ci/.
+# Per .claude/docs/coding-standards.md: the automated suite runs on every push to
+# main and every PR; a failing check blocks merge. Each hook runs its --self-test
+# first (proves the checker still has teeth -- exit 2 = the hook itself is broken)
+# then the real invariant check (exit 1 = a GDD invariant was violated). Any
+# non-zero exit fails the job.
+#
+# Currently wired (extend this list as more tools/ci checks are authored):
+#   - tools/ci/c12_completeness_check.py        -> design/gdd/player-controller.md (+ entities.yaml)
+#   - tools/ci/determinism_check.py             -> design/gdd/crafting-and-items.md
+#   - tools/ci/crafting_reconciliation_check.py -> design/gdd/crafting-and-items.md
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gdd-invariants:
+    # The job name IS the status-check context branch protection matches. Set it
+    # explicitly to "GDD Invariant Checks" so the required-check name == the intent
+    # (default would be the job id 'gdd-invariants').
+    name: GDD Invariant Checks
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUTF8: "1"   # belt-and-suspenders: the checkers echo non-ASCII glyphs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile the hooks (syntax gate)
+        run: |
+          python -m py_compile tools/ci/c12_completeness_check.py
+          python -m py_compile tools/ci/determinism_check.py
+          python -m py_compile tools/ci/crafting_reconciliation_check.py
+
+      - name: C.12 contract-completeness hook self-test (prove teeth)
+        run: python tools/ci/c12_completeness_check.py --self-test
+
+      - name: C.12 contract-completeness invariant (player-controller.md)
+        run: python tools/ci/c12_completeness_check.py
+
+      - name: Determinism-preamble hook self-test (prove teeth)
+        run: python tools/ci/determinism_check.py --self-test
+
+      - name: Determinism-preamble invariant (crafting-and-items.md)
+        run: python tools/ci/determinism_check.py
+
+      - name: Crafting reconciliation hook self-test (prove teeth)
+        run: python tools/ci/crafting_reconciliation_check.py --self-test
+
+      - name: Crafting reconciliation invariant (crafting-and-items.md)
+        run: python tools/ci/crafting_reconciliation_check.py
